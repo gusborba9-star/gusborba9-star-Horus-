@@ -2,6 +2,7 @@
 
 import { motion } from 'motion/react';
 import { Bot, ChevronRight, Zap } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Hero() {
   return (
@@ -49,10 +50,10 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row gap-4"
           >
-            <button className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-black rounded-xl font-bold shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-all">
-              <span>Agendar Demonstração</span>
+            <Link href="/dashboard" className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-cyan-500 hover:bg-cyan-400 text-black rounded-xl font-bold shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-all">
+              <span>Acessar Painel Hórus</span>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </Link>
             <button className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent border border-white/10 hover:bg-white/5 text-white rounded-xl font-bold transition-all">
               <Bot className="w-5 h-5" />
               <span>Ver agente em ação</span>
