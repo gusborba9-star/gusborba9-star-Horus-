@@ -2,19 +2,23 @@
 
 import { Users, Plus, BrainCircuit, Activity, Settings2, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import BackButton from '@/components/BackButton';
 
 export default function AgentsPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div className="mb-4">
+        <BackButton label="Voltar para Visão Geral" />
+      </div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Funcionários Digitais</h1>
           <p className="text-white/50 mt-1">Gerencie a força de trabalho da sua Agência de Empregos Digitais Universal.</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg transition-colors">
+        <Link href="/dashboard/agents/new" className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded-lg transition-colors">
           <Plus className="w-4 h-4" />
           Contratar Novo Funcionário
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

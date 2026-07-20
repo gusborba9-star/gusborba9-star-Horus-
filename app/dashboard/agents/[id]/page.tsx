@@ -2,7 +2,7 @@
 
 import { use } from 'react';
 import { BrainCircuit, Activity, Settings, ArrowLeft, MessageSquare, Webhook, Zap, Clock, ShieldCheck } from 'lucide-react';
-import Link from 'next/link';
+import BackButton from '@/components/BackButton';
 
 const agentsData: Record<string, any> = {
   maria: {
@@ -33,9 +33,7 @@ export default function AgentDetails({ params }: { params: Promise<{ id: string 
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <Link href="/dashboard/agents" className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Voltar para Funcionários
-      </Link>
+      <BackButton label="Voltar para Funcionários" fallbackHref="/dashboard/agents" />
       
       <div className="flex flex-col md:flex-row gap-8 items-start">
         {/* Profile Sidebar */}

@@ -16,21 +16,21 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit mb-8"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 w-fit mb-8"
           >
-            <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-            <span className="text-[10px] uppercase tracking-widest font-bold">O Futuro do Atendimento Chegou</span>
+            <Zap className="w-3 h-3 text-cyan-400" />
+            <span className="text-[10px] uppercase tracking-widest font-bold text-cyan-400">Powered by Hórus OS & Nexus</span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl md:text-7xl font-extrabold leading-[1.1] tracking-tight mb-6 max-w-4xl"
+            className="text-5xl md:text-7xl font-extrabold font-display leading-[1.1] tracking-tight mb-6 max-w-4xl"
           >
-            Agentes de IA que vendem e atendem por você{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/40">
-              24 horas por dia.
+            O Sistema Operacional Cognitivo Definitivo.{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
+              Agentes Polimórficos.
             </span>
           </motion.h1>
 
@@ -40,8 +40,7 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl text-white/50 leading-relaxed max-w-2xl mb-10"
           >
-            Reduza custos, zere o tempo de espera e qualifique leads automaticamente. 
-            Uma experiência 10x superior para o seu cliente, com zero esforço humano.
+            Implante uma força de trabalho digital autônoma capaz de operar vendas, atendimento e cobranças (Efí) em qualquer nicho. Governado pela inteligência superior do Nexus.
           </motion.p>
 
           <motion.div
