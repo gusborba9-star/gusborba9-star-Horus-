@@ -11,10 +11,10 @@ export default function Footer() {
               <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-lg flex items-center justify-center font-bold text-black group-hover:scale-105 transition-transform">
                 Σ
               </div>
-              <span className="text-xl font-bold font-display tracking-tighter uppercase">Nexus AI</span>
+              <span className="text-xl font-bold font-display tracking-tighter uppercase">Hórus OS</span>
             </Link>
             <p className="text-white/40 text-sm leading-relaxed">
-              Transformando a forma como empresas se comunicam com seus clientes através de Inteligência Artificial avançada.
+              O Sistema Operacional Cognitivo Definitivo. Transformando a forma como empresas operam através de Inteligência Artificial de alta performance.
             </p>
           </div>
           
@@ -23,7 +23,7 @@ export default function Footer() {
             <ul className="space-y-4 text-sm text-white/40">
               <li><Link href="#" className="hover:text-cyan-400 transition-colors">Agentes de Vendas</Link></li>
               <li><Link href="#" className="hover:text-cyan-400 transition-colors">Atendimento ao Cliente</Link></li>
-              <li><Link href="#" className="hover:text-cyan-400 transition-colors">Integrações</Link></li>
+              <li><Link href="#" className="hover:text-cyan-400 transition-colors">Estúdio Criativo</Link></li>
               <li><Link href="#" className="hover:text-cyan-400 transition-colors">Preços</Link></li>
             </ul>
           </div>
@@ -31,9 +31,7 @@ export default function Footer() {
           <div>
             <h4 className="font-bold mb-6 text-white">Empresa</h4>
             <ul className="space-y-4 text-sm text-white/40">
-              <li><Link href="#" className="hover:text-cyan-400 transition-colors">Sobre nós</Link></li>
-              <li><Link href="#" className="hover:text-cyan-400 transition-colors">Blog</Link></li>
-              <li><Link href="#" className="hover:text-cyan-400 transition-colors">Carreiras</Link></li>
+              <li><Link href="#" className="hover:text-cyan-400 transition-colors">Nexus Corp</Link></li>
               <li><Link href="#" className="hover:text-cyan-400 transition-colors">Contato</Link></li>
             </ul>
           </div>
@@ -49,7 +47,7 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between text-sm text-white/40">
-          <p>© {new Date().getFullYear()} Nexus AI. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} Hórus OS - Uma tecnologia Nexus Corp. Todos os direitos reservados.</p>
           <div className="flex gap-6 mt-4 md:mt-0">
             <Link href="#" className="hover:text-white transition-colors">Twitter</Link>
             <Link href="#" className="hover:text-white transition-colors">LinkedIn</Link>

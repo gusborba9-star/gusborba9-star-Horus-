@@ -90,11 +90,10 @@ export default function Pricing() {
           >
             <div className="text-white/50 font-bold tracking-wider uppercase text-sm mb-2">Essential</div>
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-4xl font-bold">R$ 497,00</span>
-              <span className="text-white/50">/mês</span>
+              <span className="text-4xl font-bold">Flexível</span>
             </div>
-            <div className="text-sm font-medium text-cyan-400/80 mb-6">+ R$ 599,00 (Taxa de Setup por Agente)</div>
-            <p className="text-white/60 text-sm mb-8">Para pequenos negócios automatizando o primeiro canal.</p>
+            <div className="text-sm font-medium text-cyan-400/80 mb-6">Adequado ao seu contexto</div>
+            <p className="text-white/60 text-sm mb-8">Para negócios iniciando automação (Atendimento, Financeiro, RH, etc.)</p>
             
             <ul className="space-y-4 mb-8 flex-1">
               <FeatureItem text="Exatamente 1 Agente Digital Hórus" />
@@ -127,11 +126,10 @@ export default function Pricing() {
             </div>
             <div className="text-cyan-400 font-bold tracking-wider uppercase text-sm mb-2">Scale (Pro)</div>
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-5xl font-bold">R$ 1.297,00</span>
-              <span className="text-white/50">/mês</span>
+              <span className="text-5xl font-bold">Avançado</span>
             </div>
-            <div className="text-sm font-medium text-cyan-400 mb-6">+ R$ 599,00 (Taxa de Setup por Agente)</div>
-            <p className="text-white/80 text-sm mb-8">Para operações em escala que exigem orquestração complexa.</p>
+            <div className="text-sm font-medium text-cyan-400 mb-6">Setup guiado pelo Hórus</div>
+            <p className="text-white/80 text-sm mb-8">Para operações em escala que exigem múltiplos setores integrados.</p>
             
             <ul className="space-y-4 mb-8 flex-1">
               <FeatureItem text="Até 4 Agentes Digitais" highlight />
@@ -161,10 +159,10 @@ export default function Pricing() {
           >
             <div className="text-white/50 font-bold tracking-wider uppercase text-sm mb-2">Enterprise</div>
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-4xl font-bold">Sob Demanda</span>
+              <span className="text-4xl font-bold">Personalizado</span>
             </div>
-            <div className="text-sm font-medium text-white/40 mb-6">Proposta Dinâmica (Via Nexus)</div>
-            <p className="text-white/60 text-sm mb-8">Arquitetura dedicada para corporações e infraestrutura Palantir-like.</p>
+            <div className="text-sm font-medium text-white/40 mb-6">Proposta Dinâmica via Nexus</div>
+            <p className="text-white/60 text-sm mb-8">Infraestrutura absoluta para corporações e franqueadoras.</p>
             
             <ul className="space-y-4 mb-8 flex-1">
               <FeatureItem text="Agentes Infinitos" highlight />

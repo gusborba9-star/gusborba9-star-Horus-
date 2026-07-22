@@ -1,9 +1,19 @@
 'use client';
 
-import { Activity, BrainCircuit, CheckCircle2, AlertTriangle, Users, ArrowUpRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, BrainCircuit, CheckCircle2, AlertTriangle, Users, ArrowUpRight, Loader2, Code, Video, Mic, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardOverview() {
+  const [isProvisioning, setIsProvisioning] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsProvisioning(false);
+    }, 6000); // 6 seconds simulation
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -18,6 +28,62 @@ export default function DashboardOverview() {
           </div>
         </div>
       </div>
+
+      {isProvisioning ? (
+        <div className="bg-gradient-to-r from-cyan-500/10 via-black to-cyan-500/5 border border-cyan-500/30 p-6 rounded-2xl flex flex-col md:flex-row items-center gap-6 shadow-[0_0_30px_rgba(34,211,238,0.1)]">
+          <div className="w-16 h-16 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0 border border-cyan-500/50">
+            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <h2 className="text-xl font-bold text-cyan-300 mb-1">Engenharia Hórus em Andamento</h2>
+            <p className="text-white/70">Calibrando e estruturando agentes sob medida para o seu nicho. O setup 1-Click será liberado em instantes (Previsão: até 24h em plano padrão).</p>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 p-6 rounded-2xl flex flex-col gap-6 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/50">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="text-xl font-bold text-emerald-300 mb-1">Provisionamento Concluído</h2>
+              <p className="text-white/70">Seus agentes estão estruturados e prontos para operar. Conecte seus canais em 1 clique abaixo.</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-white/10 pt-6">
+            <div>
+              <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">Conectar Canais (1-Click)</h3>
+              <div className="flex flex-wrap gap-3">
+                <button className="flex-1 py-2 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4" /> Conectar WhatsApp
+                </button>
+                <button className="flex-1 py-2 px-4 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors">
+                  Gerar Webhooks
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-black/50 p-4 rounded-xl border border-white/5">
+              <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3 flex justify-between items-center">
+                <span>Créditos Multimídia</span>
+                <span className="text-cyan-400 normal-case">Add-ons (Tokens)</span>
+              </h3>
+              <div className="flex items-center flex-wrap gap-4 text-xs font-medium text-white/80">
+                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded">
+                  <Video className="w-4 h-4 text-purple-400" /> 150 min
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded">
+                  <Mic className="w-4 h-4 text-emerald-400" /> 10h
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded">
+                  <Code className="w-4 h-4 text-blue-400" /> Ilimitado
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

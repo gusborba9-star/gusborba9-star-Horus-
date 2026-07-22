@@ -23,6 +23,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <NavLink href="/dashboard/memory" icon={<BrainCircuit className="w-4 h-4" />} label="Memória Infinita" />
           <NavLink href="/dashboard/logs" icon={<Activity className="w-4 h-4" />} label="Trilha de Auditoria" />
           
+          <div className="text-xs font-bold text-white/30 uppercase tracking-wider mb-2 px-3 mt-8">Multimídia & Pay-Per-Use</div>
+          <NavLink href="/dashboard/studio" icon={<BrainCircuit className="w-4 h-4" />} label="Estúdio Criativo (Projetos)" />
+          
           <div className="text-xs font-bold text-white/30 uppercase tracking-wider mb-2 px-3 mt-8">Configurações</div>
           <NavLink href="/dashboard/settings" icon={<Settings className="w-4 h-4" />} label="Ajustes" />
         </div>

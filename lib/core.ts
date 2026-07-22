@@ -54,6 +54,21 @@ const escalateToHumanTool: FunctionDeclaration = {
   },
 };
 
+const requireLoginTool: FunctionDeclaration = {
+  name: 'requireLogin',
+  description: 'Aciona um bloqueio exigindo que o usuário faça login ou cadastro antes de prosseguir com a geração da cobrança ou finalização do fechamento. Utilize quando o cliente validar a estrutura ideal e estiver pronto para avançar para o checkout.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      reason: {
+        type: Type.STRING,
+        description: 'Mensagem explicativa curta de por que o login é necessário agora.',
+      },
+    },
+    required: ['reason'],
+  },
+};
+
 export class CoreEngine {
   private ai: GoogleGenAI;
 
@@ -106,7 +121,7 @@ export class CoreEngine {
   async refinePrompt(rawPrompt: string): Promise<string> {
     try {
       const response = await this.ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.5-flash',
         contents: `Você é o "Prompt Refiner" (Middleware de Otimização Cognitiva do Hórus OS).
 Sua função é pegar um pedido de criação de conteúdo (imagem, vídeo, código, campanha de marketing) muitas vezes genérico ou pobre, e transformá-lo em um mega-prompt estruturado, rico em detalhes, personas, contexto e diretrizes técnicas.
 
@@ -120,7 +135,7 @@ Se FOR um pedido de criação complexa (ex: "cria uma logo pra mim", "faz um sit
       });
       return response.text || rawPrompt;
     } catch (error) {
-      console.error('[CoreEngine] Error during refinePrompt:', error);
+      console.warn('[CoreEngine] Warning during refinePrompt (using fallback):', error);
       return rawPrompt; // Fallback to original
     }
   }
@@ -130,7 +145,7 @@ Se FOR um pedido de criação complexa (ex: "cria uma logo pra mim", "faz um sit
    */
   async streamChat(history: Content[], systemInstruction?: string) {
     try {
-      const tools: Tool[] = [{ functionDeclarations: [generateBillingTool, escalateToHumanTool] }];
+      const tools: Tool[] = [{ functionDeclarations: [generateBillingTool, escalateToHumanTool, requireLoginTool] }];
       
       const config: any = {
         temperature: 0.4, // Keep it focused, persuasive and precise
@@ -141,9 +156,9 @@ Se FOR um pedido de criação complexa (ex: "cria uma logo pra mim", "faz um sit
         config.systemInstruction = systemInstruction;
       }
 
-      // Using gemini-2.0-flash as a fallback for quota limits
+      // Using gemini-3.5-flash as a fallback for quota limits
       const responseStream = await this.ai.models.generateContentStream({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.5-flash',
         contents: history,
         config,
       });

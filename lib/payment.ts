@@ -7,6 +7,9 @@ interface EfiConfig {
   clientId: string;
   clientSecret: string;
   certificateBase64: string;
+  accountIdentifier: string;
+  pixKey: string;
+  tokenFortunus: string;
   isProduction: boolean;
 }
 
@@ -18,6 +21,9 @@ export class PaymentService {
       clientId: process.env.EFI_CLIENT_ID || '',
       clientSecret: process.env.EFI_CLIENT_SECRET || '',
       certificateBase64: process.env.EFI_CERT_BASE64 || '',
+      accountIdentifier: process.env.IDENTIFICADOR_CONTA || '',
+      pixKey: process.env.PIX_CHAVE || '',
+      tokenFortunus: process.env.TOKEN_FORTUNUS || '',
       isProduction: process.env.NODE_ENV === 'production',
     };
   }

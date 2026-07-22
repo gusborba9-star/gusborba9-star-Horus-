@@ -6,20 +6,20 @@ import { FileText, Cpu, Rocket } from 'lucide-react';
 const steps = [
   {
     step: '01',
-    title: 'Treinamento Rápido',
-    description: 'Faça upload de PDFs, base de conhecimento ou links do seu site. A IA aprende tudo sobre sua empresa em segundos.',
+    title: 'Dois Modos de Configuração',
+    description: 'Manual via painel guiado (nicho, tom de voz, escopo) ou Automática/Injeção via APIs, ERPs, uploads de manuais, links e arquivos de apoio.',
     icon: FileText,
   },
   {
     step: '02',
-    title: 'Personalização',
-    description: 'Ajuste o tom de voz do agente. Quer que ele seja mais formal, descontraído ou focado em vendas? Você decide.',
+    title: 'Calibração Nexus (Engenharia)',
+    description: 'Após a confirmação, nossos engenheiros preparam e orquestram a memória vetorial. Prazo máximo de até 24h para liberação das credenciais.',
     icon: Cpu,
   },
   {
     step: '03',
-    title: 'Implantação',
-    description: 'Gere um link ou escaneie o QR Code e seu agente já estará ativo no WhatsApp, pronto para atender milhares de clientes.',
+    title: 'Implantação em Minutos',
+    description: 'Com o painel liberado, integre seu agente Hórus OS aos canais (WhatsApp, Webhooks, CRMs) instantaneamente, em poucos cliques.',
     icon: Rocket,
   },
 ];
@@ -33,11 +33,11 @@ export default function Workflow() {
         <div className="flex flex-col lg:flex-row gap-16 items-center">
           <div className="lg:w-1/2">
             <h2 className="text-3xl md:text-5xl font-bold font-display mb-6">
-              Em operação em <br />
-              <span className="text-cyan-400">menos de 24 horas</span>
+              Em operação total em <br />
+              <span className="text-cyan-400">até 24 horas</span>
             </h2>
             <p className="text-white/50 text-lg mb-8">
-              Nossa plataforma no-code permite que você coloque um atendente de IA ultra-avançado no ar sem precisar de uma equipe de desenvolvedores.
+              A curadoria técnica dos nossos engenheiros garante que seu agente cognitivo chegue ao painel pronto para operar de forma polimórfica e inteligente.
             </p>
             <div className="space-y-8">
               {steps.map((item, index) => (
@@ -74,12 +74,12 @@ export default function Workflow() {
               <div className="relative w-3/4 h-3/4 flex flex-col gap-4">
                 <div className="w-full h-12 bg-white/5 rounded-xl border border-white/10 animate-pulse flex items-center justify-between px-4">
                   <div className="w-1/3 h-3 bg-white/20 rounded-full" />
-                  <div className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Agent_Terminal</div>
+                  <div className="text-[10px] text-white/30 font-mono uppercase tracking-widest">Nexus_Configurator</div>
                 </div>
                 <div className="w-full flex-1 bg-white/5 rounded-xl border border-white/10 p-6 flex flex-col gap-4 relative overflow-hidden font-mono text-xs">
-                  <div className="w-2/3 h-16 bg-white/5 rounded-2xl rounded-tl-none self-start border border-white/5 p-3 text-cyan-400">&gt; Processando intenção...</div>
-                  <div className="w-2/3 h-12 bg-cyan-500/20 text-cyan-200 rounded-2xl rounded-tr-none self-end border border-cyan-500/20 p-3 text-right">Análise: Alta conversão</div>
-                  <div className="w-1/2 h-16 bg-white/5 rounded-2xl rounded-tl-none self-start border border-white/5 p-3 text-white/40">[SUCCESS] Proposta enviada.</div>
+                  <div className="w-2/3 h-16 bg-white/5 rounded-2xl rounded-tl-none self-start border border-white/5 p-3 text-cyan-400">&gt; Injetando dados ERP e Memory Graph...</div>
+                  <div className="w-2/3 h-12 bg-cyan-500/20 text-cyan-200 rounded-2xl rounded-tr-none self-end border border-cyan-500/20 p-3 text-right">[OK] Calibrado</div>
+                  <div className="w-1/2 h-16 bg-white/5 rounded-2xl rounded-tl-none self-start border border-white/5 p-3 text-white/40">&gt; Credenciais do Painel Geradas.</div>
                   <div className="absolute bottom-4 left-6 right-6 h-10 bg-white/5 rounded-full border border-white/10 flex items-center px-4">
                      <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
                   </div>

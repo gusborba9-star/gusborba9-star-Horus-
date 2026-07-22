@@ -63,6 +63,9 @@ export async function POST(req: NextRequest) {
                 } else if (call.name === 'escalateToHuman') {
                   const toolResponse = `\n[SISTEMA: Transferência de atendimento solicitada. Motivo: ${(call.args as any).reason}]`;
                   controller.enqueue(new TextEncoder().encode(toolResponse));
+                } else if (call.name === 'requireLogin') {
+                  const toolResponse = `__REQUIRE_LOGIN__${JSON.stringify({reason: (call.args as any).reason})}__`;
+                  controller.enqueue(new TextEncoder().encode(toolResponse));
                 }
               }
             }

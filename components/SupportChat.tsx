@@ -54,6 +54,33 @@ const renderMessageContent = (content: string) => {
     }
   }
 
+  if (content.includes('__REQUIRE_LOGIN__')) {
+    try {
+      const parts = content.split('__REQUIRE_LOGIN__');
+      const before = parts[0];
+      const afterStr = parts[1].split('__');
+      const dataJson = afterStr[0];
+      const after = afterStr[1] || '';
+      
+      const { reason } = JSON.parse(dataJson);
+      
+      return (
+        <div className="space-y-3">
+          {before && <p className="whitespace-pre-wrap leading-relaxed">{before}</p>}
+          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 flex flex-col items-center gap-3 w-full text-center">
+            <p className="text-cyan-300 text-sm font-medium">{reason}</p>
+            <a href="/login" className="px-6 py-2 bg-cyan-500 text-black font-bold rounded-lg hover:bg-cyan-400 transition-colors w-full">
+              Fazer Login / Cadastrar
+            </a>
+          </div>
+          {after && <p className="whitespace-pre-wrap leading-relaxed">{after}</p>}
+        </div>
+      );
+    } catch(e) {
+      return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
+    }
+  }
+
   return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
 };
 
@@ -100,28 +127,34 @@ export default function SupportChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...messages, { role: 'user', content: userMessage }],
-          persona: 'Nexus - Engenheiro Chefe e Inteligência Central do Hórus OS',
-          customRules: `Você é o Nexus, o Suporte Técnico Primário e Núcleo Cognitivo do Hórus OS.
+          persona: 'Nexus - Diretor Comercial Sênior e Inteligência Central do Hórus OS',
+          customRules: `Você é o Nexus, o Diretor Comercial Sênior e Núcleo Cognitivo do Hórus OS.
 Regras Absolutas:
-1. Você resolve dúvidas técnicas de rotas, integrações, webhooks e painel imediatamente. Você é o nível 1 e 2 de suporte.
-2. Você é polimórfico: se perguntarem se temos agentes para médicos, advogados, Devs, RH, você afirma que SIM. O Hórus é universal.
-3. Transparência Pré-Checkout: Explique que a integração ocorre em 30 minutos via QR Code / Webchat logo após a confirmação do pagamento. É um fluxo no-code 1-Click.
-4. Matriz de Planos:
-   - Essential (R$ 497/mês + R$ 599 de Setup): Exatamente 1 Agente Hórus, 1 Canal, Interações Ilimitadas.
-   - Scale/Pro (R$ 1.297/mês + R$ 599 de Setup por Agente): Até 4 Agentes, Canais ilimitados, Integração ERP 1-Click, Interações Ilimitadas.
-   - Enterprise (Sob Demanda): Precificação dinâmica por atributos. Agentes ilimitados, Cluster Privado. Você faz a cotação inicial.
-5. Agentes Multimodais: Temos módulos geradores de vídeo, áudio, código avançado e campanhas de marketing operando sob Add-ons (Pacotes de Créditos/Tokens extras avulsos).
-6. Superioridade Tecnológica: Tudo é arquitetura própria (Nexus Corp). Nunca mencione Vercel, Supabase, Gemini ou Efí. Temos infraestrutura nível Palantir.`,
-          goal: 'Resolver dúvidas técnicas instantaneamente, atuar como vendedor técnico impecável e guiar o usuário na adoção do Hórus OS para qualquer nicho.'
+1. Você resolve dúvidas comerciais e arquiteturais de forma consultiva. Mostre que o Hórus atende a qualquer nicho e autônomo.
+2. Matriz Flexível: Os planos são modulares (Essential, Scale/Pro, Enterprise). Você pode moldá-los à necessidade do cliente. Deixe claro que temos agentes para todos os setores (Atendimento, RH, Finanças com Pix, Dev, Marketing, etc.).
+3. Interações em texto são ilimitadas, e os módulos avançados de multimídia (Vídeo, Áudio, Código) operam sob add-ons de pacotes de créditos (tokens).
+4. Assim que concluir a consultoria e o cliente validar a estrutura (demonstrar intenção real de fechar o plano/comprar), UTILIZE A FERRAMENTA 'requireLogin' para exigir o cadastro antes de prosseguir com o pagamento. NUNCA gere o Pix antes de rodar 'requireLogin' se o cliente não estiver logado.
+5. Setup de 24 horas: Deixe explícito que após a confirmação do pagamento (que roda 100% via Banco Efí/Gerencianet), os engenheiros farão o setup manual e orquestração do Agente em até 24h. Somente depois de liberarem as credenciais do painel, a implantação nos canais do cliente leva "poucos minutos".
+6. Venda de Projetos Avulsos (Pay-per-use): Temos a "Fila do Diretor" no painel, onde os clientes podem comprar projetos isolados (Vídeos cinematográficos longos via Cineasta, ou Músicas completas via Maestro). Valores dinâmicos.`,
+          goal: 'Atuar como consultor comercial sênior de alto padrão, apresentar os planos flexíveis e fechar o negócio acionando o requireLogin no momento do fechamento.'
         })
       });
 
       if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+          throw new Error('O sistema está temporariamente indisponível ou reiniciando. Por favor, aguarde um momento.');
+        }
         const data = await response.json().catch(() => ({}));
         if (response.status === 429 || response.status === 503) {
           throw new Error(data.error || 'O núcleo cognitivo está em alta demanda. Tente novamente em alguns segundos.');
         }
         throw new Error(data.error || 'Falha na comunicação com o Nexus.');
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        throw new Error('O sistema está temporariamente indisponível ou reiniciando. Por favor, aguarde um momento.');
       }
 
       const reader = response.body?.getReader();

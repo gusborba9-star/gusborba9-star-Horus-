@@ -19,7 +19,7 @@ export default function Hero() {
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 w-fit mb-8"
           >
             <Zap className="w-3 h-3 text-cyan-400" />
-            <span className="text-[10px] uppercase tracking-widest font-bold text-cyan-400">Powered by Hórus OS & Nexus</span>
+            <span className="text-[10px] uppercase tracking-widest font-bold text-cyan-400">Powered by Hórus OS & Nexus | Cobranças via Efí</span>
           </motion.div>
 
           <motion.h1
@@ -40,7 +40,7 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl text-white/50 leading-relaxed max-w-2xl mb-10"
           >
-            Implante uma força de trabalho digital autônoma capaz de operar vendas, atendimento e cobranças (Efí) em qualquer nicho. Governado pela inteligência superior do Nexus.
+            Implante uma força de trabalho digital autônoma capaz de operar vendas, atendimento e cobranças financeiras em qualquer nicho. Governado pela inteligência superior do Nexus. Setup e calibração por engenheiros em até 24h após confirmação do pagamento.
           </motion.p>
 
           <motion.div
@@ -53,9 +53,9 @@ export default function Hero() {
               <span>Acessar Painel Hórus</span>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <button className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent border border-white/10 hover:bg-white/5 text-white rounded-xl font-bold transition-all">
+            <button className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent border border-white/10 hover:bg-white/5 text-white rounded-xl font-bold transition-all" onClick={() => window.dispatchEvent(new CustomEvent('open-nexus-chat'))}>
               <Bot className="w-5 h-5" />
-              <span>Ver agente em ação</span>
+              <span>Falar com o Nexus</span>
             </button>
           </motion.div>
         </div>
