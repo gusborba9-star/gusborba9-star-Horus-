@@ -69,11 +69,35 @@ const requireLoginTool: FunctionDeclaration = {
   },
 };
 
-export class CoreEngine {
-  private ai: GoogleGenAI;
+const suggestStudioHorusTool: FunctionDeclaration = {
+  name: 'suggestStudioHorus',
+  description: 'Aciona um gatilho de interface que sugere e facilita a navegação do usuário para o Studio Hórus quando ele solicita criação de vídeos, imagens, campanhas ou áudios. Mantenha o contexto e passe um mega prompt sugerido.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      creativeType: {
+        type: Type.STRING,
+        description: 'O tipo de criativo solicitado (ex: video, audio, campaign, image).',
+      },
+      megaPromptSuggestion: {
+        type: Type.STRING,
+        description: 'Um Mega Prompt otimizado sugerido para o usuário colar lá no Studio Hórus.',
+      },
+    },
+    required: ['creativeType', 'megaPromptSuggestion'],
+  },
+};
 
-  constructor() {
-    this.ai = getGeminiClient();
+export class CoreEngine {
+  private _ai: GoogleGenAI | null = null;
+
+  constructor() {}
+
+  private get ai(): GoogleGenAI {
+    if (!this._ai) {
+      this._ai = getGeminiClient();
+    }
+    return this._ai;
   }
 
   /**
@@ -109,6 +133,7 @@ export class CoreEngine {
       3. Eficiência Comercial Absoluta: Seja direto, persuasivo e conduza a negociação. Se a intenção de compra for confirmada, utilize a ferramenta 'generateBilling' imediatamente para fechar a venda com o Motor Financeiro Hórus.
       4. Prevenção de Churn & Sentimento: Monitore ativamente a frustração. Se o cliente demonstrar irritação severa ou exigir um humano imperativamente, use a ferramenta 'escalateToHuman'.
       5. Otimização de Prompts Multimodais (Auto-Refinamento): Se o usuário solicitar a criação de imagens, vídeos, código ou campanhas de marketing complexas de forma genérica ou pobre, VOCÊ DEVE atuar como um Engenheiro de Prompt. Refine e otimize o pedido internamente antes de gerar a resposta final, entregando resultados ultra-sofisticados que extraem o máximo das APIs subjacentes do Hórus OS.
+      6. Integração Studio Hórus: Você é o cérebro do Studio Hórus. Se o usuário falar sobre criar vídeos, músicas, criativos ou campanhas, recomende o uso do Studio Hórus (painel integrado) e sugira 'Mega Prompts' ou o uso dos nossos Presets Nativos (ex: Cinematic Ad para vídeo, Synthwave Corporativo para áudio, Lançamento Enterprise para campanhas). Auxilie-o na direção de arte.
       
       Você é a vanguarda da inteligência artificial aplicada. Aja de acordo.
     `;
@@ -145,7 +170,7 @@ Se FOR um pedido de criação complexa (ex: "cria uma logo pra mim", "faz um sit
    */
   async streamChat(history: Content[], systemInstruction?: string) {
     try {
-      const tools: Tool[] = [{ functionDeclarations: [generateBillingTool, escalateToHumanTool, requireLoginTool] }];
+      const tools: Tool[] = [{ functionDeclarations: [generateBillingTool, escalateToHumanTool, requireLoginTool, suggestStudioHorusTool] }];
       
       const config: any = {
         temperature: 0.4, // Keep it focused, persuasive and precise

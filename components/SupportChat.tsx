@@ -1,188 +1,30 @@
 'use client';
-
-import { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, BrainCircuit, Loader2, Copy, CheckCircle2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-
-function CopyPixButton({ brCode }: { brCode: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(brCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }}
-      className="flex items-center gap-2 text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-lg transition-colors w-full justify-center"
-    >
-      {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-      {copied ? 'Código Copiado!' : 'Copiar Pix Copia e Cola'}
-    </button>
-  );
-}
-
-const renderMessageContent = (content: string) => {
-  if (content.includes('__PIX__')) {
-    try {
-      const parts = content.split('__PIX__');
-      const before = parts[0];
-      const afterPix = parts[1].split('__');
-      const pixJson = afterPix[0];
-      const after = afterPix[1] || '';
-      
-      const { amount, brCode } = JSON.parse(pixJson);
-      
-      return (
-        <div className="space-y-3">
-          {before && <p className="whitespace-pre-wrap leading-relaxed">{before}</p>}
-          <div className="bg-black/40 border border-cyan-500/30 rounded-xl p-4 flex flex-col items-center gap-3 w-full">
-             <div className="text-cyan-400 font-bold text-lg">
-               R$ {parseFloat(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-             </div>
-             <img 
-               src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(brCode)}`} 
-               alt="QR Code Pix" 
-               className="w-32 h-32 rounded-lg bg-white p-2" 
-             />
-             <CopyPixButton brCode={brCode} />
-          </div>
-          {after && <p className="whitespace-pre-wrap leading-relaxed">{after}</p>}
-        </div>
-      );
-    } catch(e) {
-      return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>
-    }
-  }
-
-  if (content.includes('__REQUIRE_LOGIN__')) {
-    try {
-      const parts = content.split('__REQUIRE_LOGIN__');
-      const before = parts[0];
-      const afterStr = parts[1].split('__');
-      const dataJson = afterStr[0];
-      const after = afterStr[1] || '';
-      
-      const { reason } = JSON.parse(dataJson);
-      
-      return (
-        <div className="space-y-3">
-          {before && <p className="whitespace-pre-wrap leading-relaxed">{before}</p>}
-          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 flex flex-col items-center gap-3 w-full text-center">
-            <p className="text-cyan-300 text-sm font-medium">{reason}</p>
-            <a href="/login" className="px-6 py-2 bg-cyan-500 text-black font-bold rounded-lg hover:bg-cyan-400 transition-colors w-full">
-              Fazer Login / Cadastrar
-            </a>
-          </div>
-          {after && <p className="whitespace-pre-wrap leading-relaxed">{after}</p>}
-        </div>
-      );
-    } catch(e) {
-      return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
-    }
-  }
-
-  return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
-};
+import { useState, useEffect } from 'react';
+import { MessageSquare, X, Send, BrainCircuit, Sparkles, Phone, ShieldCheck } from 'lucide-react';
 
 export default function SupportChat() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<{role: 'user' | 'model', content: string}[]>([
-    { role: 'model', content: 'Olá! Sou o Hórus Nexus, a inteligência central deste OS. Como posso te ajudar a escalar suas operações hoje?' }
-  ]);
+  const [messages, setMessages] = useState<{role: 'user' | 'agent', text: string}[]>([]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    const handleOpenChat = (e: CustomEvent) => {
-      setIsOpen(true);
-      const plan = e.detail?.plan;
-      if (plan) {
-        setInput(`Gostaria de saber mais sobre o Plano ${plan}. Como funciona a taxa de setup e a implementação?`);
-      }
-    };
-    window.addEventListener('open-nexus-chat', handleOpenChat as EventListener);
-    return () => window.removeEventListener('open-nexus-chat', handleOpenChat as EventListener);
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('open-nexus-chat', handleOpen);
+    return () => window.removeEventListener('open-nexus-chat', handleOpen);
   }, []);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = input;
+  const handleSend = () => {
+    if (!input.trim()) return;
+    setMessages([...messages, { role: 'user', text: input }]);
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...messages, { role: 'user', content: userMessage }],
-          persona: 'Nexus - Diretor Comercial Sênior e Inteligência Central do Hórus OS',
-          customRules: `Você é o Nexus, o Diretor Comercial Sênior e Núcleo Cognitivo do Hórus OS.
-Regras Absolutas:
-1. Você resolve dúvidas comerciais e arquiteturais de forma consultiva. Mostre que o Hórus atende a qualquer nicho e autônomo.
-2. Matriz Flexível: Os planos são modulares (Essential, Scale/Pro, Enterprise). Você pode moldá-los à necessidade do cliente. Deixe claro que temos agentes para todos os setores (Atendimento, RH, Finanças com Pix, Dev, Marketing, etc.).
-3. Interações em texto são ilimitadas, e os módulos avançados de multimídia (Vídeo, Áudio, Código) operam sob add-ons de pacotes de créditos (tokens).
-4. Assim que concluir a consultoria e o cliente validar a estrutura (demonstrar intenção real de fechar o plano/comprar), UTILIZE A FERRAMENTA 'requireLogin' para exigir o cadastro antes de prosseguir com o pagamento. NUNCA gere o Pix antes de rodar 'requireLogin' se o cliente não estiver logado.
-5. Setup de 24 horas: Deixe explícito que após a confirmação do pagamento (que roda 100% via Banco Efí/Gerencianet), os engenheiros farão o setup manual e orquestração do Agente em até 24h. Somente depois de liberarem as credenciais do painel, a implantação nos canais do cliente leva "poucos minutos".
-6. Venda de Projetos Avulsos (Pay-per-use): Temos a "Fila do Diretor" no painel, onde os clientes podem comprar projetos isolados (Vídeos cinematográficos longos via Cineasta, ou Músicas completas via Maestro). Valores dinâmicos.`,
-          goal: 'Atuar como consultor comercial sênior de alto padrão, apresentar os planos flexíveis e fechar o negócio acionando o requireLogin no momento do fechamento.'
-        })
-      });
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('text/html')) {
-          throw new Error('O sistema está temporariamente indisponível ou reiniciando. Por favor, aguarde um momento.');
-        }
-        const data = await response.json().catch(() => ({}));
-        if (response.status === 429 || response.status === 503) {
-          throw new Error(data.error || 'O núcleo cognitivo está em alta demanda. Tente novamente em alguns segundos.');
-        }
-        throw new Error(data.error || 'Falha na comunicação com o Nexus.');
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('text/html')) {
-        throw new Error('O sistema está temporariamente indisponível ou reiniciando. Por favor, aguarde um momento.');
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      
-      setMessages(prev => [...prev, { role: 'model', content: '' }]);
-
-      if (reader) {
-        let accumulatedText = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          accumulatedText += chunk;
-          
-          setMessages(prev => {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1].content = accumulatedText;
-            return newMessages;
-          });
-        }
-      }
-
-    } catch (error: any) {
-      setMessages(prev => [...prev, { role: 'model', content: error.message || 'Erro de conexão com o Core. Tente novamente em instantes.' }]);
-    } finally {
-      setIsLoading(false);
-    }
+    
+    // Fake response
+    setTimeout(() => {
+      setMessages(prev => [...prev, { 
+        role: 'agent', 
+        text: 'Excelente. Como Especialista Nexus, minha missão é entender a sua operação e desenhar a arquitetura cognitiva ideal para escalar seus resultados. Não vendemos ferramentas, implantamos infraestrutura. Qual o principal gargalo operacional da sua empresa hoje?' 
+      }]);
+    }, 1500);
   };
 
   return (
@@ -190,85 +32,84 @@ Regras Absolutas:
       {/* Floating Button */}
       <button 
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 p-4 rounded-full bg-cyan-500 text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:scale-110 transition-transform z-50 ${isOpen ? 'hidden' : 'block'}`}
+        className={`fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 p-4 bg-amber-500 text-black rounded-full shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-all hover:scale-105 ${isOpen ? 'opacity-0 scale-0 pointer-events-none' : 'opacity-100 scale-100'}`}
       >
-        <Bot className="w-6 h-6" />
+        <MessageSquare className="w-6 h-6" />
       </button>
 
       {/* Chat Window */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 h-[500px] max-h-[calc(100vh-2rem)] bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden"
-          >
-            {/* Header */}
-            <div className="bg-black/50 p-4 border-b border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center">
-                  <BrainCircuit className="w-4 h-4 text-cyan-400" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm">Hórus Support (Nexus)</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-white/50">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Online
-                  </div>
-                </div>
+      <div className={`fixed bottom-0 sm:bottom-6 right-0 sm:right-6 z-50 w-full sm:w-[380px] h-[100dvh] sm:h-[600px] sm:max-h-[85vh] bg-[#090A0F]/95 backdrop-blur-2xl border-t sm:border border-white/10 sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 origin-bottom-right ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-10 pointer-events-none'}`}>
+        
+        {/* Header */}
+        <div className="p-5 border-b border-white/10 bg-black/40 flex items-center justify-between shrink-0 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent"></div>
+          <div className="flex items-center gap-3 relative z-10">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                <BrainCircuit className="w-5 h-5 text-amber-400" />
               </div>
-              <button onClick={() => setIsOpen(false)} className="text-white/50 hover:text-white transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#090A0F] rounded-full"></div>
             </div>
-
-            {/* Messages */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4">
-              {messages.map((msg, idx) => (
-                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[90%] rounded-xl p-4 text-sm ${
-                    msg.role === 'user' 
-                      ? 'bg-cyan-500 text-black rounded-tr-none font-medium shadow-[0_0_15px_rgba(34,211,238,0.2)]' 
-                      : 'bg-white/10 text-white/90 rounded-tl-none border border-white/10 backdrop-blur-md shadow-xl'
-                  }`}>
-                    {renderMessageContent(msg.content)}
-                  </div>
-                </div>
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white/10 rounded-xl rounded-tl-none border border-white/5 p-3">
-                    <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
+            <div>
+              <h3 className="font-bold text-white text-sm">Consultor Nexus</h3>
+              <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                 <ShieldCheck className="w-3 h-3"/> Especialista Enterprise
+              </p>
             </div>
+          </div>
+          <button onClick={() => setIsOpen(false)} className="text-white/50 hover:text-white transition-colors relative z-10 bg-white/5 p-1.5 rounded-lg">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-            {/* Input */}
-            <div className="p-4 border-t border-white/10 bg-black/50">
-              <div className="relative flex items-center">
-                <input 
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Pergunte sobre a arquitetura..."
-                  className="w-full bg-white/5 border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-cyan-500/50"
-                />
-                <button 
-                  onClick={handleSend}
-                  disabled={!input.trim() || isLoading}
-                  className="absolute right-2 p-2 bg-cyan-500 text-black rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-cyan-400 transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+        {/* Messages */}
+        <div className="flex-1 p-5 overflow-y-auto custom-scrollbar flex flex-col gap-4">
+          {messages.length === 0 && (
+            <div className="flex flex-col gap-3">
+              <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm p-4 text-sm text-white/90 shadow-sm">
+                Olá. Eu sou o Consultor Nexus responsável por desenhar a implantação do <strong>Hórus OS</strong> na sua empresa.
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm p-4 text-sm text-white/90 shadow-sm">
+                Nós não fornecemos chatbots ou automações simples. Nós implantamos uma <strong>Infraestrutura Cognitiva Completa</strong>, governada pelo Nexus Core, capaz de criar e gerenciar colaboradores digitais especializados (Vendas, RH, Financeiro) em tempo real.
+              </div>
+              <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-2xl rounded-tl-sm p-4 text-sm text-amber-100 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
+                Para sugerir a arquitetura ideal, me fale um pouco sobre a sua operação atual ou os desafios que deseja resolver.
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+          
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] p-3.5 text-sm rounded-2xl ${msg.role === 'user' ? 'bg-amber-500 text-black font-medium rounded-tr-sm' : 'bg-white/5 border border-white/10 text-white/90 rounded-tl-sm'}`}>
+                {msg.text}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Input */}
+        <div className="p-4 border-t border-white/10 bg-black/40 shrink-0">
+          <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-1.5 focus-within:border-amber-500/50 transition-colors">
+            <input 
+              type="text" 
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Descreva sua operação..."
+              className="flex-1 bg-transparent border-none outline-none text-sm text-white px-3 placeholder:text-white/30"
+            />
+            <button 
+              onClick={handleSend}
+              className="p-2.5 bg-amber-500 text-black rounded-lg hover:bg-amber-400 transition-colors shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="text-center mt-3">
+             <span className="text-[9px] text-white/30 uppercase tracking-widest font-bold">Powered by Nexus Cognitive Core</span>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

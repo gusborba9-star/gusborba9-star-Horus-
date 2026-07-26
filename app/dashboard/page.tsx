@@ -1,220 +1,185 @@
 'use client';
-
-import { useState, useEffect } from 'react';
-import { Activity, BrainCircuit, CheckCircle2, AlertTriangle, Users, ArrowUpRight, Loader2, Code, Video, Mic, RefreshCw } from 'lucide-react';
+import { 
+  BarChart3, Users, Zap, BrainCircuit, Activity,
+  ArrowRight, Shield, Database, Network, Search, ArrowLeft
+} from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardOverview() {
-  const [isProvisioning, setIsProvisioning] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsProvisioning(false);
-    }, 6000); // 6 seconds simulation
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
-          <p className="text-white/50 mt-1">Status do Hórus Cognitive OS e seus funcionários digitais.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-            Sistema Operacional Online
-          </div>
-        </div>
-      </div>
-
-      {isProvisioning ? (
-        <div className="bg-gradient-to-r from-cyan-500/10 via-black to-cyan-500/5 border border-cyan-500/30 p-6 rounded-2xl flex flex-col md:flex-row items-center gap-6 shadow-[0_0_30px_rgba(34,211,238,0.1)]">
-          <div className="w-16 h-16 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0 border border-cyan-500/50">
-            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-          </div>
-          <div className="flex-1 text-center md:text-left">
-            <h2 className="text-xl font-bold text-cyan-300 mb-1">Engenharia Hórus em Andamento</h2>
-            <p className="text-white/70">Calibrando e estruturando agentes sob medida para o seu nicho. O setup 1-Click será liberado em instantes (Previsão: até 24h em plano padrão).</p>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 p-6 rounded-2xl flex flex-col gap-6 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/50">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
-            </div>
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-xl font-bold text-emerald-300 mb-1">Provisionamento Concluído</h2>
-              <p className="text-white/70">Seus agentes estão estruturados e prontos para operar. Conecte seus canais em 1 clique abaixo.</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-white/10 pt-6">
-            <div>
-              <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">Conectar Canais (1-Click)</h3>
-              <div className="flex flex-wrap gap-3">
-                <button className="flex-1 py-2 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold rounded-lg transition-colors flex items-center justify-center gap-2">
-                  <RefreshCw className="w-4 h-4" /> Conectar WhatsApp
-                </button>
-                <button className="flex-1 py-2 px-4 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors">
-                  Gerar Webhooks
-                </button>
-              </div>
-            </div>
+    <div className="h-full flex flex-col bg-[#0A0A0C] relative font-sans">
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay pointer-events-none"></div>
+      
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 relative z-10">
+         <div className="max-w-7xl mx-auto space-y-8">
             
-            <div className="bg-black/50 p-4 rounded-xl border border-white/5">
-              <h3 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3 flex justify-between items-center">
-                <span>Créditos Multimídia</span>
-                <span className="text-cyan-400 normal-case">Add-ons (Tokens)</span>
-              </h3>
-              <div className="flex items-center flex-wrap gap-4 text-xs font-medium text-white/80">
-                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded">
-                  <Video className="w-4 h-4 text-purple-400" /> 150 min
-                </div>
-                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded">
-                  <Mic className="w-4 h-4 text-emerald-400" /> 10h
-                </div>
-                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded">
-                  <Code className="w-4 h-4 text-blue-400" /> Ilimitado
-                </div>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+               <div>
+                  <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors text-xs font-bold mb-4">
+                     <ArrowLeft className="w-4 h-4" /> Voltar para o Site
+                  </Link>
+                  <h1 className="text-3xl font-black tracking-tight text-white mb-2">Visão Geral</h1>
+                  <p className="text-sm text-white/50 font-light">Monitoramento em tempo real do ecossistema Hórus OS.</p>
+               </div>
+               <div className="flex items-center gap-3">
+                  <div className="relative">
+                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                     <input type="text" placeholder="Buscar no workspace..." className="bg-[#141417] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white outline-none focus:border-amber-500/50 transition-colors w-full sm:w-64 font-light" />
+                  </div>
+               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <MetricCard 
-          title="Funcionários Ativos" 
-          value="4" 
-          icon={<Users className="w-5 h-5 text-cyan-400" />} 
-          trend="+1 este mês"
-        />
-        <MetricCard 
-          title="Nós de Memória" 
-          value="1.2M" 
-          icon={<BrainCircuit className="w-5 h-5 text-purple-400" />} 
-          trend="+150k indexados"
-        />
-        <MetricCard 
-          title="Execuções (24h)" 
-          value="84,392" 
-          icon={<Activity className="w-5 h-5 text-emerald-400" />} 
-          trend="99.9% taxa de sucesso"
-        />
-        <MetricCard 
-          title="Intervenções" 
-          value="12" 
-          icon={<AlertTriangle className="w-5 h-5 text-amber-400" />} 
-          trend="Aguardando humano"
-        />
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+               {/* Ativos */}
+               <div className="glass-panel border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors group">
+                  <div className="flex justify-between items-start mb-4">
+                     <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-500 group-hover:scale-110 transition-transform">
+                        <Users className="w-5 h-5" />
+                     </div>
+                     <span className="text-[10px] font-bold text-emerald-400 uppercase bg-emerald-400/10 px-2 py-1 rounded-md">Online</span>
+                  </div>
+                  <h3 className="text-3xl font-black text-white mb-1">12</h3>
+                  <p className="text-xs text-white/40 font-medium">Agentes Operacionais</p>
+               </div>
+
+               {/* Ações */}
+               <div className="glass-panel border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors group">
+                  <div className="flex justify-between items-start mb-4">
+                     <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 group-hover:scale-110 transition-transform">
+                        <Activity className="w-5 h-5" />
+                     </div>
+                     <span className="text-[10px] font-bold text-white/40 uppercase">Hoje</span>
+                  </div>
+                  <h3 className="text-3xl font-black text-white mb-1">4.281</h3>
+                  <p className="text-xs text-white/40 font-medium">Tarefas Executadas</p>
+               </div>
+
+               {/* Custo */}
+               <div className="glass-panel border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors group">
+                  <div className="flex justify-between items-start mb-4">
+                     <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-400 group-hover:scale-110 transition-transform">
+                        <BarChart3 className="w-5 h-5" />
+                     </div>
+                     <span className="text-[10px] font-bold text-white/40 uppercase">Este Mês</span>
+                  </div>
+                  <h3 className="text-3xl font-black text-white mb-1">R$ 142<span className="text-sm text-white/30">,50</span></h3>
+                  <p className="text-xs text-white/40 font-medium">Nexus Cost Intelligence™</p>
+               </div>
+
+               {/* Créditos */}
+               <div className="glass-panel border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors group">
+                  <div className="flex justify-between items-start mb-4">
+                     <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 group-hover:scale-110 transition-transform">
+                        <Zap className="w-5 h-5" />
+                     </div>
+                     <span className="text-[10px] font-bold text-white/40 uppercase">Franquia</span>
+                  </div>
+                  <h3 className="text-3xl font-black text-white mb-1">85k</h3>
+                  <p className="text-xs text-white/40 font-medium">Créditos Restantes</p>
+                  <div className="w-full h-1 bg-white/5 rounded-full mt-3 overflow-hidden">
+                     <div className="w-[60%] h-full bg-emerald-500 rounded-full"></div>
+                  </div>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+               {/* Main Activity & Nexus Status */}
+               <div className="lg:col-span-2 space-y-8">
+                  
+                  {/* Smart Resumo */}
+                  <div className="glass-panel border-amber-500/10 border border-amber-500/20 rounded-3xl p-8 relative overflow-hidden">
+                     <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+                     <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-6">
+                           <BrainCircuit className="w-6 h-6 text-amber-500" />
+                           <h2 className="text-lg font-bold text-white">Consultor Nexus</h2>
+                        </div>
+                        <p className="text-white/70 font-light leading-relaxed mb-6">
+                           "A infraestrutura está estável. A equipe de Marketing concluiu a campanha de Q3. Notei um pico de latência no Hub Financeiro e redirecionei as rotas de inferência. Deseja que eu inicie a geração de relatórios consolidados no Studio Docs?"
+                        </p>
+                        <div className="flex gap-3">
+                           <Link href="/nexus" className="px-5 py-2.5 bg-amber-500 text-black font-bold rounded-xl text-xs hover:bg-amber-400 transition-colors shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                              Iniciar Nexus Engine
+                           </Link>
+                           <button className="px-5 py-2.5 bg-white/5 text-white font-bold rounded-xl text-xs hover:bg-white/10 transition-colors border border-white/10">
+                              Gerar Relatórios
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* Atividades Recentes */}
+                  <div className="glass-panel border border-white/5 rounded-3xl p-6">
+                     <div className="flex justify-between items-center mb-6">
+                        <h2 className="font-bold text-white">Memory Graph • Registro de Eventos</h2>
+                        <button className="text-xs text-amber-500 hover:underline font-bold">Ver Tudo</button>
+                     </div>
+                     <div className="space-y-4">
+                        {[
+                           { action: 'Studio Video: Renderização Concluída', agent: 'Nexus Auto', time: 'Há 5 min', type: 'success' },
+                           { action: 'Colaborador (Financeiro) processou 45 NFs', agent: 'Clara (Financeiro)', time: 'Há 12 min', type: 'info' },
+                           { action: 'Automação Hubspot -> CRM finalizada', agent: 'Nexus Integrator', time: 'Há 1 hora', type: 'info' },
+                           { action: 'Novo modelo ajustado para campanha', agent: 'Marcos (Marketing)', time: 'Há 2 horas', type: 'info' }
+                        ].map((log, i) => (
+                           <div key={i} className="flex gap-4 items-start p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                              <div className="text-xs font-bold text-white/40 mt-1 w-20 shrink-0">{log.time}</div>
+                              <div>
+                                 <div className="text-sm font-bold text-white/80">{log.action}</div>
+                                 <div className="text-[10px] text-white/50">{log.agent}</div>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+
+               {/* Right Sidebar */}
+               <div className="space-y-8">
+                  
+                  {/* Status Infra */}
+                  <div className="glass-panel border border-white/5 rounded-3xl p-6">
+                     <h2 className="font-bold text-white mb-4">Saúde do Ecossistema</h2>
+                     <div className="space-y-3">
+                        <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-white/5">
+                           <span className="text-white/60 flex items-center gap-2"><Database className="w-4 h-4"/> Memory Graph</span>
+                           <span className="text-emerald-400 font-bold text-xs">Sincronizado</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-white/5">
+                           <span className="text-white/60 flex items-center gap-2"><Network className="w-4 h-4"/> Integrações</span>
+                           <span className="text-emerald-400 font-bold text-xs">9 Ativas</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-white/5">
+                           <span className="text-white/60 flex items-center gap-2"><Shield className="w-4 h-4"/> Permissões</span>
+                           <span className="text-emerald-400 font-bold text-xs">Seguro</span>
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* Studio Shortcuts */}
+                  <div className="glass-panel border border-white/5 rounded-3xl p-6">
+                     <h2 className="font-bold text-white mb-4">Atalhos Rápidos</h2>
+                     <div className="grid grid-cols-2 gap-3">
+                        <Link href="/dashboard/studio/audio" className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors text-center">
+                           <div className="text-xs font-bold text-white/70">Studio Music</div>
+                        </Link>
+                        <Link href="/dashboard/studio/video" className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors text-center">
+                           <div className="text-xs font-bold text-white/70">Studio Video</div>
+                        </Link>
+                        <Link href="/dashboard/agents" className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors text-center">
+                           <div className="text-xs font-bold text-white/70">Novo Agente</div>
+                        </Link>
+                        <Link href="/nexus" className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors text-center">
+                           <div className="text-xs font-bold text-amber-500">Nexus Engine</div>
+                        </Link>
+                     </div>
+                  </div>
+
+               </div>
+            </div>
+
+         </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Active Agents */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Funcionários Digitais em Execução</h2>
-            <Link href="/dashboard/agents" className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
-              Ver todos <ArrowUpRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-white/5 text-white/60">
-                <tr>
-                  <th className="px-6 py-4 font-medium">Funcionário</th>
-                  <th className="px-6 py-4 font-medium">Função</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium">Carga (CPU/Mem)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                <AgentRow name="Maria" role="Atendente MVP" status="online" load="12%" />
-                <AgentRow name="Caleb" role="SDR Outbound" status="online" load="24%" />
-                <AgentRow name="Sophia" role="Customer Success" status="online" load="8%" />
-                <AgentRow name="Nexus" role="Gerente IA (Orquestrador)" status="online" load="45%" />
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Live Logs */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Trilha de Execução</h2>
-            <Link href="/dashboard/logs" className="text-sm text-white/50 hover:text-white">
-              Ver logs
-            </Link>
-          </div>
-          <div className="bg-[#0A0A0A] border border-white/10 rounded-xl p-4 font-mono text-xs space-y-3 h-[300px] overflow-y-auto">
-            <LogEntry time="08:42:12" agent="Maria" action="Agendamento Confirmado" status="success" />
-            <LogEntry time="08:41:55" agent="Nexus" action="Context Semantic Pruning" status="success" />
-            <LogEntry time="08:40:30" agent="Caleb" action="Outbound Email Batch (50)" status="success" />
-            <LogEntry time="08:38:12" agent="Maria" action="Intent Recognition (Lead)" status="success" />
-            <LogEntry time="08:35:01" agent="Sophia" action="Churn Risk Detected" status="warning" />
-            <LogEntry time="08:32:44" agent="Nexus" action="Memory Graph Sync" status="success" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MetricCard({ title, value, icon, trend }: { title: string, value: string, icon: React.ReactNode, trend: string }) {
-  return (
-    <div className="bg-white/5 border border-white/10 p-6 rounded-xl relative overflow-hidden group hover:border-white/20 transition-colors">
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-          {icon}
-        </div>
-      </div>
-      <div>
-        <div className="text-3xl font-bold mb-1">{value}</div>
-        <div className="text-sm text-white/50">{title}</div>
-      </div>
-      <div className="mt-4 text-xs font-medium text-white/40">{trend}</div>
-    </div>
-  );
-}
-
-function AgentRow({ name, role, status, load }: { name: string, role: string, status: 'online' | 'offline', load: string }) {
-  return (
-    <tr className="hover:bg-white/[0.02] transition-colors">
-      <td className="px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center font-bold text-cyan-400">
-            {name[0]}
-          </div>
-          <span className="font-medium">{name}</span>
-        </div>
-      </td>
-      <td className="px-6 py-4 text-white/60">{role}</td>
-      <td className="px-6 py-4">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-400' : 'bg-red-400'}`}></span>
-          <span className="capitalize">{status}</span>
-        </div>
-      </td>
-      <td className="px-6 py-4 text-white/60">{load}</td>
-    </tr>
-  );
-}
-
-function LogEntry({ time, agent, action, status }: { time: string, agent: string, action: string, status: 'success' | 'warning' | 'error' }) {
-  const colors = {
-    success: 'text-emerald-400',
-    warning: 'text-amber-400',
-    error: 'text-red-400'
-  };
-  return (
-    <div className="flex items-start gap-3">
-      <span className="text-white/30 shrink-0">[{time}]</span>
-      <span className="text-cyan-400 shrink-0">[{agent}]</span>
-      <span className={`flex-1 ${colors[status]}`}>{action}</span>
     </div>
   );
 }

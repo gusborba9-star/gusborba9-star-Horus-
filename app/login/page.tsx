@@ -1,115 +1,62 @@
 'use client';
-
-import { useState } from 'react';
-import { motion } from 'motion/react';
 import { BrainCircuit, ArrowRight, Lock, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-
-import BackButton from '@/components/BackButton';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulating authentication delay
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push('/dashboard');
-    }, 1500);
-  };
-
   return (
-    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background FX */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center bg-[#050508] relative font-sans overflow-hidden">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.1] mix-blend-overlay pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[150px] pointer-events-none animate-pulse"></div>
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[150px] pointer-events-none"></div>
 
-      <div className="w-full max-w-md relative z-10 mb-4">
-        <BackButton label="Voltar para a Home" fallbackHref="/" />
-      </div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md relative z-10"
-      >
-        <div className="bg-white/5 border border-white/10 p-8 rounded-2xl backdrop-blur-xl shadow-2xl">
-          <div className="flex flex-col items-center mb-8">
-            <Link href="/" className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center font-bold text-black mb-4 shadow-[0_0_30px_rgba(34,211,238,0.3)]">
-              <BrainCircuit className="w-8 h-8" />
+      <div className="w-full max-w-md p-8 relative z-10 animate-in fade-in zoom-in duration-700">
+         <div className="mb-10 text-center">
+            <Link href="/" className="inline-flex items-center justify-center gap-3 mb-6 group">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)] group-hover:bg-amber-500/20 transition-all duration-500">
+                 <BrainCircuit className="w-7 h-7 text-amber-500" />
+              </div>
             </Link>
-            <h1 className="text-2xl font-bold font-display tracking-tight text-white">Acessar Hórus OS</h1>
-            <p className="text-white/50 text-sm mt-2 text-center">Entre no centro de comando da sua força de trabalho digital.</p>
-          </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">HÓRUS OS</h1>
+            <p className="text-white/40 text-sm font-light">Autenticação Biométrica / Credenciais Nexus</p>
+         </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-white/60 uppercase tracking-wider ml-1">E-mail Corporativo</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@empresa.com"
-                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
-                  required
-                />
-              </div>
-            </div>
+         <div className="bg-[#090A0F]/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+               <div>
+                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2">Identificação (Email)</label>
+                  <div className="relative">
+                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+                     <input type="email" placeholder="nome@empresa.com" className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white outline-none focus:border-amber-500/50 focus:bg-white/5 transition-all text-sm" />
+                  </div>
+               </div>
+               
+               <div>
+                  <label className="block text-[10px] font-bold text-white/50 uppercase tracking-widest mb-2">Chave de Acesso</label>
+                  <div className="relative">
+                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+                     <input type="password" placeholder="••••••••••••" className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white outline-none focus:border-amber-500/50 focus:bg-white/5 transition-all text-sm" />
+                  </div>
+               </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-white/60 uppercase tracking-wider ml-1">Senha de Acesso</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
-                  required
-                />
-              </div>
-            </div>
+               <div className="flex items-center justify-between text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                     <div className="w-4 h-4 rounded border border-white/20 bg-black/50 group-hover:border-amber-500/50 transition-colors"></div>
+                     <span className="text-white/50 group-hover:text-white/70 transition-colors">Lembrar sessão</span>
+                  </label>
+                  <a href="#" className="text-amber-500/80 hover:text-amber-400 hover:underline transition-colors">Esqueceu a chave?</a>
+               </div>
 
-            <div className="flex items-center justify-between py-2 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="rounded border-white/20 bg-black/50 text-cyan-500 focus:ring-cyan-500/50" />
-                <span className="text-white/60 hover:text-white transition-colors">Lembrar de mim</span>
-              </label>
-              <a href="#" className="text-cyan-400 hover:text-cyan-300 transition-colors">Esqueceu a senha?</a>
-            </div>
+               <Link href="/dashboard" className="w-full py-4 bg-amber-500 text-black font-black rounded-xl hover:bg-amber-400 transition-colors shadow-[0_0_20px_rgba(245,158,11,0.2)] flex items-center justify-center gap-2 mt-4 text-sm">
+                  ACESSAR WORKSPACE <ArrowRight className="w-4 h-4" />
+               </Link>
+            </form>
+         </div>
 
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl py-3 px-4 flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-              ) : (
-                <>
-                  Entrar no Sistema
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-white/50">
-            Não possui uma conta? <a href="/#precos" className="text-white font-semibold hover:text-cyan-400 transition-colors">Veja nossos planos</a>
-          </div>
-        </div>
-      </motion.div>
+         <div className="mt-8 text-center text-xs text-white/30">
+            Acesso restrito. Protegido por Nexus Security Engine™.
+         </div>
+      </div>
     </div>
   );
 }

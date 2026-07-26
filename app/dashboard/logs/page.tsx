@@ -29,19 +29,19 @@ export default function LogsPage() {
         </div>
         
         <div className="flex gap-2">
-          <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
+          <button className="px-4 py-2 bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
             Filtrar: Todos
           </button>
-          <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
+          <button className="px-4 py-2 bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
             Exportar CSV
           </button>
         </div>
       </div>
       
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden flex-1 flex flex-col">
+      <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden flex-1 flex flex-col">
         <div className="p-4 border-b border-white/10 bg-black/20 flex items-center gap-4">
-          <Database className="w-5 h-5 text-emerald-400" />
-          <span className="font-mono text-sm text-emerald-400 font-bold">executions_log</span>
+          <Database className="w-5 h-5 text-amber-400" />
+          <span className="font-mono text-sm text-amber-400 font-bold">executions_log</span>
           <span className="text-xs text-white/40 font-mono">APPEND-ONLY</span>
         </div>
         <div className="overflow-x-auto">
@@ -57,14 +57,14 @@ export default function LogsPage() {
             </thead>
             <tbody className="divide-y divide-white/5 font-mono text-xs">
               {logs.map((log) => (
-                <tr key={log.id} className="hover:bg-white/[0.02] transition-colors group">
+                <tr key={log.id} className="hover:bg-white/[0.05] transition-colors group">
                   <td className="px-6 py-4 text-white/30">{log.id}</td>
                   <td className="px-6 py-4 text-white/50">{log.time}</td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 bg-white/5 rounded text-cyan-400">{log.agent}</span>
+                    <span className="px-2 py-1 bg-white/[0.03] backdrop-blur-xl rounded text-amber-400">{log.agent}</span>
                   </td>
                   <td className="px-6 py-4 flex items-center gap-2">
-                    {log.status === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                    {log.status === 'success' && <CheckCircle2 className="w-4 h-4 text-amber-400" />}
                     {log.status === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-400" />}
                     {log.status === 'error' && <ShieldAlert className="w-4 h-4 text-red-400" />}
                     <span className={log.status === 'error' ? 'text-red-400' : 'text-white/80'}>{log.action}</span>

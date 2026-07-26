@@ -66,6 +66,10 @@ export async function POST(req: NextRequest) {
                 } else if (call.name === 'requireLogin') {
                   const toolResponse = `__REQUIRE_LOGIN__${JSON.stringify({reason: (call.args as any).reason})}__`;
                   controller.enqueue(new TextEncoder().encode(toolResponse));
+                } else if (call.name === 'suggestStudioHorus') {
+                  const args = call.args as any;
+                  const toolResponse = `\n__STUDIO_SUGGESTION__${JSON.stringify({ creativeType: args.creativeType, megaPrompt: args.megaPromptSuggestion })}__\n`;
+                  controller.enqueue(new TextEncoder().encode(toolResponse));
                 }
               }
             }

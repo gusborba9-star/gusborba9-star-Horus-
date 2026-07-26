@@ -7,10 +7,10 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-[#090A0F]/80 text-white flex flex-col items-center justify-center">
       <h1 className="text-4xl font-bold mb-4">500 - Erro Interno</h1>
       <p className="text-white/60">Ocorreu um erro inesperado.</p>
-      <button onClick={() => reset()} className="mt-4 px-4 py-2 bg-cyan-500 text-black rounded-lg font-bold">
+      <button onClick={() => reset()} className="mt-4 px-4 py-2 bg-amber-500 text-black rounded-lg font-bold">
         Tentar Novamente
       </button>
     </div>
