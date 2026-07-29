@@ -53,7 +53,7 @@ export default function CRMPage() {
         </div>
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 flex flex-col justify-between min-w-[140px]">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-amber-500 font-bold uppercase tracking-wider">Ações da IA</span>
+            <span className="text-xs text-amber-500 font-bold uppercase tracking-wider">Ações da Nexus</span>
             <BrainCircuit className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-2xl lg:text-3xl font-black">1.4k</div>
@@ -117,7 +117,7 @@ export default function CRMPage() {
         <div className="w-[85vw] sm:w-[320px] shrink-0 flex flex-col h-full snap-center">
           <div className="flex items-center justify-between mb-4 px-1">
             <h3 className="font-bold text-sm text-amber-500 uppercase tracking-widest flex items-center gap-2">
-               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Em Qualificação (IA)
+               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> Em Qualificação (Nexus)
             </h3>
             <span className="text-xs font-bold bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">4</span>
           </div>
@@ -130,7 +130,7 @@ export default function CRMPage() {
                <div className="flex justify-between items-start mb-2 mt-2">
                  <span className="font-bold text-sm text-amber-100">Global Logistics</span>
                </div>
-               <p className="text-xs text-white/60 mb-3 line-clamp-2">Agente está analisando viabilidade de integração ERP com base nas respostas do cliente no WhatsApp.</p>
+               <p className="text-xs text-white/60 mb-3 line-clamp-2">Membro Cognitivo está analisando viabilidade de integração ERP com base nas respostas do cliente no WhatsApp.</p>
                <div className="bg-black/40 rounded-lg p-2 mb-3">
                   <div className="text-[10px] text-white/40 mb-1 flex items-center gap-1"><Zap className="w-3 h-3 text-amber-400" /> Insight Nexus</div>
                   <div className="text-xs font-medium text-amber-200/80">&quot;Alta probabilidade de conversão. Dores focadas em redução de custos.&quot;</div>
@@ -158,7 +158,7 @@ export default function CRMPage() {
                  <span className="font-bold text-sm group-hover:text-amber-400 transition-colors">Nexus Labs S.A</span>
                  <MoreHorizontal className="w-4 h-4 text-white/30" />
                </div>
-               <p className="text-xs text-white/50 mb-3">Proposta enviada pelo Agente Financeiro. Aguardando assinatura digital.</p>
+               <p className="text-xs text-white/50 mb-3">Proposta enviada pelo Membro Cognitivo Financeiro. Aguardando assinatura digital.</p>
                <div className="flex items-center justify-between">
                  <span className="text-xs font-bold text-emerald-400">R$ 4.800</span>
                  <span className="text-[10px] font-bold bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">Enviado</span>

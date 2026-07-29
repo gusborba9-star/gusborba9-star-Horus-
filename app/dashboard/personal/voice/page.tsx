@@ -25,7 +25,7 @@ export default function VoiceRuntime() {
             
             <div>
                <h2 className="text-3xl font-black text-white mb-2">Voice Runtime Ativo</h2>
-               <p className="text-white/50 font-light max-w-md mx-auto">Comunicação natural habilitada. Seu colaborador está ouvindo e processando em tempo real.</p>
+               <p className="text-white/50 font-light max-w-md mx-auto">Comunicação natural habilitada. Seu membro está ouvindo e processando em tempo real.</p>
             </div>
 
             <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6 flex items-center justify-between">

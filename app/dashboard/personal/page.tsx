@@ -19,9 +19,9 @@ export default function PersonalHome() {
          <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
               <User className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
-              Colaboradores de Presença
+              Operações de Presença
             </h1>
-            <p className="text-xs sm:text-sm text-white/50 mt-1 font-light">Seu colaborador digital pessoal, disponível 24 horas por dia (Hórus Personal™).</p>
+            <p className="text-xs sm:text-sm text-white/50 mt-1 font-light">Seu membro da equipe cognitiva pessoal, disponível 24 horas por dia (Hórus Personal™).</p>
          </div>
          <div className="flex items-center gap-3">
             <Link href="/dashboard/personal/setup" className="px-4 py-2 bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-blue-500/10 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2">
@@ -154,7 +154,7 @@ export default function PersonalHome() {
                      </div>
                      <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
                         <div className="flex items-center justify-between mb-2">
-                           <div className="text-xs font-bold text-white/50 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> WhatsApp (Filtro IA)</div>
+                           <div className="text-xs font-bold text-white/50 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> WhatsApp (Filtro Nexus)</div>
                            <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-[10px] font-bold">1</span>
                         </div>
                         <div className="space-y-2 mt-4">
@@ -226,10 +226,8 @@ export default function PersonalHome() {
 
                {/* Consumption & Plan */}
                <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6">
-                  <h4 className="font-bold text-white text-sm mb-4">Plano & Consumo</h4>
                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 mb-4">
                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs text-white/50">Plano Contratado</span>
                         <span className="text-xs font-bold text-white">Chief of Staff (24/7)</span>
                      </div>
                      <div className="flex justify-between items-center mb-2">
@@ -245,7 +243,7 @@ export default function PersonalHome() {
                      <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                         <div className="h-full bg-blue-500 w-[45%]"></div>
                      </div>
-                     <div className="text-[10px] text-white/40 text-right mt-1">~120k tokens restantes hoje</div>
+                     <div className="text-[10px] text-white/40 text-right mt-1">~120k créditos restantes hoje</div>
                   </div>
                </div>
 

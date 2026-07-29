@@ -48,7 +48,7 @@ export default function NewProjectWizard() {
              <Zap className="w-8 h-8 text-purple-500/50" />
            </div>
            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white mb-2">Engenharia Cognitiva</h2>
-           <p className="text-purple-400/80 font-mono text-xs md:text-sm tracking-widest uppercase">Gerando Planejamento, Mega Prompt e Orçamento Dinâmico...</p>
+           <p className="text-purple-400/80 font-mono text-xs md:text-sm tracking-widest uppercase">Gerando Planejamento, Mega Objetivo e Orçamento Dinâmico...</p>
            
            <div className="w-48 md:w-64 h-1.5 bg-white/10 mt-8 rounded-full overflow-hidden">
              <div className="h-full bg-purple-500 animate-[fillUp_4s_ease-in-out_forwards]" style={{ width: '0%' }}></div>
@@ -168,7 +168,7 @@ export default function NewProjectWizard() {
                              <div className="text-4xl font-black text-white mb-6">R$ 1.850</div>
                              
                              <div className="space-y-3 text-xs text-white/60 mb-6 pb-6 border-b border-white/10">
-                                <div className="flex justify-between"><span>Complexidade / IA</span><span>Alto (VideoGen)</span></div>
+                                <div className="flex justify-between"><span>Complexidade / Nexus</span><span>Alto (VideoGen)</span></div>
                                 <div className="flex justify-between"><span>Tempo de Processamento</span><span>~45 min GPU</span></div>
                                 <div className="flex justify-between"><span>Prazo de Entrega</span><span className="text-emerald-400 font-bold">Hoje (Fila Diretor)</span></div>
                              </div>

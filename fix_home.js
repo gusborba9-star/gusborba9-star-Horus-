@@ -1,7 +1,18 @@
 const fs = require('fs');
-let code = fs.readFileSync('app/page.tsx', 'utf-8');
-code = code.replace(
-  /Financeiro, Comercial, Marketing, Jurídico, RH, Operacional, Atendimento, Cobranças, Inteligência, Criativo, Desenvolvimento, Gestão, Estoque, Compras, Administrativo\.\.\. <strong>Ou crie o seu próprio\.<\/strong><br\/>(?:<br\/>)?\s*O limite não é o Hórus\. O limite é a imaginação operacional da sua empresa\./,
-  'O Hórus Core possui base cognitiva para atuar no Financeiro, Comercial, Marketing, Jurídico, RH, Operacional, Atendimento, Compras e muito mais.<br/><br/><strong>Sua necessidade é inédita?</strong> Treine um colaborador digital exclusivo do zero. O limite não é o Hórus. O limite é a imaginação operacional da sua empresa.'
-);
+let code = fs.readFileSync('app/page.tsx', 'utf8');
+
+const newPhrases = `const carouselPhrases = [
+  "Operações Inteligentes",
+  "Equipes Digitais",
+  "Automações Invisíveis",
+  "Integração Universal",
+  "Crescimento Contínuo",
+  "Inteligência Operacional",
+  "Projetos Multimodais",
+  "Escalabilidade Enterprise",
+  "Infraestrutura Cognitiva"
+];`;
+
+code = code.replace(/const carouselPhrases = \[\s*([\s\S]*?)\s*\];/, newPhrases);
+
 fs.writeFileSync('app/page.tsx', code);

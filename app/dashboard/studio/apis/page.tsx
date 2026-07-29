@@ -72,7 +72,7 @@ export default function StudioAPIsPage() {
 
                      <div className="glass-panel p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 inline-flex items-center gap-3">
                         <Shield className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs text-amber-500/70 font-medium">Você não conversa com dezenas de IAs. Você conversa apenas com o Nexus, e nós orquestramos todo o resto em segundo plano.</span>
+                        <span className="text-xs text-amber-500/70 font-medium">Você não conversa com dezenas de operações. Você conversa apenas com o Nexus, e nós orquestramos todo o resto em segundo plano.</span>
                      </div>
                   </div>
                )}
@@ -83,7 +83,7 @@ export default function StudioAPIsPage() {
                         <Settings2 className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
                         <div>
                            <h4 className="text-sm font-bold text-red-400 mb-1">Modo de Engenharia Exposto</h4>
-                           <p className="text-xs text-white/50 font-light leading-relaxed">Neste modo, o Nexus sai de cena e você escolhe manualmente os parâmetros de geração, engenharia de prompt e seleção de IAs terceiras.</p>
+                           <p className="text-xs text-white/50 font-light leading-relaxed">Neste modo, o Nexus sai de cena e você escolhe manualmente os parâmetros de geração, engenharia de objetivo e seleção de operações terceiras.</p>
                         </div>
                      </div>
 
@@ -101,10 +101,10 @@ export default function StudioAPIsPage() {
                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-6">
                            <div className="glass-panel p-6 rounded-3xl">
-                              <label className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-3 block">Instruções Raw / Prompt Direto</label>
+                              <label className="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-3 block">Instruções Raw / Objetivo Direto</label>
                               <textarea 
                                  className="w-full h-40 bg-[#0A0A0C] border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-amber-500/50 resize-none font-light leading-relaxed"
-                                 placeholder="Descreva detalhadamente os parâmetros de entrada para o modelo de Inteligência Artificial..."
+                                 placeholder="Descreva detalhadamente os parâmetros de entrada para o modelo de Inteligência Operacional..."
                               ></textarea>
                            </div>
                            

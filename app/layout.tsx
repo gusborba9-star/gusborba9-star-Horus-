@@ -8,7 +8,7 @@ const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-displ
 
 export const metadata: Metadata = {
   title: 'Hórus OS | O Sistema Operacional Cognitivo',
-  description: 'A revolução da força de trabalho digital com Inteligência Artificial e Agentes Polimórficos.',
+  description: 'A revolução da força de trabalho digital com Inteligência Operacional e Equipes Cognitivas Polimórficos.',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

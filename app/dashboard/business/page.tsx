@@ -20,7 +20,6 @@ export default function BusinessHome() {
          </div>
          <div className="flex items-center gap-3">
             <Link href="/dashboard/plans" className="px-4 py-2 bg-amber-500 text-black font-bold rounded-xl text-xs hover:bg-amber-400 transition-colors shadow-[0_0_20px_rgba(245,158,11,0.3)]">
-               Fazer Upgrade do Plano
             </Link>
          </div>
       </div>
@@ -44,8 +43,8 @@ export default function BusinessHome() {
                   <div className="flex items-center gap-3 mb-4">
                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400"><Users className="w-5 h-5"/></div>
                      <div>
-                        <div className="text-sm font-bold text-white">Colaboradores</div>
-                        <div className="text-[10px] text-white/50 uppercase tracking-widest">Agentes Nexus</div>
+                        <div className="text-sm font-bold text-white">Membroes</div>
+                        <div className="text-[10px] text-white/50 uppercase tracking-widest">Equipes Cognitivas Nexus</div>
                      </div>
                   </div>
                   <div className="text-4xl font-black text-white">12<span className="text-lg text-white/30 font-medium">/15 contratados</span></div>
@@ -85,8 +84,8 @@ export default function BusinessHome() {
                      
                      <div className="space-y-2 mb-6">
                         <div className="flex items-center justify-between text-xs">
-                           <span className="text-white/40">Colaboradores</span>
-                           <span className="text-white font-bold">4 Agentes</span>
+                           <span className="text-white/40">Membroes</span>
+                           <span className="text-white font-bold">4 Equipes Cognitivas</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                            <span className="text-white/40">Integrações</span>
@@ -110,8 +109,8 @@ export default function BusinessHome() {
                      
                      <div className="space-y-2 mb-6">
                         <div className="flex items-center justify-between text-xs">
-                           <span className="text-white/40">Colaboradores</span>
-                           <span className="text-white font-bold">2 Agentes</span>
+                           <span className="text-white/40">Membroes</span>
+                           <span className="text-white font-bold">2 Equipes Cognitivas</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                            <span className="text-white/40">Integrações</span>
@@ -135,8 +134,8 @@ export default function BusinessHome() {
                      
                      <div className="space-y-2 mb-6">
                         <div className="flex items-center justify-between text-xs">
-                           <span className="text-white/40">Colaboradores</span>
-                           <span className="text-white font-bold">3 Agentes</span>
+                           <span className="text-white/40">Membroes</span>
+                           <span className="text-white font-bold">3 Equipes Cognitivas</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                            <span className="text-white/40">Integrações</span>

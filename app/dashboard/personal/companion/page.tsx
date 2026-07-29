@@ -19,7 +19,7 @@ export default function CompanionApp() {
       <div className="flex-1 p-6 sm:p-10 overflow-y-auto custom-scrollbar relative z-10 flex items-center justify-center">
          <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-               <h2 className="text-4xl font-black text-white">Seu colaborador no seu sistema operacional.</h2>
+               <h2 className="text-4xl font-black text-white">Seu membro no seu sistema operacional.</h2>
                <p className="text-white/50 font-light leading-relaxed">
                   Baixe o Desktop Companion para macOS ou Windows. Ele opera como um assistente invisível que pode analisar sua tela (quando autorizado), redigir emails nativamente, e executar atalhos do sistema.
                </p>

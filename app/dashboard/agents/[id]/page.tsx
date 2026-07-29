@@ -17,9 +17,9 @@ const agentsData: Record<string, any> = {
   },
   nexus: {
     name: 'Nexus',
-    role: 'Gerente IA',
+    role: 'Gerente Nexus',
     status: 'online',
-    description: 'Orquestrador central. Avalia confiança e audita outros agentes.',
+    description: 'Orquestrador central. Avalia confiança e audita outros equipes cognitivas.',
     confidence: 99.9,
     memoryNodes: 1024500,
     uptime: '100%',

@@ -1,10 +1,13 @@
 const fs = require('fs');
+let code = fs.readFileSync('app/dashboard/layout.tsx', 'utf8');
 
-let code1 = fs.readFileSync('app/dashboard/agents/page.tsx', 'utf-8');
-code1 = code1.replace('      </div></div>    </Link>\n  );\n}', '      </div>\n    </Link>\n  );\n}');
-code1 = code1.replace('      </div>\n    </div>\n  );\n}\n\nfunction AgentCard', '      </div>\n    </div>\n    </div>\n  );\n}\n\nfunction AgentCard');
-fs.writeFileSync('app/dashboard/agents/page.tsx', code1);
+const oldStr = `              <div className="flex-1 overflow-hidden">
+                 <h4 className="font-bold text-sm truncate text-[#FAFAFA]">Nexus Corp</h4>
+                 <p className="text-[9px] text-[#C9A55C] font-bold uppercase tracking-[0.2em]">Enterprise Plan</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#FAFAFA]/30 group-hover:text-[#D4AF37] transition-colors" />
+           </div>
+        </div>`;
 
-let code2 = fs.readFileSync('app/dashboard/agents/[id]/page.tsx', 'utf-8');
-code2 = code2.replace('      </div>    </div></div>  );\n}', '      </div>    </div>\n    </div>  );\n}');
-fs.writeFileSync('app/dashboard/agents/[id]/page.tsx', code2);
+code = code.replace(oldStr, "");
+fs.writeFileSync('app/dashboard/layout.tsx', code);

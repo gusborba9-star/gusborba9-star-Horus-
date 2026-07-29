@@ -3,8 +3,8 @@ import { geminiCircuitBreaker } from '@/utils/circuitBreaker';
 
 /**
  * Hórus OS - Core Execution Endpoint
- * O "Gerente IA" processa as intenções, avalia o Confidence Score, e orquestra
- * os agentes via LangGraph.
+ * O "Gerente Nexus" processa as intenções, avalia o Confidence Score, e orquestra
+ * os equipes cognitivas via LangGraph.
  */
 export async function POST(req: Request) {
   try {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     // 1. Inserir no Executions Log (Auditoria Imutável / Event Sourcing)
     // await logExecutionRequest(event_type, payload);
 
-    // 2. Verificar Semantic Cache (Economia de Tokens)
+    // 2. Verificar Semantic Cache (Economia de Créditos)
     // const cachedResponse = await checkSemanticCache(payload);
     // if (cachedResponse) return NextResponse.json(cachedResponse);
 

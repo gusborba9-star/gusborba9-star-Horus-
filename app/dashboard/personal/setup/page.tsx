@@ -50,7 +50,7 @@ export default function PersonalSetupWizard() {
                  <CheckCircle2 className="w-10 h-10 md:w-12 md:h-12 text-emerald-400" />
                </div>
                <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tight text-white mb-4">CONTRATAÇÃO CONCLUÍDA.</h2>
-               <p className="text-emerald-400 font-mono text-xs md:text-sm tracking-widest uppercase mb-4">Seu colaborador estará online em até 24 horas.</p>
+               <p className="text-emerald-400 font-mono text-xs md:text-sm tracking-widest uppercase mb-4">Seu membro estará online em até 24 horas.</p>
                <p className="text-white/50 text-xs max-w-sm text-center">Nossa equipe realizará a Curadoria Técnica para garantir a segurança e integração perfeita antes da liberação operacional.</p>
              </div>
            )}
@@ -84,14 +84,14 @@ export default function PersonalSetupWizard() {
                      <div className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(59,130,246,0.15)]">
                         <User className="w-8 h-8 text-blue-400" />
                      </div>
-                     <h2 className="text-3xl font-black text-white mb-4">Perfil do Colaborador</h2>
+                     <h2 className="text-3xl font-black text-white mb-4">Perfil do Membro</h2>
                      <p className="text-white/50 font-light max-w-lg mx-auto">Defina a identidade do profissional digital que trabalhará lado a lado com você diariamente.</p>
                   </div>
                   
                   <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-8 space-y-6">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                           <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Nome do Colaborador</label>
+                           <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Nome do Membro</label>
                            <input type="text" placeholder="Ex: Arthur, Sarah..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors text-sm" />
                         </div>
                         <div>
@@ -120,7 +120,7 @@ export default function PersonalSetupWizard() {
                      
                      <div>
                         <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Sua Rotina Principal (Briefing)</label>
-                        <textarea placeholder="Resuma como é o seu dia a dia e quais os seus principais objetivos com o colaborador..." className="w-full h-32 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors resize-none text-sm custom-scrollbar"></textarea>
+                        <textarea placeholder="Resuma como é o seu dia a dia e quais os seus principais objetivos com o membro..." className="w-full h-32 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors resize-none text-sm custom-scrollbar"></textarea>
                      </div>
                   </div>
                </div>
@@ -133,7 +133,7 @@ export default function PersonalSetupWizard() {
                         <Settings className="w-8 h-8 text-amber-400" />
                      </div>
                      <h2 className="text-3xl font-black text-white mb-4">Modo de Operação</h2>
-                     <p className="text-white/50 font-light max-w-lg mx-auto">Escolha o nível de capacidade intelectual e abrangência das funções que seu colaborador irá exercer.</p>
+                     <p className="text-white/50 font-light max-w-lg mx-auto">Escolha o nível de capacidade intelectual e abrangência das funções que seu membro irá exercer.</p>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -173,7 +173,7 @@ export default function PersonalSetupWizard() {
                         <Zap className="w-6 h-6 text-rose-400 shrink-0" />
                         <div>
                            <h4 className="text-sm font-bold text-white mb-1">Atenção: Transações Financeiras</h4>
-                           <p className="text-xs text-white/70 font-light">O colaborador nunca fará pagamentos ou transferências (PIX/Cartão) automaticamente. Ele sempre gerará as guias e solicitará sua aprovação biométrica via aplicativo.</p>
+                           <p className="text-xs text-white/70 font-light">O membro nunca fará pagamentos ou transferências (PIX/Cartão) automaticamente. Ele sempre gerará as guias e solicitará sua aprovação biométrica via aplicativo.</p>
                         </div>
                      </div>
 
@@ -206,7 +206,7 @@ export default function PersonalSetupWizard() {
                         <Monitor className="w-8 h-8 text-emerald-400" />
                      </div>
                      <h2 className="text-3xl font-black text-white mb-4">Presença & Dispositivos</h2>
-                     <p className="text-white/50 font-light max-w-lg mx-auto">Selecione onde seu colaborador deverá estar presente e aguardando chamados.</p>
+                     <p className="text-white/50 font-light max-w-lg mx-auto">Selecione onde seu membro deverá estar presente e aguardando chamados.</p>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -251,7 +251,6 @@ export default function PersonalSetupWizard() {
                      
                      <div className="space-y-4 mb-8">
                         <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                           <span className="text-sm text-white/70">Plano (Secretário Executivo)</span>
                            <span className="text-sm font-bold text-white">R$ 597/mês</span>
                         </div>
                         <div className="flex justify-between items-start pb-4 border-b border-white/5">

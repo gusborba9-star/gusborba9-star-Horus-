@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function HubPage() {
   const categories = [
-    { id: 'agents', name: 'Agentes Prontos', icon: Bot, count: 42 },
+    { id: 'agents', name: 'Equipes Cognitivas Prontos', icon: Bot, count: 42 },
     { id: 'integrations', name: 'Integrações', icon: Network, count: 18 },
     { id: 'templates', name: 'Templates de Operação', icon: LayoutTemplate, count: 25 },
     { id: 'kits', name: 'Kits por Segmento', icon: Briefcase, count: 12 },
@@ -40,7 +40,7 @@ export default function HubPage() {
                   </div>
                   <h2 className="text-3xl md:text-4xl font-black text-white mb-4">Kit Completo para Clínicas de Estética</h2>
                   <p className="text-white/60 font-light leading-relaxed max-w-lg mb-8">
-                     Adquira um ambiente Hórus 100% pré-configurado. Inclui agente de agendamento (WhatsApp), fluxos de CRM de saúde, políticas de LGPD e 5 templates de campanhas.
+                     Adquira um ambiente Hórus 100% pré-configurado. Inclui membro cognitivo de agendamento (WhatsApp), fluxos de CRM de saúde, políticas de LGPD e 5 templates de campanhas.
                   </p>
                   <button className="px-6 py-3 bg-rose-500 text-black font-bold rounded-xl hover:bg-rose-400 transition-colors shadow-[0_0_20px_rgba(244,63,94,0.3)]">
                     Ver Detalhes do Kit
@@ -72,7 +72,7 @@ export default function HubPage() {
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  
                  {[
-                   { name: 'SDR Outbound (LinkedIn)', price: 'R$ 1.297', type: 'Agente Pronto', color: 'blue' },
+                   { name: 'SDR Outbound (LinkedIn)', price: 'R$ 1.297', type: 'Membro Cognitivo Pronto', color: 'blue' },
                    { name: 'Dashboard Financeiro Pro', price: 'R$ 597', type: 'Template', color: 'emerald' },
                    { name: 'Integração Shopify Av.', price: 'R$ 397', type: 'Integração', color: 'purple' },
                  ].map((item, i) => (

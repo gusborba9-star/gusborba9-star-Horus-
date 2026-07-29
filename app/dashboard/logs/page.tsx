@@ -50,7 +50,7 @@ export default function LogsPage() {
               <tr>
                 <th className="px-6 py-4 font-bold">Event ID</th>
                 <th className="px-6 py-4 font-bold">Time (UTC)</th>
-                <th className="px-6 py-4 font-bold">Ator (Agente)</th>
+                <th className="px-6 py-4 font-bold">Ator (Membro Cognitivo)</th>
                 <th className="px-6 py-4 font-bold">Ação</th>
                 <th className="px-6 py-4 font-bold w-full">Payload / Detalhes</th>
               </tr>

@@ -19,7 +19,7 @@ export default function IntelignciaFinanceiraPage() {
               </div>
               Inteligência Financeira
             </h1>
-            <p className="text-xs sm:text-sm text-white/40 mt-2 font-light max-w-2xl">Análise de métricas, forecast financeiro e controle de caixa gerados por IA.</p>
+            <p className="text-xs sm:text-sm text-white/40 mt-2 font-light max-w-2xl">Análise de métricas, forecast financeiro e controle de caixa gerados por Nexus.</p>
          </div>
          <div className="hidden sm:flex gap-3">
             <button className="px-5 py-2.5 bg-amber-500 text-black font-bold rounded-xl text-xs hover:bg-amber-400 transition-colors shadow-[0_0_20px_rgba(190,158,108,0.3)] flex items-center gap-2">

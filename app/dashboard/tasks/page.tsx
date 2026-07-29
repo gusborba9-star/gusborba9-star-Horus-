@@ -19,7 +19,7 @@ export default function TarefasFluxosPage() {
               </div>
               Tarefas & Fluxos
             </h1>
-            <p className="text-xs sm:text-sm text-white/40 mt-2 font-light max-w-2xl">Gerenciamento ágil de entregas e fluxos de trabalho orquestrados pelos Agentes e equipe.</p>
+            <p className="text-xs sm:text-sm text-white/40 mt-2 font-light max-w-2xl">Gerenciamento ágil de entregas e fluxos de trabalho orquestrados pelos Equipes Cognitivas e equipe.</p>
          </div>
          <div className="hidden sm:flex gap-3">
             <button className="px-5 py-2.5 bg-amber-500 text-black font-bold rounded-xl text-xs hover:bg-amber-400 transition-colors shadow-[0_0_20px_rgba(190,158,108,0.3)] flex items-center gap-2">

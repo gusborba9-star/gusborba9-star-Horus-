@@ -1,296 +1,368 @@
 'use client';
 import { 
-  BrainCircuit, ChevronRight, Sparkles, Activity,
-  Server, Network, Shield, ArrowRight
+  BrainCircuit, ChevronRight, Sparkles, Activity, 
+  Server, Network, Shield, ArrowRight, MessageSquare, X, Check
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { NeuralFigure } from './components/NeuralFigure';
 
-function Carousel3D({ groups }: { groups: { category: string, items: string[] }[] }) {
+const carouselPhrases = [
+  "CRM Inteligente",
+  "Operações Autônomas",
+  "Equipes Cognitivas",
+  "Projetos Multimodais",
+  "Integrações Corporativas",
+  "Financeiro Inteligente",
+  "ERP Adaptativo",
+  "Automações Invisíveis",
+  "Operações Pessoais",
+  "Arquiteturas Empresariais",
+  "Infraestrutura Cognitiva",
+  "Qualquer Nicho",
+  "Qualquer Mercado",
+  "Qualquer Empresa",
+  "Qualquer Operação"
+];
+
+function Carousel3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     let animationFrameId: number;
+    let currentAngle = 0;
+    
     const updateItems = () => {
       if (!containerRef.current) return;
-      const items = containerRef.current.querySelectorAll('.carousel-item');
-      const containerCenter = window.innerWidth / 2;
       
-      items.forEach((item) => { const el = item as HTMLElement;
-        const rect = el.getBoundingClientRect();
-        const itemCenter = rect.left + rect.width / 2;
-        const distanceFromCenter = itemCenter - containerCenter;
+      const radius = 900;
+      currentAngle -= 0.03; // Slowed down for elegance
+      
+      const items = containerRef.current.querySelectorAll('.carousel-item');
+      const totalItems = items.length;
+      const anglePerItem = 360 / totalItems;
+      
+      items.forEach((item, index) => {
+        const el = item as HTMLElement;
+        const itemAngle = currentAngle + (index * anglePerItem);
         
-        // Normalized distance from -1 (left edge) to 1 (right edge)
-        const normalizedDistance = Math.min(Math.max(distanceFromCenter / (window.innerWidth / 2.5), -1), 1);
+        // Em um cilindro onde os itens circulam o usuário (ou onde o centro está perfeitamente de frente para nós)
+        const radians = itemAngle * (Math.PI / 180);
         
-        // Rotate up to 50 degrees, scale down to 0.75, lower opacity at edges
-        const rotationY = normalizedDistance * 50; 
-        const scale = 1 - Math.abs(normalizedDistance) * 0.25;
-        const opacity = 1 - Math.abs(normalizedDistance) * 0.7;
+        const x = Math.sin(radians) * radius;
+        const z = Math.cos(radians) * radius;
         
-        el.style.transform = `perspective(1000px) rotateY(${rotationY}deg) scale(${scale}) translateZ(${-Math.abs(normalizedDistance) * 50}px)`;
-        el.style.opacity = Math.max(0.1, opacity).toString();
+        // Z positivo significa que está mais próximo de quem vê
+        const normalizedZ = (z + radius) / (radius * 2); 
+        const opacity = Math.max(0.02, Math.pow(normalizedZ, 4));
+        const scale = 0.8 + (normalizedZ * 0.2);
+        
+        // No eixo Y rotacionamos para acompanhar a curvatura, mas mantemos o centro alinhado
+        el.style.transform = `translate(-50%, -50%) translate3d(${x}px, 0, ${z}px) rotateY(${itemAngle}deg) scale(${scale})`;
+        el.style.opacity = opacity.toString();
+        el.style.visibility = normalizedZ < 0.1 ? 'hidden' : 'visible';
       });
+      
       animationFrameId = requestAnimationFrame(updateItems);
     };
+    
     updateItems();
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
   return (
-    <div className="w-full overflow-hidden flex relative py-20 bg-[#08090E]/50 border-y border-amber-500/10 shadow-[0_0_50px_rgba(190,158,108,0.03)]" ref={containerRef}>
-      <div className="absolute left-0 top-0 bottom-0 w-64 bg-gradient-to-r from-[#08090E] to-transparent z-10 pointer-events-none"></div>
-      <div className="absolute right-0 top-0 bottom-0 w-64 bg-gradient-to-l from-[#08090E] to-transparent z-10 pointer-events-none"></div>
+    <div className="w-full h-[350px] overflow-hidden relative bg-transparent flex items-center justify-center" style={{ perspective: '1200px' }}>
+      <div className="absolute inset-0 bg-gradient-to-r from-[#080808] via-transparent to-[#080808] z-20 pointer-events-none"></div>
       
-      <div className="flex animate-[marquee_50s_linear_infinite] whitespace-nowrap items-center hover:[animation-play-state:paused]">
-         {/* Group 1 */}
-         {groups.map((group, gIdx) => (
-            <div key={`g1-${gIdx}`} className="flex items-center mx-10">
-               <div className="flex flex-col gap-2 items-center mr-10 opacity-40 carousel-item transition-transform duration-75">
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-amber-500">{group.category}</span>
-                  <div className="h-px w-12 bg-amber-500/30"></div>
-               </div>
-               {group.items.map((item, iIdx) => (
-                  <div key={`i1-${gIdx}-${iIdx}`} className="carousel-item mx-8 flex items-center gap-4 transition-transform duration-75 cursor-default group">
-                     <div className="w-2 h-2 rounded-full bg-amber-500/20 group-hover:bg-amber-500 shadow-[0_0_10px_rgba(190,158,108,0)] group-hover:shadow-[0_0_15px_rgba(190,158,108,0.8)] transition-all"></div>
-                     <span className="text-3xl font-light tracking-wide text-white drop-shadow-md">{item}</span>
-                  </div>
-               ))}
+      {/* 3D Container */}
+      <div ref={containerRef} className="relative w-full h-full flex items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
+        {carouselPhrases.map((phrase, idx) => (
+          <div 
+            key={idx}
+            className="carousel-item absolute top-1/2 left-1/2 text-center flex justify-center w-max px-4"
+            style={{ 
+              transform: 'translate(-50%, -50%)', // Default before JS kicks in
+            }}
+          >
+            <div className="px-10 py-5 rounded-2xl bg-[#FAFAFA]/[0.01] backdrop-blur-xl border border-[#FAFAFA]/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_0_15px_rgba(250,250,250,0.02)] transition-all">
+              <h2 className="text-xl md:text-3xl font-light text-[#FAFAFA]/90 tracking-widest whitespace-nowrap">
+                {phrase}
+              </h2>
             </div>
-         ))}
-         {/* Group 2 (Duplicate for seamless scroll) */}
-         {groups.map((group, gIdx) => (
-            <div key={`g2-${gIdx}`} className="flex items-center mx-10">
-               <div className="flex flex-col gap-2 items-center mr-10 opacity-40 carousel-item transition-transform duration-75">
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-amber-500">{group.category}</span>
-                  <div className="h-px w-12 bg-amber-500/30"></div>
-               </div>
-               {group.items.map((item, iIdx) => (
-                  <div key={`i2-${gIdx}-${iIdx}`} className="carousel-item mx-8 flex items-center gap-4 transition-transform duration-75 cursor-default group">
-                     <div className="w-2 h-2 rounded-full bg-amber-500/20 group-hover:bg-amber-500 shadow-[0_0_10px_rgba(190,158,108,0)] group-hover:shadow-[0_0_15px_rgba(190,158,108,0.8)] transition-all"></div>
-                     <span className="text-3xl font-light tracking-wide text-white drop-shadow-md">{item}</span>
-                  </div>
-               ))}
-            </div>
-         ))}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-export default function LandingPage() {
-  const [mounted, setMounted] = useState(false);
-  
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const ecosystemGroups = [
-    {
-      category: 'CRM & Vendas',
-      items: ['Salesforce', 'HubSpot', 'Pipedrive', 'RD Station']
-    },
-    {
-      category: 'Cloud & Infra',
-      items: ['AWS', 'Google Cloud', 'Azure', 'Vercel']
-    },
-    {
-      category: 'Comunicação',
-      items: ['WhatsApp', 'Telegram', 'Slack', 'Discord']
-    },
-    {
-      category: 'Inteligência Artificial',
-      items: ['OpenAI', 'Anthropic', 'Google', 'Mistral']
-    },
-    {
-      category: 'Desenvolvimento',
-      items: ['GitHub', 'Supabase', 'PostgreSQL', 'Docker']
-    }
-  ];
-
+export default function Home() {
   return (
-    <div className="min-h-screen bg-[#08090E] text-white selection:bg-amber-500/30 selection:text-amber-200 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#080808] selection:bg-[#D4AF37]/30 selection:text-white font-sans overflow-x-hidden">
       
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-[marquee_50s_linear_infinite] {
-          animation: marquee 50s linear infinite;
-        }
-        @keyframes pulse-ring {
-          0% { transform: scale(0.8); opacity: 0.5; }
-          100% { transform: scale(2.5); opacity: 0; }
-        }
-        @keyframes spin-slow {
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes spin-slow-reverse {
-          100% { transform: rotate(-360deg); }
-        }
-      `}} />
-
-      {/* Background Ambience */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay"></div>
-         {/* Subtle corner glows */}
-         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-500/5 blur-[150px] rounded-full"></div>
-         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-500/5 blur-[150px] rounded-full"></div>
-      </div>
-
-      {/* Header Executivo */}
-      <nav className="fixed top-0 left-0 right-0 z-50 pt-6 pb-4 bg-gradient-to-b from-[#08090E] to-transparent">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 pt-6 pb-4 bg-gradient-to-b from-[#080808] via-[#080808]/90 to-transparent">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          
-          <div className="flex-1 hidden md:flex items-center gap-8 text-xs font-bold tracking-widest text-white/40 uppercase">
-            <a href="#infrastructure" className="hover:text-amber-400 transition-colors">Infraestrutura</a>
-            <a href="#ecosystem" className="hover:text-amber-400 transition-colors">Ecossistema</a>
+          <div className="hidden md:flex flex-1 items-center gap-8 text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase">
+            <a href="#infrastructure" className="hover:text-[#D4AF37] transition-colors">Infraestrutura</a>
+            <a href="#ecosystem" className="hover:text-[#D4AF37] transition-colors">Cognição</a>
           </div>
 
-          <div className="flex-1 flex justify-center items-center relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-20 bg-amber-500/20 blur-[40px] rounded-full pointer-events-none"></div>
-            <Link href="/" className="flex items-center gap-4 group relative z-10">
-               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600/20 to-amber-400/5 flex items-center justify-center border border-amber-500/30 shadow-[0_0_30px_rgba(190,158,108,0.3)] group-hover:shadow-[0_0_40px_rgba(190,158,108,0.5)] transition-all">
-                 <BrainCircuit className="w-5 h-5 text-amber-400" />
+          <div className="flex justify-start md:justify-center items-center relative md:flex-1">
+            <Link href="/" className="flex items-center gap-3 group relative z-10">
+               <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-tr from-[#D4AF37]/10 to-[#E5D2A0]/5 flex items-center justify-center border border-[#D4AF37]/20 shadow-[0_0_20px_rgba(212,175,55,0.1)] group-hover:shadow-[0_0_30px_rgba(212,175,55,0.2)] transition-all">
+                 <BrainCircuit className="w-4 h-4 md:w-5 md:h-5 text-[#D4AF37]" />
                </div>
-               <span className="font-black text-2xl tracking-widest text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+               <span className="font-black text-xl md:text-2xl tracking-[0.3em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
                  HÓRUS OS
                </span>
             </Link>
           </div>
           
-          <div className="flex-1 flex justify-end">
-            <Link href="/dashboard" className="px-6 py-2.5 backdrop-blur-md bg-white/[0.03] border border-amber-500/20 text-white font-bold rounded-full text-xs uppercase tracking-widest hover:bg-white/[0.08] hover:border-amber-500/40 transition-all items-center gap-2 shadow-[0_0_20px_rgba(190,158,108,0.1)] hover:shadow-[0_0_30px_rgba(190,158,108,0.2)]">
-              Acessar Console
+          <div className="flex flex-1 justify-end">
+            <Link href="/dashboard" className="px-5 py-2.5 bg-white/[0.02] backdrop-blur-md border border-[#D4AF37]/20 text-[#FAFAFA] font-bold rounded-full text-[10px] uppercase tracking-[0.2em] hover:bg-white/[0.05] hover:border-[#D4AF37]/40 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.05)]">
+              Console
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Floating Status Bar */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-         <Link href="/nexus" className="flex items-center gap-4 px-6 py-3 rounded-full backdrop-blur-xl bg-black/40 border border-white/10 shadow-2xl hover:border-amber-500/30 hover:bg-black/60 transition-all group">
-            <div className="flex items-center gap-2">
-               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
-               <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Nexus Engine</span>
-            </div>
-            <div className="h-4 w-px bg-white/10"></div>
-            <div className="flex items-center gap-2 text-xs font-bold text-white group-hover:text-amber-400 transition-colors">
-               <Sparkles className="w-3.5 h-3.5" /> Fale com o Nexus
-            </div>
-         </Link>
-      </div>
-
       {/* Hero Section */}
-      <section className="pt-48 pb-24 relative z-10 flex flex-col items-center justify-center min-h-[90vh]">
-        <div className="max-w-7xl mx-auto px-6 text-center w-full">
+      <section className="relative pt-40 pb-20 md:pt-52 md:pb-32 px-6 flex flex-col items-center justify-center min-h-[90vh] overflow-hidden">
+        
+        {/* Living Intelligence Background */}
+        <div className="absolute inset-0 z-0">
+           <NeuralFigure />
+        </div>
+
+        {/* Very subtle ambient gold light */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#D4AF37]/5 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <div className="relative z-10 w-full max-w-5xl mx-auto text-center flex flex-col items-center">
           
-          <div className="relative inline-block mb-10">
-             <h1 className="text-5xl md:text-[5rem] leading-[1.1] font-black tracking-tight text-white relative z-10 drop-shadow-2xl">
-               A Infraestrutura <br className="hidden md:block"/> de Inteligência.
-             </h1>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-white/[0.02] backdrop-blur-md mb-8">
+             <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></div>
+             <span className="text-[9px] uppercase tracking-[0.3em] font-bold text-[#D4AF37]/80">
+               Nexus Cognitive Engine™
+             </span>
           </div>
           
-          <p className="text-lg md:text-xl text-white/50 font-light max-w-3xl mx-auto mb-20 leading-relaxed">
-            Hórus OS não é um assistente. É um sistema operacional cognitivo desenhado para orquestrar fluxos, integrar dados e escalar operações em nível enterprise.
+          <h1 className="text-6xl md:text-8xl lg:text-[7rem] font-light tracking-tight text-[#FAFAFA] mb-4 leading-none">
+            HÓRUS OS™
+          </h1>
+          
+          <h2 className="text-xl md:text-2xl font-light tracking-[0.4em] text-[#FAFAFA]/40 uppercase mb-12">
+            Infrastructure of Intelligence™
+          </h2>
+          
+          <h3 className="text-2xl md:text-4xl font-light text-[#FAFAFA] mb-8 max-w-3xl leading-snug drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+            Compreenda objetivos. Adapte-se à sua realidade. Orquestre resultados.
+          </h3>
+          
+          <p className="text-base md:text-lg text-[#FAFAFA]/50 font-light max-w-3xl mx-auto mb-16 leading-relaxed">
+            O Hórus OS é uma Infraestrutura Cognitiva concebida para compreender objetivos complexos e transformá-los em projetos, operações e resultados reais. De pequenas empresas sem qualquer sistema implementado até grandes operações corporativas, o Nexus Cognitive Engine™ adapta-se automaticamente à sua realidade, arquitetando a melhor combinação entre inteligência, recursos e capacidades disponíveis no ecossistema Hórus.
           </p>
 
-          {/* O Núcleo Neural em Movimento */}
-          <div className="relative w-full max-w-4xl mx-auto h-[400px] flex items-center justify-center mt-10">
-             {/* Central Glow */}
-             <div className="absolute w-64 h-64 bg-amber-500/20 blur-[100px] rounded-full"></div>
-             
-             {/* Pulse Rings */}
-             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-40 h-40 border border-amber-500/20 rounded-full" style={{ animation: 'pulse-ring 4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite' }}></div>
-                <div className="w-40 h-40 border border-amber-500/10 rounded-full" style={{ animation: 'pulse-ring 4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 1.3s' }}></div>
-                <div className="w-40 h-40 border border-amber-500/5 rounded-full" style={{ animation: 'pulse-ring 4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 2.6s' }}></div>
-             </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <Link href="/dashboard" className="w-full sm:w-auto px-8 py-4 bg-[#D4AF37] text-[#080808] font-bold rounded-full text-xs uppercase tracking-[0.2em] hover:bg-[#E5D2A0] transition-all shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] flex items-center justify-center gap-3 group">
+              Conversar com Nexus™ <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link href="/dashboard/studio" className="w-full sm:w-auto px-8 py-4 bg-transparent border border-[#D4AF37]/30 text-[#FAFAFA] font-bold rounded-full text-xs uppercase tracking-[0.2em] hover:bg-white/[0.03] hover:border-[#D4AF37]/60 transition-all flex items-center justify-center gap-3">
+              Arquitetar uma Solução™
+            </Link>
+          </div>
+        </div>
 
-             {/* Orbiting Particles */}
-             <div className="absolute w-[300px] h-[300px] rounded-full border border-white/5" style={{ animation: 'spin-slow 20s linear infinite' }}>
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-amber-400 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.8)]"></div>
-             </div>
-             <div className="absolute w-[450px] h-[450px] rounded-full border border-white/5" style={{ animation: 'spin-slow-reverse 30s linear infinite' }}>
-                <div className="absolute bottom-1/4 right-0 translate-x-1/2 w-2 h-2 bg-emerald-400/80 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.8)]"></div>
-                <div className="absolute top-1/4 left-0 -translate-x-1/2 w-2 h-2 bg-blue-400/80 rounded-full shadow-[0_0_10px_rgba(96,165,250,0.8)]"></div>
-             </div>
+        
+        {/* Nexus Cognitive Core™ */}
+        <div className="relative w-full max-w-xl mx-auto h-[350px] flex items-center justify-center mt-20 animate-[float_6s_ease-in-out_infinite]">
+           {/* Subtle Gold Pulse */}
+           <div className="absolute w-40 h-40 bg-[#D4AF37]/10 blur-[80px] rounded-full"></div>
+           
+           {/* Neural Rings (Dynamic) */}
+           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-40 h-40 border-[0.5px] border-[#D4AF37]/30 rounded-full" style={{ animation: 'pulse-ring 4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite' }}></div>
+              <div className="w-40 h-40 border-[0.5px] border-[#D4AF37]/15 rounded-full" style={{ animation: 'pulse-ring 4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 1.3s' }}></div>
+              <div className="w-40 h-40 border-[0.5px] border-[#D4AF37]/5 rounded-full" style={{ animation: 'pulse-ring 4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite 2.6s' }}></div>
+           </div>
 
-             {/* Core Element */}
-             <div className="relative z-20 w-32 h-32 rounded-full backdrop-blur-xl bg-black/40 border border-amber-500/30 flex items-center justify-center shadow-[0_0_50px_rgba(190,158,108,0.2)]">
-                <div className="absolute inset-0 rounded-full border border-amber-500/20" style={{ animation: 'spin-slow-reverse 10s linear infinite' }}></div>
-                <div className="absolute inset-2 rounded-full border border-amber-500/40 border-dashed" style={{ animation: 'spin-slow 15s linear infinite' }}></div>
-                <BrainCircuit className="w-12 h-12 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.6)]" />
-             </div>
+           {/* Holographic Neural Connections (Orbit) */}
+           <div className="absolute w-[250px] h-[250px] rounded-full border-[0.5px] border-[#FAFAFA]/5" style={{ animation: 'spin-slow 20s linear infinite' }}>
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-[#D4AF37] rounded-full shadow-[0_0_10px_rgba(212,175,55,0.8)] opacity-80"></div>
+           </div>
+           <div className="absolute w-[350px] h-[350px] rounded-full border-[0.5px] border-[#FAFAFA]/5" style={{ animation: 'spin-slow-reverse 30s linear infinite' }}>
+              <div className="absolute bottom-1/4 right-0 translate-x-1/2 w-1.5 h-1.5 bg-[#E5D2A0] rounded-full shadow-[0_0_10px_rgba(229,210,160,0.5)] opacity-60"></div>
+           </div>
+
+           {/* Smoked Glass Core */}
+           <div className="relative z-20 w-24 h-24 rounded-full backdrop-blur-2xl bg-[#101010]/60 border border-[#D4AF37]/30 flex items-center justify-center shadow-[0_0_40px_rgba(212,175,55,0.15)] overflow-hidden">
+              <div className="absolute inset-0 rounded-full border border-[#D4AF37]/20" style={{ animation: 'spin-slow-reverse 15s linear infinite' }}></div>
+              <BrainCircuit className="w-8 h-8 text-[#D4AF37]/90 drop-shadow-[0_0_15px_rgba(212,175,55,0.4)] animate-pulse" />
+              {/* Glass reflection */}
+              <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 to-transparent rounded-t-full"></div>
+           </div>
+        </div>
+
+      </section>
+
+      {/* Adaptability Section */}
+      <section className="py-24 relative z-10 border-t border-[#141414] bg-[#080808]">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+           <h2 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-[0.3em] mb-4">
+             O Hórus adapta-se à sua realidade
+           </h2>
+           <p className="text-2xl md:text-4xl font-light text-[#FAFAFA] mb-16 max-w-4xl mx-auto leading-relaxed">
+             Você não precisa adaptar-se ao Hórus. O Hórus foi concebido para adaptar-se à sua realidade operacional.
+           </p>
+           
+           <div className="flex flex-wrap items-center justify-center gap-4 max-w-5xl mx-auto">
+             {["Escritórios", "Clínicas", "Startups", "E-commerces", "Restaurantes", "Agências", "Desenvolvedores", "Criadores de Conteúdo", "Empresas Enterprise", "Operações Pessoais", "Pequenos Negócios", "Autônomos"].map((niche, i) => (
+                <div key={i} className="px-5 py-2.5 rounded-full border border-[#1C1C1C] bg-[#101010] text-[#FAFAFA]/60 text-xs font-light tracking-wide hover:border-[#D4AF37]/30 hover:text-[#D4AF37] transition-all cursor-default">
+                   {niche}
+                </div>
+             ))}
+           </div>
+        </div>
+      </section>
+
+      {/* Carousel Premium */}
+      <section className="py-24 relative z-10 overflow-hidden bg-[#080808]">
+         <Carousel3D />
+      </section>
+
+      {/* Not About What You Have Section */}
+      <section className="py-32 relative z-10 border-t border-[#141414] bg-gradient-to-b from-[#080808] to-[#101010]">
+         <div className="max-w-6xl mx-auto px-6">
+            <div className="text-center mb-20">
+               <h3 className="text-2xl md:text-4xl font-light text-[#FAFAFA] mb-6">Não é sobre o que você possui hoje.</h3>
+               <p className="text-2xl md:text-3xl text-[#FAFAFA]/40 font-light">É sobre o que você deseja construir amanhã.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
+               {[
+                 "Quero abrir minha primeira empresa.",
+                 "Quero criar meu primeiro SaaS.",
+                 "Quero automatizar minha operação comercial.",
+                 "Quero transformar meu WhatsApp em uma central inteligente de vendas.",
+                 "Quero construir um aplicativo.",
+                 "Quero criar equipes cognitivas especializados.",
+                 "Quero integrar dezenas de sistemas empresariais.",
+                 "Quero substituir minhas ferramentas atuais.",
+                 "Quero começar do zero."
+               ].map((goal, i) => (
+                  <div key={i} className="p-8 rounded-2xl bg-[#141414]/50 border border-[#1C1C1C] hover:border-[#D4AF37]/20 transition-all flex items-start gap-4 group">
+                     <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]/50 mt-2 shrink-0 group-hover:bg-[#D4AF37] transition-colors"></div>
+                     <p className="text-[#FAFAFA]/70 font-light text-lg">{goal}</p>
+                  </div>
+               ))}
+            </div>
+
+            <div className="text-center p-10 rounded-3xl border border-[#D4AF37]/20 bg-gradient-to-b from-[#D4AF37]/5 to-transparent relative overflow-hidden">
+               <div className="absolute inset-0 bg-[#D4AF37]/5 blur-3xl pointer-events-none"></div>
+               <p className="text-2xl md:text-4xl font-light text-[#D4AF37] relative z-10">
+                  Se você possui um objetivo, o Nexus possui um ponto de partida.
+               </p>
+            </div>
+         </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-32 relative z-10 bg-[#080808]">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-20">
+             <h2 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-[0.3em] mb-4">Visão & Estrutura</h2>
+             <h3 className="text-3xl md:text-5xl font-light text-[#FAFAFA] mb-6">Conhecimento Core</h3>
           </div>
 
-        </div>
-      </section>
+          <div className="space-y-6">
+             <div className="p-8 rounded-3xl bg-[#101010] border border-[#1C1C1C] hover:border-[#D4AF37]/20 transition-colors">
+                <h3 className="text-xl font-medium text-[#FAFAFA] mb-4">O Hórus pode operar minha empresa inteira?</h3>
+                <p className="text-[#FAFAFA]/50 font-light leading-relaxed">
+                   SIM. O Hórus pode tornar-se toda a sua infraestrutura operacional ou integrar-se perfeitamente às tecnologias que você já utiliza.
+                </p>
+             </div>
+             
+             <div className="p-8 rounded-3xl bg-[#101010] border border-[#1C1C1C] hover:border-[#D4AF37]/20 transition-colors">
+                <h3 className="text-xl font-medium text-[#FAFAFA] mb-4">Preciso possuir conhecimentos técnicos?</h3>
+                <p className="text-[#FAFAFA]/50 font-light leading-relaxed">
+                   NÃO. O Nexus foi concebido para compreender objetivos em linguagem natural e arquitetar automaticamente a melhor solução possível.
+                </p>
+             </div>
+             
+             <div className="p-8 rounded-3xl bg-[#101010] border border-[#1C1C1C] hover:border-[#D4AF37]/20 transition-colors">
+                <h3 className="text-xl font-medium text-[#FAFAFA] mb-4">O Hórus serve apenas para grandes empresas?</h3>
+                <p className="text-[#FAFAFA]/50 font-light leading-relaxed">
+                   NÃO. Ele adapta-se desde pequenos negócios até operações corporativas altamente complexas.
+                </p>
+             </div>
+             
+             <div className="p-8 rounded-3xl bg-[#101010] border border-[#1C1C1C] hover:border-[#D4AF37]/20 transition-colors">
+                <h3 className="text-xl font-medium text-[#FAFAFA] mb-4">Posso contratar apenas um membro da equipe cognitiva?</h3>
+                <p className="text-[#FAFAFA]/50 font-light leading-relaxed">
+                   SIM. Você pode implantar desde uma única equipe cognitiva até operações empresariais completas.
+                </p>
+             </div>
 
-      {/* Structured Ecosystem Carousel 3D */}
-      <section id="ecosystem" className="py-24 relative z-10">
-        <div className="text-center mb-16 px-6">
-          <h2 className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-4 drop-shadow-[0_0_10px_rgba(190,158,108,0.5)]">Ecossistema Agnóstico</h2>
-          <p className="text-3xl md:text-4xl font-light text-white max-w-2xl mx-auto">Nós não vendemos tecnologia.<br/>Nós orquestramos as suas.</p>
-        </div>
-        
-        <Carousel3D groups={ecosystemGroups} />
-      </section>
+             <div className="p-8 rounded-3xl bg-[#101010] border border-[#1C1C1C] hover:border-[#D4AF37]/20 transition-colors">
+                <h3 className="text-xl font-medium text-[#FAFAFA] mb-4">Posso criar projetos avulsos?</h3>
+                <p className="text-[#FAFAFA]/50 font-light leading-relaxed mb-4">
+                   SIM. Você poderá desenvolver:
+                </p>
+                <ul className="grid grid-cols-2 sm:grid-cols-3 gap-y-2 text-[#FAFAFA]/40 font-light text-sm">
+                   <li>• músicas</li>
+                   <li>• vídeos</li>
+                   <li>• Landing Pages</li>
+                   <li>• aplicativos</li>
+                   <li>• APIs</li>
+                   <li>• dashboards</li>
+                   <li>• ERPs</li>
+                   <li>• SaaS</li>
+                   <li>• automações</li>
+                   <li>• apresentações</li>
+                   <li>• documentos</li>
+                   <li>• websites</li>
+                   <li>• projetos personalizados</li>
+                </ul>
+             </div>
 
-      {/* Core Features - Glassmorphism Almofadado */}
-      <section id="infrastructure" className="py-32 relative z-10">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="backdrop-blur-xl bg-white/[0.02] border border-amber-500/15 shadow-2xl rounded-2xl p-10 group hover:bg-white/[0.04] transition-colors relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-[50px] group-hover:bg-amber-500/20 transition-colors"></div>
-              <div className="w-14 h-14 rounded-2xl bg-[#141417] flex items-center justify-center border border-white/10 mb-8 group-hover:scale-110 transition-transform shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-                <Server className="w-6 h-6 text-amber-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-4">Arquitetura Descentralizada</h3>
-              <p className="text-white/50 font-light leading-relaxed text-sm">
-                Nós orquestramos agentes independentes através de hubs departamentais, permitindo processamento assíncrono e isolamento de tarefas.
-              </p>
-            </div>
-            
-            <div className="backdrop-blur-xl bg-white/[0.02] border border-amber-500/15 shadow-2xl rounded-2xl p-10 group hover:bg-white/[0.04] transition-colors relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-[50px] group-hover:bg-amber-500/20 transition-colors"></div>
-              <div className="w-14 h-14 rounded-2xl bg-[#141417] flex items-center justify-center border border-white/10 mb-8 group-hover:scale-110 transition-transform shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-                <Network className="w-6 h-6 text-amber-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-4">Memory Graph Centralizado</h3>
-              <p className="text-white/50 font-light leading-relaxed text-sm">
-                Todo contexto corporativo é persistido vetorialmente. O Hórus lembra de cada reunião, transação e instrução dada no passado.
-              </p>
-            </div>
-            
-            <div className="backdrop-blur-xl bg-white/[0.02] border border-amber-500/15 shadow-2xl rounded-2xl p-10 group hover:bg-white/[0.04] transition-colors relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-[50px] group-hover:bg-amber-500/20 transition-colors"></div>
-              <div className="w-14 h-14 rounded-2xl bg-[#141417] flex items-center justify-center border border-white/10 mb-8 group-hover:scale-110 transition-transform shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-                <Shield className="w-6 h-6 text-amber-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-4">Governança Enterprise</h3>
-              <p className="text-white/50 font-light leading-relaxed text-sm">
-                Controle granular de acessos, logs de auditoria imutáveis e roteamento seguro garantindo conformidade com padrões globais.
-              </p>
-            </div>
+             <div className="p-8 rounded-3xl bg-[#101010] border border-[#1C1C1C] hover:border-[#D4AF37]/20 transition-colors">
+                <h3 className="text-xl font-medium text-[#FAFAFA] mb-4">O Hórus escolhe automaticamente as tecnologias utilizadas?</h3>
+                <p className="text-[#FAFAFA]/50 font-light leading-relaxed">
+                   SIM. Toda a complexidade tecnológica permanecerá invisível para o usuário. O Nexus Cognitive Engine™ será responsável por arquitetar automaticamente a melhor combinação entre inteligência, recursos computacionais e capacidades disponíveis no ecossistema Hórus.
+                </p>
+             </div>
           </div>
         </div>
       </section>
 
       {/* Premium Footer */}
-      <footer className="border-t border-white/5 bg-[#08090E] pt-24 pb-32 relative z-10 overflow-hidden">
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-amber-500/5 blur-[120px] rounded-t-full pointer-events-none"></div>
+      <footer className="border-t border-[#1C1C1C] bg-[#080808] pt-32 pb-40 relative z-10 overflow-hidden">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-80 bg-[#D4AF37]/5 blur-[120px] rounded-t-full pointer-events-none"></div>
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <BrainCircuit className="w-8 h-8 text-amber-500" />
-            <span className="font-black text-3xl tracking-widest text-white uppercase drop-shadow-md">HÓRUS OS</span>
+          <div className="flex flex-col items-center justify-center mb-12">
+            <span className="text-[10px] uppercase tracking-[0.4em] text-[#FAFAFA]/30 mb-6 font-bold">
+              Powered by Nexus Cognitive Core™
+            </span>
+            <span className="text-sm font-light tracking-[0.2em] text-[#D4AF37] mb-8 uppercase">
+              Infrastructure of Intelligence™
+            </span>
+            <p className="text-lg md:text-xl text-[#FAFAFA]/70 font-light mb-4 max-w-2xl">
+              Compreendendo objetivos. Adaptando-se à sua realidade. Orquestrando resultados.
+            </p>
+            <p className="text-sm text-[#FAFAFA]/40 font-light max-w-2xl">
+              Uma Infraestrutura Cognitiva concebida para transformar objetivos em projetos, operações e resultados reais.
+            </p>
           </div>
-          <p className="text-xl md:text-2xl text-white/80 font-light mb-4">The Cognitive Operating System for Modern Enterprises.</p>
-          <p className="text-base text-white/50 font-light mb-16 max-w-2xl mx-auto">Orquestrando pessoas, agentes, dados e inteligência em uma única infraestrutura cognitiva.</p>
-          <div className="text-xs text-white/30 font-bold uppercase tracking-widest">
-            &copy; 2026 Nexus Cognitive Architectures. All rights reserved.
+          
+          <div className="w-full h-px bg-gradient-to-r from-transparent via-[#1C1C1C] to-transparent my-12"></div>
+          
+          <div className="flex flex-col items-center justify-center">
+            <span className="font-black text-2xl tracking-[0.3em] text-[#FAFAFA] mb-4">HÓRUS OS™</span>
+            <span className="text-xs text-[#FAFAFA]/30 font-light tracking-[0.2em] mb-12">The Cognitive Operating System.</span>
+            
+            <div className="text-[10px] text-[#FAFAFA]/20 font-bold uppercase tracking-[0.2em]">
+              &copy; 2026 Nexus Cognitive Architectures™. Todos os direitos reservados.
+            </div>
           </div>
         </div>
       </footer>

@@ -53,7 +53,7 @@ export default function APIsPage() {
                          </tr>
                          <tr className="hover:bg-white/[0.02] transition-colors">
                            <td className="px-6 py-4 font-bold">Desenvolvimento Local</td>
-                           <td className="px-6 py-4"><span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs font-bold uppercase">Sandbox</span></td>
+                           <td className="px-6 py-4"><span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs font-bold uppercase">Simulação</span></td>
                            <td className="px-6 py-4 font-mono text-white/50">hx_test_4f21...c9d0</td>
                            <td className="px-6 py-4 flex justify-end gap-2">
                              <button className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors"><Copy className="w-4 h-4"/></button>
@@ -74,7 +74,7 @@ export default function APIsPage() {
                      <div className="flex justify-between items-start mb-4">
                         <div>
                            <h3 className="font-bold mb-1">agent.message.received</h3>
-                           <p className="text-xs text-white/50">Disparado quando um agente recebe uma mensagem do cliente.</p>
+                           <p className="text-xs text-white/50">Disparado quando um membro cognitivo recebe uma mensagem do cliente.</p>
                         </div>
                         <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-[10px] font-bold uppercase flex items-center gap-1"><ShieldCheck className="w-3 h-3"/> Ativo</span>
                      </div>

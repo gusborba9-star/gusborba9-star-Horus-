@@ -4,8 +4,8 @@ import Link from 'next/link';
 
 export default function MissionsPage() {
   const missions = [
-    { id: 'startup', name: 'Abrir uma Empresa', icon: Building, desc: 'O Hórus orquestra abertura de CNPJ, logo, site e agentes de atendimento em um único fluxo.' },
-    { id: 'sales', name: 'Atingir R$ 100k em Vendas', icon: TrendingUp, desc: 'Configuração de agentes SDR, automação de e-mails, anúncios e landing page de alta conversão.' },
+    { id: 'startup', name: 'Abrir uma Empresa', icon: Building, desc: 'O Hórus orquestra abertura de CNPJ, logo, site e equipes cognitivas de atendimento em um único fluxo.' },
+    { id: 'sales', name: 'Atingir R$ 100k em Vendas', icon: TrendingUp, desc: 'Configuração de equipes cognitivas SDR, automação de e-mails, anúncios e landing page de alta conversão.' },
     { id: 'launch', name: 'Lançar um Curso', icon: Zap, desc: 'Criação de eixos de conteúdo, vídeo-aulas sintetizadas, área de membros e funil de vendas.' },
     { id: 'saas', name: 'Criar um SaaS (Micro-SaaS)', icon: Cog, desc: 'Engenharia completa: back-end, front-end, banco de dados, billing Stripe e implantação.' }
   ];
@@ -35,7 +35,7 @@ export default function MissionsPage() {
                   </div>
                   <h2 className="text-3xl md:text-4xl font-black text-white mb-4">Diga ao Hórus o que você quer alcançar.</h2>
                   <p className="text-white/60 font-light leading-relaxed max-w-xl mb-8">
-                     Missões são os fluxos mais avançados do Nexus Core. Em vez de criar um agente ou um vídeo, você define um objetivo final de negócio. O sistema desdobra o objetivo em centenas de tarefas autônomas.
+                     Missões são os fluxos mais avançados do Nexus Core. Em vez de criar um membro cognitivo ou um vídeo, você define um objetivo final de negócio. O sistema desdobra o objetivo em centenas de tarefas autônomas.
                   </p>
                   <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-2xl p-2 max-w-lg">
                     <input type="text" placeholder="Ex: Quero estruturar o RH da minha empresa..." className="bg-transparent border-none outline-none text-white px-4 py-2 flex-1 text-sm" />

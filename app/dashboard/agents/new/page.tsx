@@ -79,7 +79,7 @@ export default function NewAgentCinematic() {
   }
 
   const steps = [
-    { id: 1, title: 'Identidade', icon: Users, desc: 'Perfil do Colaborador' },
+    { id: 1, title: 'Identidade', icon: Users, desc: 'Perfil do Membro' },
     { id: 2, title: 'Conhecimentos', icon: Database, desc: 'O que ele sabe' },
     { id: 3, title: 'Capacidades', icon: Zap, desc: 'O que ele faz' },
     { id: 4, title: 'Ferramentas', icon: Cog, desc: 'Onde ele atua' },
@@ -132,7 +132,7 @@ export default function NewAgentCinematic() {
                  <div className="space-y-6">
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <div>
-                       <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Nome do Colaborador</label>
+                       <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Nome do Membro</label>
                        <input type="text" placeholder="Ex: Hórus Financeiro" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 md:py-4 text-white outline-none focus:border-amber-500/50 transition-colors text-base md:text-lg" />
                      </div>
                      <div>
@@ -180,7 +180,7 @@ export default function NewAgentCinematic() {
 
                {step === 2 && (
                  <div className="space-y-6">
-                    <p className="text-white/60 text-sm mb-6">Alimente o <strong>Memory Graph</strong>. Conecte dados para que o colaborador digital atue com precisão corporativa.</p>
+                    <p className="text-white/60 text-sm mb-6">Alimente o <strong>Memory Graph</strong>. Conecte dados para que o membro da equipe cognitiva atue com precisão corporativa.</p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <div className="border border-white/10 rounded-2xl p-6 bg-white/5 hover:border-amber-500/50 hover:bg-amber-500/5 transition-colors cursor-pointer text-center group">
@@ -200,7 +200,7 @@ export default function NewAgentCinematic() {
                        <div className="space-y-4">
                           <div>
                             <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Produtos e Serviços (Resumo)</label>
-                            <textarea placeholder="Liste o que sua empresa oferece. Ex: Plano Básico R$99..." className="w-full h-24 bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-amber-500/50 transition-colors resize-none text-sm custom-scrollbar"></textarea>
+                            <textarea placeholder="Liste o que sua empresa oferece. Ex: Mentoria Premium R$999..." className="w-full h-24 bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-amber-500/50 transition-colors resize-none text-sm custom-scrollbar"></textarea>
                           </div>
                           <div>
                             <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Políticas de Atendimento</label>
@@ -213,7 +213,7 @@ export default function NewAgentCinematic() {
 
                {step === 3 && (
                  <div className="space-y-6">
-                    <p className="text-white/60 text-sm mb-6">Selecione os superpoderes. O que este colaborador está autorizado a fazer de forma autônoma?</p>
+                    <p className="text-white/60 text-sm mb-6">Selecione os superpoderes. O que este membro está autorizado a fazer de forma autônoma?</p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                        {[
                          'Atender e Conversar', 'Vender / Fechar', 'Negociar Valores', 
@@ -232,7 +232,7 @@ export default function NewAgentCinematic() {
 
                {step === 4 && (
                  <div className="space-y-6">
-                    <p className="text-white/60 text-sm mb-6">Selecione onde o agente irá operar e de onde ele extrairá dados em tempo real.</p>
+                    <p className="text-white/60 text-sm mb-6">Selecione onde o membro cognitivo irá operar e de onde ele extrairá dados em tempo real.</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                        {['WhatsApp', 'Email (Gmail)', 'Google Calendar', 'Zendesk', 'Stripe', 'HubSpot CRM', 'Bling ERP', 'Slack', 'Banco de Dados SQL', 'Shopify', 'Webhooks Custom', 'Plugins Hórus'].map((tool, i) => (
                          <label key={i} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 transition-colors has-[:checked]:border-amber-500/50 has-[:checked]:bg-amber-500/5 text-center">
@@ -277,7 +277,7 @@ export default function NewAgentCinematic() {
                  <div className="flex flex-col h-[400px]">
                     <div className="text-center mb-6">
                        <h3 className="text-lg font-bold text-white">Simulação Cognitiva</h3>
-                       <p className="text-xs text-white/50">Converse com o agente antes de aprovar a arquitetura.</p>
+                       <p className="text-xs text-white/50">Converse com o membro cognitivo antes de aprovar a arquitetura.</p>
                     </div>
                     
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-4 bg-black/40 border border-white/5 rounded-2xl flex flex-col gap-4 mb-4">
@@ -356,7 +356,7 @@ export default function NewAgentCinematic() {
                             <h4 className="text-lg font-bold text-white mb-2">Compra Vitalícia</h4>
                             <div className="text-3xl font-black text-white mb-4">R$ 5.997<span className="text-sm text-white/40 font-medium">/único</span></div>
                             <ul className="space-y-2 mb-6 text-sm text-white/60">
-                               <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Agente é 100% seu ativo</li>
+                               <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Membro Cognitivo é 100% seu ativo</li>
                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Sem mensalidades do Studio</li>
                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Integração em infra própria</li>
                             </ul>
