@@ -22,7 +22,6 @@ alter table public.models
   add constraint models_max_completion_positive_check
     check (max_completion_tokens is null or max_completion_tokens > 0);
 
--- A model can expose multiple capabilities/modalities. The capability is therefore part of identity.
 alter table public.models drop constraint if exists models_pkey;
 alter table public.models add primary key (provider_id, id, capability);
 
@@ -107,10 +106,8 @@ create table if not exists public.model_price_history (
   unique (provider_id, model_id, observed_at)
 );
 
-create index if not exists model_price_history_lookup_idx
-  on public.model_price_history(provider_id, model_id, observed_at desc);
-create index if not exists model_price_history_snapshot_idx
-  on public.model_price_history(snapshot_id);
+create index if not exists model_price_history_lookup_idx on public.model_price_history(provider_id, model_id, observed_at desc);
+create index if not exists model_price_history_snapshot_idx on public.model_price_history(snapshot_id);
 
 create table if not exists public.provider_endpoint_history (
   id bigint generated always as identity primary key,
@@ -126,8 +123,7 @@ create table if not exists public.provider_endpoint_history (
   metadata jsonb not null default '{}'::jsonb
 );
 
-create index if not exists provider_endpoint_history_lookup_idx
-  on public.provider_endpoint_history(provider_id, model_id, observed_at desc);
+create index if not exists provider_endpoint_history_lookup_idx on public.provider_endpoint_history(provider_id, model_id, observed_at desc);
 
 create table if not exists public.execution_budgets (
   id uuid primary key default gen_random_uuid(),
@@ -158,9 +154,7 @@ create table if not exists public.execution_budgets (
   started_at timestamptz,
   completed_at timestamptz
 );
-
-create index if not exists execution_budgets_user_status_idx
-  on public.execution_budgets(user_id, status, created_at desc);
+create index if not exists execution_budgets_user_status_idx on public.execution_budgets(user_id, status, created_at desc);
 
 create table if not exists public.execution_attempts (
   id uuid primary key default gen_random_uuid(),
@@ -182,9 +176,7 @@ create table if not exists public.execution_attempts (
   completed_at timestamptz,
   unique (budget_id, attempt_number)
 );
-
-create index if not exists execution_attempts_budget_idx
-  on public.execution_attempts(budget_id, attempt_number);
+create index if not exists execution_attempts_budget_idx on public.execution_attempts(budget_id, attempt_number);
 
 create table if not exists public.execution_usage (
   attempt_id uuid primary key references public.execution_attempts(id) on delete restrict,
@@ -210,61 +202,10 @@ create table if not exists public.economic_events (
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+create index if not exists economic_events_operation_idx on public.economic_events(operation_id, created_at desc);
+create index if not exists economic_events_type_idx on public.economic_events(event_type, created_at desc);
 
-create index if not exists economic_events_operation_idx
-  on public.economic_events(operation_id, created_at desc);
-create index if not exists economic_events_type_idx
-  on public.economic_events(event_type, created_at desc);
+-- Overage is system-owned. The legacy authenticated entry point is revoked and replaced by an explicit privileged boundary.
+revoke execute on function public.flag_horus_credit_overage(uuid, bigint) from public, anon, authenticated;
 
-alter table public.economic_policy_versions enable row level security;
-alter table public.pricing_snapshots enable row level security;
-alter table public.model_price_history enable row level security;
-alter table public.provider_endpoint_history enable row level security;
-alter table public.execution_budgets enable row level security;
-alter table public.execution_attempts enable row level security;
-alter table public.execution_usage enable row level security;
-alter table public.economic_events enable row level security;
-
-create policy execution_budgets_select_own on public.execution_budgets
-  for select to authenticated using (user_id = (select auth.uid()));
-
-create policy execution_attempts_select_own on public.execution_attempts
-  for select to authenticated
-  using (exists (select 1 from public.execution_budgets b where b.id = budget_id and b.user_id = (select auth.uid())));
-
-create policy execution_usage_select_own on public.execution_usage
-  for select to authenticated
-  using (exists (
-    select 1 from public.execution_attempts a
-    join public.execution_budgets b on b.id = a.budget_id
-    where a.id = attempt_id and b.user_id = (select auth.uid())
-  ));
-
-create policy economic_events_select_own on public.economic_events
-  for select to authenticated using (user_id = (select auth.uid()));
-
-revoke all on public.economic_policy_versions from anon, authenticated;
-revoke all on public.pricing_snapshots from anon, authenticated;
-revoke all on public.model_price_history from anon, authenticated;
-revoke all on public.provider_endpoint_history from anon, authenticated;
-revoke insert, update, delete on public.execution_budgets from anon, authenticated;
-revoke insert, update, delete on public.execution_attempts from anon, authenticated;
-revoke insert, update, delete on public.execution_usage from anon, authenticated;
-revoke insert, update, delete on public.economic_events from anon, authenticated;
-
-insert into public.economic_policy_versions(
-  version, target_gross_margin_rate, minimum_gross_margin_rate, provider_fee_rate,
-  exchange_buffer_rate, fx_buffer_rate, pricing_drift_buffer_rate,
-  safety_buffer_rate, infrastructure_rate, usage_uncertainty_rate,
-  retry_reserve_rate, failure_reserve_rate, credit_brl_value,
-  global_execution_enabled, snapshot
-)
-select
-  version, target_gross_margin_rate, minimum_gross_margin_rate, provider_fee_rate,
-  exchange_buffer_rate, fx_buffer_rate, pricing_drift_buffer_rate,
-  safety_buffer_rate, infrastructure_rate, usage_uncertainty_rate,
-  retry_reserve_rate, failure_reserve_rate, credit_brl_value,
-  global_execution_enabled,
-  to_jsonb(economic_policy)
-from public.economic_policy
-on conflict (version) do nothing;
+authorization: false
