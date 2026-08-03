@@ -1,5 +1,6 @@
 import { defineConfig, globalIgnores } from 'eslint/config';
 import nextPlugin from '@next/eslint-plugin-next';
+import tsParser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 
@@ -25,6 +26,17 @@ export default defineConfig([
       ...react.configs.flat['jsx-runtime'].rules,
       ...reactHooks.configs.flat.recommended.rules,
       ...nextPlugin.configs.recommended.rules,
+    },
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
     },
   },
 ]);
