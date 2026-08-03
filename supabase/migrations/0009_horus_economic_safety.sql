@@ -22,6 +22,10 @@ alter table public.models
   add constraint models_max_completion_positive_check
     check (max_completion_tokens is null or max_completion_tokens > 0);
 
+-- A model can expose multiple capabilities/modalities. The capability is therefore part of identity.
+alter table public.models drop constraint if exists models_pkey;
+alter table public.models add primary key (provider_id, id, capability);
+
 alter table public.economic_policy
   add column if not exists target_gross_margin_rate numeric(10,6) not null default 0.70,
   add column if not exists minimum_gross_margin_rate numeric(10,6) not null default 0.60,
@@ -212,7 +216,6 @@ create index if not exists economic_events_operation_idx
 create index if not exists economic_events_type_idx
   on public.economic_events(event_type, created_at desc);
 
--- All new economic telemetry is system-owned. User-scoped execution budgets are readable only by their owner.
 alter table public.economic_policy_versions enable row level security;
 alter table public.pricing_snapshots enable row level security;
 alter table public.model_price_history enable row level security;
