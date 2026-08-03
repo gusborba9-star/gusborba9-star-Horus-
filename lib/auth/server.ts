@@ -7,16 +7,15 @@ const ACCESS_TOKEN_COOKIE = 'horus_access_token';
 function getSupabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) {
-    throw new Error('Supabase URL and anonymous key are required.');
-  }
+  if (!url || !anonKey) throw new Error('Supabase URL and anonymous key are required.');
   return { url, anonKey };
 }
 
-function getAuthClient() {
+function getAuthClient(accessToken?: string) {
   const { url, anonKey } = getSupabaseConfig();
   return createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : undefined,
   });
 }
 
@@ -29,17 +28,26 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
   const accessToken = await getAccessTokenFromCookies();
   if (!accessToken) return null;
 
-  const supabase = getAuthClient();
+  const supabase = getAuthClient(accessToken);
   const { data, error } = await supabase.auth.getUser(accessToken);
   if (error || !data.user) return null;
+
+  const { data: entitlement } = await supabase
+    .from('user_entitlements')
+    .select('role, organization_id, plan_tier, entitlements')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
+
+  const role = (entitlement?.role ?? 'member') as AppRole;
+  const entitlements = Array.isArray(entitlement?.entitlements) ? entitlement.entitlements : [];
 
   return {
     id: data.user.id,
     email: data.user.email ?? null,
-    role: 'member',
-    organizationId: null,
-    planTier: 'free',
-    entitlements: [],
+    role,
+    organizationId: entitlement?.organization_id ?? null,
+    planTier: entitlement?.plan_tier ?? 'free',
+    entitlements,
   };
 }
 
