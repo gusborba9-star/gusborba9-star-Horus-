@@ -36,6 +36,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/parser": "8.65.0",
     "eslint": "9.39.1",
     "eslint-config-next": "15.5.22",
     "eslint-plugin-react": "7.37.5",
