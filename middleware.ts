@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { ACCESS_TOKEN_COOKIE } from '@/lib/auth/server';
 
-const PUBLIC_PATHS = new Set([
-  '/',
-  '/login',
-  '/api/auth/session',
-  '/api/webhook-pix',
-]);
+const ACCESS_TOKEN_COOKIE = 'horus_access_token';
+const PUBLIC_PATHS = new Set(['/api/auth/session', '/api/webhook-pix']);
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.has(pathname)) return true;
