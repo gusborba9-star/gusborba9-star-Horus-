@@ -12,6 +12,16 @@ function createUserScopedClient(accessToken: string) {
   });
 }
 
+function createSystemClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRoleKey) throw new Error('SUPABASE_SERVER_CONFIGURATION_MISSING');
+
+  return createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 export interface CreditHold {
   id: string;
   user_id: string;
@@ -40,9 +50,25 @@ export async function reserveCredits(operationId: string, idempotencyKey: string
   return data;
 }
 
-export async function reconcileCredits(holdId: string, actualCredits: number, status: 'SETTLED' | 'FAILED' | 'CANCELLED' = 'SETTLED'): Promise<CreditHold> {
+/**
+ * Reconciliation is intentionally privileged. User-scoped clients cannot decide
+ * actual provider cost or settlement state.
+ */
+export async function reconcileCredits(): Promise<never> {
+  throw new Error('PRIVILEGED_RECONCILIATION_REQUIRED');
+}
+
+export async function reconcileCreditsSystem(
+  userId: string,
+  holdId: string,
+  actualCredits: number,
+  status: 'SETTLED' | 'FAILED' | 'CANCELLED' = 'SETTLED',
+): Promise<CreditHold> {
+  if (!userId) throw new Error('INVALID_USER_ID');
   if (!Number.isSafeInteger(actualCredits) || actualCredits < 0) throw new Error('INVALID_ACTUAL_CREDIT_COST');
-  const { data, error } = await (await getUserClient()).rpc('reconcile_horus_credit_hold', {
+
+  const { data, error } = await createSystemClient().rpc('reconcile_horus_credit_hold_system', {
+    p_user_id: userId,
     p_hold_id: holdId,
     p_actual_credits: actualCredits,
     p_status: status,
@@ -52,9 +78,20 @@ export async function reconcileCredits(holdId: string, actualCredits: number, st
   return data;
 }
 
-export async function flagCreditOverage(holdId: string, actualCredits: number): Promise<CreditHold> {
+/**
+ * Overage review is also a system decision. A user can observe their review,
+ * but cannot manufacture a provider overage or mutate its financial state.
+ */
+export async function flagCreditOverage(): Promise<never> {
+  throw new Error('PRIVILEGED_OVERAGE_REVIEW_REQUIRED');
+}
+
+export async function flagCreditOverageSystem(userId: string, holdId: string, actualCredits: number): Promise<CreditHold> {
+  if (!userId) throw new Error('INVALID_USER_ID');
   if (!Number.isSafeInteger(actualCredits) || actualCredits <= 0) throw new Error('INVALID_ACTUAL_CREDIT_COST');
-  const { data, error } = await (await getUserClient()).rpc('flag_horus_credit_overage', {
+
+  const { data, error } = await createSystemClient().rpc('flag_horus_credit_overage_system', {
+    p_user_id: userId,
     p_hold_id: holdId,
     p_actual_credits: actualCredits,
   }).single<CreditHold>();
