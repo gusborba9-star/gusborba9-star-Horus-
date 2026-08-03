@@ -2,6 +2,26 @@
 -- Dynamic pricing, policy versioning and execution-budget primitives.
 -- This migration deliberately does not migrate API routes yet.
 
+alter table public.models
+  add column if not exists canonical_slug text,
+  add column if not exists request_price numeric(30,18) not null default 0,
+  add column if not exists image_price numeric(30,18) not null default 0,
+  add column if not exists reasoning_price_per_million numeric(30,18) not null default 0,
+  add column if not exists cached_input_price_per_million numeric(30,18) not null default 0,
+  add column if not exists cache_write_price_per_million numeric(30,18) not null default 0,
+  add column if not exists max_completion_tokens integer,
+  add column if not exists supported_parameters jsonb not null default '[]'::jsonb,
+  add column if not exists input_modalities jsonb not null default '[]'::jsonb,
+  add column if not exists output_modalities jsonb not null default '[]'::jsonb,
+  add column if not exists expiration_date timestamptz;
+
+alter table public.models
+  add constraint models_economic_pricing_nonnegative_check
+    check (request_price >= 0 and image_price >= 0 and reasoning_price_per_million >= 0
+      and cached_input_price_per_million >= 0 and cache_write_price_per_million >= 0),
+  add constraint models_max_completion_positive_check
+    check (max_completion_tokens is null or max_completion_tokens > 0);
+
 alter table public.economic_policy
   add column if not exists target_gross_margin_rate numeric(10,6) not null default 0.70,
   add column if not exists minimum_gross_margin_rate numeric(10,6) not null default 0.60,
@@ -229,7 +249,6 @@ revoke insert, update, delete on public.execution_attempts from anon, authentica
 revoke insert, update, delete on public.execution_usage from anon, authenticated;
 revoke insert, update, delete on public.economic_events from anon, authenticated;
 
--- Capture the current policy as an immutable version when a policy row already exists.
 insert into public.economic_policy_versions(
   version, target_gross_margin_rate, minimum_gross_margin_rate, provider_fee_rate,
   exchange_buffer_rate, fx_buffer_rate, pricing_drift_buffer_rate,
