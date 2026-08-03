@@ -34,8 +34,6 @@ interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 
-type ParsedPrice = { known: true; valuePerToken: number } | { known: false };
-
 function serverClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -45,16 +43,12 @@ function serverClient() {
   });
 }
 
-function parsePrice(value: string | undefined | null): ParsedPrice {
-  if (value == null || value === '') return { known: false };
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`INVALID_OPENROUTER_PRICE:${value}`);
-  return { known: true, valuePerToken: parsed };
-}
-
-function requirePrice(price: ParsedPrice, field: string): number {
-  if (!price.known) throw new Error(`OPENROUTER_PRICE_UNKNOWN:${field}`);
-  return price.valuePerToken;
+function requiredPrice(pricing: OpenRouterModel['pricing'], field: keyof NonNullable<OpenRouterModel['pricing']>): number {
+  const raw = pricing?.[field];
+  if (raw == null || raw === '') throw new Error(`OPENROUTER_PRICE_UNKNOWN:${field}`);
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) throw new Error(`INVALID_OPENROUTER_PRICE:${field}`);
+  return parsed;
 }
 
 function capabilityFor(model: OpenRouterModel): { id: string; category: string }[] {
@@ -64,28 +58,6 @@ function capabilityFor(model: OpenRouterModel): { id: string; category: string }
   if (output.has('image')) result.push({ id: 'IMAGE_GENERATION', category: 'generation' });
   if (output.has('embeddings')) result.push({ id: 'EMBEDDING', category: 'embedding' });
   return result;
-}
-
-function requiredPricingFields(model: OpenRouterModel, capability: string): string[] {
-  const pricing = model.pricing ?? {};
-  const fields: string[] = [];
-
-  if (capability === 'TEXT_GENERATION' || capability === 'VISION' || capability === 'EMBEDDING') {
-    if (pricing.prompt == null || pricing.prompt === '') fields.push('prompt');
-  }
-  if (capability === 'TEXT_GENERATION' || capability === 'VISION') {
-    if (pricing.completion == null || pricing.completion === '') fields.push('completion');
-  }
-  if (capability === 'IMAGE_GENERATION') {
-    if (pricing.image == null || pricing.image === '') fields.push('image');
-  }
-
-  const supportsReasoning = (model.supported_parameters ?? []).some((parameter) => parameter === 'reasoning');
-  if (supportsReasoning && (pricing.internal_reasoning == null || pricing.internal_reasoning === '')) {
-    fields.push('internal_reasoning');
-  }
-
-  return fields;
 }
 
 export interface PricingSyncResult {
@@ -120,7 +92,7 @@ export async function syncOpenRouterPricing(): Promise<PricingSyncResult> {
       source_endpoint: OPENROUTER_MODELS_URL,
       model_count: models.length,
       payload_hash: payloadHash,
-      metadata: { sync_type: 'models', version: 2 },
+      metadata: { sync_type: 'models', version: 3 },
     }, { onConflict: 'source,payload_hash' })
     .select('id')
     .single();
@@ -137,39 +109,40 @@ export async function syncOpenRouterPricing(): Promise<PricingSyncResult> {
     const capabilities = capabilityFor(model);
     if (capabilities.length === 0) continue;
 
-    for (const capability of capabilities) {
-      const requiredFields = requiredPricingFields(model, capability.id);
-      if (requiredFields.length > 0) {
-        incompleteModels++;
-        continue;
-      }
+    const pricing = model.pricing;
+    const requiredFields: (keyof NonNullable<OpenRouterModel['pricing']>)[] = [
+      'prompt',
+      'completion',
+      'request',
+      'image',
+      'internal_reasoning',
+      'input_cache_read',
+      'input_cache_write',
+    ];
+    const missingPricing = requiredFields.filter((field) => pricing?.[field] == null || pricing?.[field] === '');
+    if (missingPricing.length > 0) {
+      incompleteModels++;
+      continue;
+    }
 
-      const capabilityError = (await supabase.from('capabilities').upsert({
+    const inputPerToken = requiredPrice(pricing, 'prompt');
+    const outputPerToken = requiredPrice(pricing, 'completion');
+    const requestFee = requiredPrice(pricing, 'request');
+    const imageFee = requiredPrice(pricing, 'image');
+    const reasoningPerToken = requiredPrice(pricing, 'internal_reasoning');
+    const cachedPerToken = requiredPrice(pricing, 'input_cache_read');
+    const cacheWritePerToken = requiredPrice(pricing, 'input_cache_write');
+
+    for (const capability of capabilities) {
+      const { error: capabilityError } = await supabase.from('capabilities').upsert({
         id: capability.id,
         display_name: capability.id.replaceAll('_', ' '),
         category: capability.category,
         enabled: true,
-      }, { onConflict: 'id' })).error;
+      }, { onConflict: 'id' });
       if (capabilityError) throw new Error(`CAPABILITY_SYNC_FAILED:${capabilityError.message}`);
 
-      const pricing = model.pricing ?? {};
-      const inputPrice = parsePrice(pricing.prompt);
-      const outputPrice = parsePrice(pricing.completion);
-      const requestPrice = parsePrice(pricing.request);
-      const imagePrice = parsePrice(pricing.image);
-      const reasoningPrice = parsePrice(pricing.internal_reasoning);
-      const cachedInputPrice = parsePrice(pricing.input_cache_read);
-      const cacheWritePrice = parsePrice(pricing.input_cache_write);
       const expirationDate = model.expiration_date ?? null;
-
-      const inputPerToken = requirePrice(inputPrice, 'prompt');
-      const outputPerToken = requirePrice(outputPrice, 'completion');
-      const requestFee = requestPrice.known ? requestPrice.valuePerToken : null;
-      const imageFee = imagePrice.known ? imagePrice.valuePerToken : null;
-      const reasoningPerToken = reasoningPrice.known ? reasoningPrice.valuePerToken : null;
-      const cachedPerToken = cachedInputPrice.known ? cachedInputPrice.valuePerToken : null;
-      const cacheWritePerToken = cacheWritePrice.known ? cacheWritePrice.valuePerToken : null;
-
       const { data: existing } = await supabase
         .from('models')
         .select('input_price_per_million,output_price_per_million,request_price,image_price,reasoning_price_per_million,cached_input_price_per_million,cache_write_price_per_million,context_window,expiration_date')
@@ -177,19 +150,14 @@ export async function syncOpenRouterPricing(): Promise<PricingSyncResult> {
         .eq('id', model.id)
         .maybeSingle();
 
-      const comparableRequest = requestFee ?? 0;
-      const comparableImage = imageFee ?? 0;
-      const comparableReasoning = reasoningPerToken ?? 0;
-      const comparableCached = cachedPerToken ?? 0;
-      const comparableCacheWrite = cacheWritePerToken ?? 0;
       const priceChanged = existing && (
         Number(existing.input_price_per_million) !== inputPerToken * 1_000_000 ||
         Number(existing.output_price_per_million) !== outputPerToken * 1_000_000 ||
-        Number(existing.request_price) !== comparableRequest ||
-        Number(existing.image_price) !== comparableImage ||
-        Number(existing.reasoning_price_per_million) !== comparableReasoning * 1_000_000 ||
-        Number(existing.cached_input_price_per_million) !== comparableCached * 1_000_000 ||
-        Number(existing.cache_write_price_per_million) !== comparableCacheWrite * 1_000_000
+        Number(existing.request_price) !== requestFee ||
+        Number(existing.image_price) !== imageFee ||
+        Number(existing.reasoning_price_per_million) !== reasoningPerToken * 1_000_000 ||
+        Number(existing.cached_input_price_per_million) !== cachedPerToken * 1_000_000 ||
+        Number(existing.cache_write_price_per_million) !== cacheWritePerToken * 1_000_000
       );
 
       if (priceChanged) changedPrices++;
@@ -202,16 +170,16 @@ export async function syncOpenRouterPricing(): Promise<PricingSyncResult> {
         canonical_slug: model.canonical_slug ?? null,
         input_price_per_token: inputPerToken,
         output_price_per_token: outputPerToken,
-        request_price: comparableRequest,
-        image_price: comparableImage,
-        reasoning_price: comparableReasoning,
-        cached_input_price: comparableCached,
-        cache_write_price: comparableCacheWrite,
+        request_price: requestFee,
+        image_price: imageFee,
+        reasoning_price: reasoningPerToken,
+        cached_input_price: cachedPerToken,
+        cache_write_price: cacheWritePerToken,
         context_window: model.context_length ?? model.top_provider?.context_length ?? null,
         expiration_date: expirationDate,
         supported_parameters: model.supported_parameters ?? [],
         modalities: model.architecture ?? {},
-        raw_pricing: pricing,
+        raw_pricing: pricing ?? {},
       });
       if (historyError) throw new Error(`MODEL_PRICE_HISTORY_WRITE_FAILED:${historyError.message}`);
 
@@ -221,11 +189,11 @@ export async function syncOpenRouterPricing(): Promise<PricingSyncResult> {
         capability: capability.id,
         input_price_per_million: inputPerToken * 1_000_000,
         output_price_per_million: outputPerToken * 1_000_000,
-        request_price: comparableRequest,
-        image_price: comparableImage,
-        reasoning_price_per_million: comparableReasoning * 1_000_000,
-        cached_input_price_per_million: comparableCached * 1_000_000,
-        cache_write_price_per_million: comparableCacheWrite * 1_000_000,
+        request_price: requestFee,
+        image_price: imageFee,
+        reasoning_price_per_million: reasoningPerToken * 1_000_000,
+        cached_input_price_per_million: cachedPerToken * 1_000_000,
+        cache_write_price_per_million: cacheWritePerToken * 1_000_000,
         currency: 'USD',
         context_window: model.context_length ?? model.top_provider?.context_length ?? null,
         max_completion_tokens: model.top_provider?.max_completion_tokens ?? null,
@@ -239,13 +207,7 @@ export async function syncOpenRouterPricing(): Promise<PricingSyncResult> {
         metadata: {
           source: 'OPENROUTER_MODELS_API',
           model_name: model.name ?? null,
-          pricing_completeness: {
-            request: requestPrice.known,
-            image: imagePrice.known,
-            reasoning: reasoningPrice.known,
-            cached_input: cachedInputPrice.known,
-            cache_write: cacheWritePrice.known,
-          },
+          pricing_complete: true,
         },
       }, { onConflict: 'provider_id,id' }).select('id').single();
 
