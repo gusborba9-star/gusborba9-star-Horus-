@@ -24,12 +24,15 @@ export async function executePaidText(request: TextExecutionRequest): Promise<Te
 
   const policy = await getEconomicPolicy();
   const route = await router.route({ capability: 'TEXT_GENERATION', qualityRequired: request.qualityRequired });
-  const estimate = estimateTextCost(route.model, Math.ceil(request.input.length / 4), request.maxOutputTokens, policy);
-  const hold = await reserveCredits(crypto.randomUUID(), request.idempotencyKey, estimate.creditCost);
+  const estimate = estimateTextCost(route.model, Math.ceil(request.input.length / 4), request.maxOutputTokens, policy, {
+    maxOutputTokens: request.maxOutputTokens,
+    maxAttempts: 1,
+  });
+  const hold = await reserveCredits(crypto.randomUUID(), request.idempotencyKey, estimate.requiredCredits);
 
   try {
     const response = await adapters.get(route.provider.id).generateText({ model: route.model.id, input: request.input, temperature: request.temperature, maxOutputTokens: request.maxOutputTokens });
-    const actualCredits = Math.ceil(calculateActualTextCost(route.model, response.usage.inputTokens, response.usage.outputTokens, policy.fxRateUsdToBrl) / policy.creditBrlValue);
+    const actualCredits = Math.ceil(calculateActualTextCost(route.model, response.usage.inputTokens, response.usage.outputTokens, policy.fxRateUsdToBrl, response.usage.reasoningTokens) / policy.creditBrlValue);
     if (actualCredits > hold.reserved_credits) {
       await flagCreditOverage(hold.id, actualCredits);
       throw new Error('ACTUAL_COST_EXCEEDS_AUTHORIZED_HOLD');
