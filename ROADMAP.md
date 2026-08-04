@@ -24,10 +24,11 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] `@typescript-eslint/parser` associado a TS/TSX.
 - [x] `@next/eslint-plugin-next` registrado.
 - [x] `next.config.ts` mantém `ignoreBuildErrors: false`.
-- [ ] Evidenciar `npm ci` + lint + TypeScript + tests + build no mesmo SHA.
-- [ ] Evidenciar deployment Vercel correspondente em `READY`.
+- [x] Evidência de build no SHA `b13fe9f5ecf04da452ca0ef1d31f300df3fef1a7`: Vercel instalou dependências, compilou Next.js, gerou 57 páginas e concluiu o build.
+- [x] Evidência de deployment Vercel correspondente ao SHA `b13fe9f5ecf04da452ca0ef1d31f300df3fef1a7` em `READY`: `dpl_2FuN8mkJ5vZbaLjsCZAKtAp4SM2C`.
+- [ ] Evidência de `npm test` executado no mesmo SHA ainda não foi obtida por CI/ferramenta disponível.
 
-**Estado:** 🟢 IMPLEMENTADO / gate ainda aberto até evidência final.
+**Estado:** 🟡 IMPLEMENTADO / build e deployment comprovados; gate de testes permanece aberto.
 
 ---
 
@@ -40,8 +41,8 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [ ] Fechar import/export graph.
 - [ ] Fechar route graph.
 - [ ] Fechar database/RPC graph.
-- [ ] Classificar scripts históricos.
-- [ ] Classificar órfãos e duplicatas com evidência.
+- [~] Classificar scripts históricos: cleanup comprovado executado para os artefatos já identificados; inventário recursivo completo permanece limitado pela indisponibilidade do índice de código do repositório.
+- [~] Classificar órfãos e duplicatas com evidência: snapshots e scripts comprovadamente históricos removidos; classificação recursiva completa ainda depende de inventário de filesystem.
 
 **Estado:** 🔍 DISCOVERY.
 
@@ -221,30 +222,23 @@ Para cada módulo provar:
 
 ## Fase 1 — Audit
 
-- [ ] Inventariar `fix_*`.
-- [ ] Inventariar `patch_*`.
-- [ ] Inventariar `rewrite_*`.
-- [ ] Inventariar `update_*`.
-- [ ] Inventariar `generate_*`.
-- [ ] Inventariar scripts JS auxiliares.
-- [ ] Classificar ACTIVE / LEGACY / ORPHAN / DUPLICATE / TEMPORARY / UNKNOWN.
+- [~] Inventariar `fix_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN` por indisponibilidade do índice de código.
+- [~] Inventariar `patch_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN`.
+- [~] Inventariar `rewrite_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN`.
+- [~] Inventariar `update_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN`.
+- [~] Inventariar `generate_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN`.
+- [x] Remover `format.js` após confirmação de artefato histórico sem consumidor atual.
+- [x] Remover `add_break_words.js` após confirmação de artefato histórico sem consumidor atual.
+- [ ] Classificar completamente os scripts JS restantes por filesystem.
+- [ ] Classificar órfãos e duplicatas restantes com evidência recursiva.
 
 ## Fase 2 — Cleanup
 
-Somente após prova de ausência de:
+- [x] Remover `db/schema.sql` e `supabase_schema.sql`; ambos eram cópias byte-for-byte do mesmo snapshot histórico e a cadeia canônica permanece `supabase/migrations/`.
+- [x] Nenhum dos snapshots removidos permanece referenciado nos artefatos de integração verificados.
+- [ ] Fechar inventário recursivo de referências dinâmicas restantes.
 
-- imports;
-- exports consumidos;
-- routes;
-- package scripts;
-- CI;
-- docs;
-- dynamic references;
-- runtime dependency;
-- migration dependency;
-- deployment dependency.
-
-**Nenhum arquivo é deletado durante a auditoria.**
+**Regra:** `UNKNOWN ≠ ORPHAN`. Itens não comprovados permanecem preservados.
 
 ---
 
