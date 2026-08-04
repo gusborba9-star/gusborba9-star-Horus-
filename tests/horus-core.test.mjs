@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+// Importa o módulo TypeScript diretamente usando o strip-types configurado em package.json.
+const { runHorusCore } = await import('../lib/core/horusGraph.ts');
+
+test('Hórus Core rejeita evento sem event_type', async () => {
+  const result = await runHorusCore({ payload: {}, source: 'test' });
+
+  assert.equal(result.action, 'invalid_request');
+  assert.equal(result.requiresHuman, true);
+  assert.equal(result.confidence, 0);
+});
+
+test('Hórus Core encaminha contexto suficiente para decisão automática', async () => {
+  const result = await runHorusCore({
+    event_type: 'operation.requested',
+    source: 'test',
+    payload: {
+      intent: 'classify_request',
+      operation: 'analysis',
+      request_id: 'test-request',
+    },
+  });
+
+  assert.equal(result.requiresHuman, false);
+  assert.equal(result.action, 'route_to_service');
+  assert.equal(result.confidence, 0.85);
+});
+
+test('Hórus Core encaminha contexto insuficiente para revisão humana', async () => {
+  const result = await runHorusCore({
+    event_type: 'operation.requested',
+    payload: {},
+    source: '',
+  });
+
+  assert.equal(result.requiresHuman, true);
+  assert.equal(result.action, 'human_review');
+  assert.equal(result.confidence, 0.55);
+});
