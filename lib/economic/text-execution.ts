@@ -1,5 +1,5 @@
 import { requirePermission } from '@/lib/auth/server';
-import { flagCreditOverage, reconcileCredits, reserveCredits } from './credit-guard';
+import { flagCreditOverageSystem, reconcileCreditsSystem, reserveCredits } from './credit-guard';
 import { calculateActualTextCost, estimateTextCost } from './cost-engine';
 import { EconomicRouter } from './router';
 import { SupabaseModelRegistry, SupabaseProviderRegistry } from './supabase-registry';
@@ -34,14 +34,14 @@ export async function executePaidText(request: TextExecutionRequest): Promise<Te
     const response = await adapters.get(route.provider.id).generateText({ model: route.model.id, input: request.input, temperature: request.temperature, maxOutputTokens: request.maxOutputTokens });
     const actualCredits = Math.ceil(calculateActualTextCost(route.model, response.usage.inputTokens, response.usage.outputTokens, policy.fxRateUsdToBrl, response.usage.reasoningTokens) / policy.creditBrlValue);
     if (actualCredits > hold.reserved_credits) {
-      await flagCreditOverage(hold.id, actualCredits);
+      await flagCreditOverageSystem(hold.user_id, hold.id, actualCredits);
       throw new Error('ACTUAL_COST_EXCEEDS_AUTHORIZED_HOLD');
     }
-    await reconcileCredits(hold.id, actualCredits, 'SETTLED');
+    await reconcileCreditsSystem(hold.user_id, hold.id, actualCredits, 'SETTLED');
     return { text: response.text, providerId: route.provider.id, modelId: route.model.id, usage: response.usage, reservedCredits: hold.reserved_credits, actualCredits };
   } catch (error) {
     if (error instanceof Error && error.message === 'ACTUAL_COST_EXCEEDS_AUTHORIZED_HOLD') throw error;
-    try { await reconcileCredits(hold.id, 0, 'FAILED'); } catch (reconciliationError) { console.error('[EconomicCore] Failed-job reconciliation failed:', reconciliationError); }
+    try { await reconcileCreditsSystem(hold.user_id, hold.id, 0, 'FAILED'); } catch (reconciliationError) { console.error('[EconomicCore] Failed-job reconciliation failed:', reconciliationError); }
     throw error;
   }
 }
