@@ -12,7 +12,10 @@ const HorusState = Annotation.Root({
   payload: Annotation<Record<string, unknown>>,
   source: Annotation<string>,
   confidence: Annotation<number>,
-  memoryContext: Annotation<unknown[]>({ default: () => [] }),
+  memoryContext: Annotation<unknown[]>({
+    reducer: (_current, update) => update,
+    default: () => [],
+  }),
   requiresHuman: Annotation<boolean>,
   action: Annotation<string>,
   error: Annotation<string | undefined>,
