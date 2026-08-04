@@ -1,47 +1,49 @@
 import { NextResponse } from 'next/server';
+import { runHorusCore } from '@/lib/core/horusGraph';
 import { geminiCircuitBreaker } from '@/utils/circuitBreaker';
 
 /**
- * Hórus OS - Core Execution Endpoint
- * O "Gerente Nexus" processa as intenções, avalia o Confidence Score, e orquestra
- * os equipes cognitivas via LangGraph.
+ * Hórus OS — Core Execution Endpoint.
+ * Entrada canônica: request → LangGraph → memory/confidence → decision.
+ * Provider execution permanece deliberadamente fora deste endpoint até que o
+ * economic authorization contract esteja integrado ao graph.
  */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { event_type, payload, source } = body;
+    const { event_type, payload, source } = body ?? {};
 
-    console.log(`[Hórus Core] Recebendo evento de: ${source} | Tipo: ${event_type}`);
+    const result = await geminiCircuitBreaker.execute(() =>
+      runHorusCore({
+        event_type,
+        payload: payload && typeof payload === 'object' ? payload : {},
+        source: typeof source === 'string' ? source : '',
+      }),
+    );
 
-    // 1. Inserir no Executions Log (Auditoria Imutável / Event Sourcing)
-    // await logExecutionRequest(event_type, payload);
+    const status = result.error ? 400 : result.requiresHuman ? 202 : 200;
 
-    // 2. Verificar Semantic Cache (Economia de Créditos)
-    // const cachedResponse = await checkSemanticCache(payload);
-    // if (cachedResponse) return NextResponse.json(cachedResponse);
-
-    // 3. Orquestração com Circuit Breaker
-    const result = await geminiCircuitBreaker.execute(async () => {
-       // TODO: Acionar o grafo do LangGraph aqui
-       // - extract_intent
-       // - retrieve_memory (MemoryGraph)
-       // - route_to_digital_employee
-       return { status: 'processed', confidence_score: 0.95, action_taken: 'routed_to_maria' };
-    });
-
-    // 4. Se Confidence Score < 0.70, disparar Human-in-the-loop
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Evento orquestrado com sucesso.',
-      data: result 
-    });
-
-  } catch (error: any) {
-    console.error('[Hórus Core] Erro Crítico:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message 
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: !result.error,
+        data: {
+          action: result.action,
+          confidence_score: result.confidence,
+          requires_human_review: result.requiresHuman,
+          memory_matches: result.memoryContext.length,
+        },
+        error: result.error,
+      },
+      { status },
+    );
+  } catch (error) {
+    console.error('[Hórus Core] Erro de orquestração:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro interno de orquestração',
+      },
+      { status: 500 },
+    );
   }
 }
