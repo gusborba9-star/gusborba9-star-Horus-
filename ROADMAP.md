@@ -24,8 +24,8 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] `@typescript-eslint/parser` associado a TS/TSX.
 - [x] `@next/eslint-plugin-next` registrado.
 - [x] `next.config.ts` mantém `ignoreBuildErrors: false`.
-- [x] Evidência de build no SHA `b13fe9f5ecf04da452ca0ef1d31f300df3fef1a7`: Vercel instalou dependências, compilou Next.js, gerou 57 páginas e concluiu o build.
-- [x] Evidência de deployment Vercel correspondente ao SHA `b13fe9f5ecf04da452ca0ef1d31f300df3fef1a7` em `READY`: `dpl_2FuN8mkJ5vZbaLjsCZAKtAp4SM2C`.
+- [x] Evidência de build no SHA `de59a1c14aa5c0d87a3baa55d7d297a056242bd4`: Vercel instalou dependências, compilou Next.js, gerou 57 páginas e concluiu o build.
+- [x] Evidência de deployment Vercel correspondente ao SHA `de59a1c14aa5c0d87a3baa55d7d297a056242bd4` em `READY`: `dpl_5gjBvjJZh25bX4FFwkV1WsmWGpYL`.
 - [ ] Evidência de `npm test` executado no mesmo SHA ainda não foi obtida por CI/ferramenta disponível.
 
 **Estado:** 🟡 IMPLEMENTADO / build e deployment comprovados; gate de testes permanece aberto.
@@ -52,13 +52,13 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 
 - [x] Endpoint base `/api/horus` existe.
 - [x] Circuit breaker existente.
-- [ ] Implementar/integrar LangGraph real.
+- [~] Implementar/integrar LangGraph real: grafo canônico `lib/core/horusGraph.ts` criado e integrado a `/api/horus`; validação e deployment no SHA `de59a1c14aa5c0d87a3baa55d7d297a056242bd4` comprovados.
 - [ ] Integrar execution log real.
 - [ ] Integrar semantic cache real.
-- [ ] Implementar confidence/human-in-the-loop real.
-- [ ] Validar cadeia completa Route → Core → Service → Persistence/Provider.
+- [~] Implementar confidence/human-in-the-loop real: score determinístico com limiar de `0.70` e decisão `human_review`/`route_to_service` integrados ao grafo; execução de testes ainda sem evidência CI.
+- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core e Core → Memory estão integrados; Service/Provider e autorização econômica permanecem deliberadamente fora do endpoint até integração canônica.
 
-**Estado:** 🟡 PARCIAL.
+**Estado:** 🟡 PARCIAL — LangGraph, Memory retrieval e confidence gate integrados; execution log, semantic cache e provider/economic execution ainda pendentes.
 
 ---
 
@@ -67,6 +67,7 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] `lib/memoryGraph.ts` existente.
 - [x] Persistência em `memory_graph_nodes` existente.
 - [x] Retrieval via `match_memory_nodes` existente.
+- [~] Retrieval de memória integrado ao Core quando `payload.embedding` é fornecido.
 - [ ] Implementar semantic pruning real.
 - [ ] Implementar TTL/lifecycle real.
 - [ ] Definir hot/cold context.
@@ -134,6 +135,8 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 
 - [x] Script de testes existe.
 - [x] CI possui TypeScript, lint, tests e build.
+- [x] Testes unitários do Core adicionados em `tests/horus-core.test.mjs`.
+- [ ] Executar `npm test` no SHA final e registrar evidência.
 - [ ] Inventariar testes existentes.
 - [ ] Mapear cobertura por domínio.
 - [ ] Adicionar testes onde houver lacunas comprovadas.
