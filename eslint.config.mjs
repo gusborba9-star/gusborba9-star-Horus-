@@ -29,7 +29,7 @@ export default defineConfig([
     'next-env.d.ts',
   ]),
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,mjs,cjs}'],
     plugins: sharedPlugins,
     settings: sharedSettings,
     rules: sharedRules,
