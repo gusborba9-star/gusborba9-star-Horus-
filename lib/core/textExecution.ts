@@ -1,26 +1,25 @@
 import { requirePermission } from '@/lib/auth/server';
-import { calculateActualTextCost, estimateTextCost } from '@/lib/economic/cost-engine';
-import { EconomicRouter } from '@/lib/economic/router';
+import { calculateActualTextCost } from '@/lib/economic/cost-engine';
 import { ProviderAdapterRegistry } from '@/lib/economic/adapter-registry';
 import { OpenRouterTextAdapter } from '@/lib/economic/adapters/openrouter-text';
 import { GoogleTextAdapter } from '@/lib/economic/adapters/google-text';
-import { SupabaseModelRegistry, SupabaseProviderRegistry } from '@/lib/economic/supabase-registry';
+import { SupabaseModelRegistry } from '@/lib/economic/supabase-registry';
 import { getEconomicPolicy } from '@/lib/economic/supabase-policy';
 import { getServiceSupabase } from '@/lib/supabase';
-import { authorizeHorusExecution } from './economicAuthorization';
 
-const router = new EconomicRouter(new SupabaseProviderRegistry(), new SupabaseModelRegistry());
+const models = new SupabaseModelRegistry();
 const adapters = new ProviderAdapterRegistry([
   new OpenRouterTextAdapter(),
   new GoogleTextAdapter(),
 ]);
 
 export type HorusTextExecutionInput = {
-  budgetId: string;
+  attemptId: string;
+  providerId: string;
+  modelId: string;
   input: string;
   maxOutputTokens: number;
   maxReasoningTokens?: number;
-  qualityRequired?: number;
   temperature?: number;
   requestId: string;
 };
@@ -51,65 +50,30 @@ export async function executeAuthorizedHorusText(
     throw new Error('INVALID_MAX_OUTPUT_TOKENS');
   }
 
-  const policy = await getEconomicPolicy();
-  const inputTokens = Math.max(1, Math.ceil(input.input.length / 4));
-  const maxReasoningTokens = Math.max(0, Math.floor(input.maxReasoningTokens ?? 0));
-
-  const route = await router.route({
-    capability: 'TEXT_GENERATION',
-    qualityRequired: input.qualityRequired,
-    inputTokens,
-    maxOutputTokens: input.maxOutputTokens,
-    maxReasoningTokens,
-    maxAttempts: 1,
-    allowFallback: false,
-  });
-
-  const estimate = estimateTextCost(
-    route.model,
-    inputTokens,
-    input.maxOutputTokens,
-    policy,
-    {
-      maxOutputTokens: input.maxOutputTokens,
-      maxReasoningTokens,
-      maxAttempts: 1,
-    },
-  );
-
-  const authorization = await authorizeHorusExecution({
-    budgetId: input.budgetId,
-    providerId: route.provider.id,
-    modelId: route.model.id,
-    capability: route.model.capability,
-    maximumCostBrl: estimate.maximumProviderCostBrl,
-    inputTokens,
-    outputTokens: input.maxOutputTokens,
-    reasoningTokens: maxReasoningTokens,
-  });
-
-  if (!authorization.authorized || !authorization.attemptId) {
-    throw new Error(authorization.error ?? 'ECONOMIC_AUTHORIZATION_DENIED');
+  const model = await models.get(input.modelId);
+  if (!model || model.providerId !== input.providerId || model.capability !== 'TEXT_GENERATION') {
+    throw new Error('EXECUTION_MODEL_NOT_AVAILABLE');
   }
 
-  const adapter = adapters.get(route.provider.id);
+  const policy = await getEconomicPolicy();
+  const adapter = adapters.get(input.providerId);
   const startedAt = Date.now();
 
   try {
     const response = await adapter.generateText({
-      model: route.model.id,
+      model: model.id,
       input: input.input,
       temperature: input.temperature,
       maxOutputTokens: input.maxOutputTokens,
-      maxReasoningTokens,
+      maxReasoningTokens: Math.max(0, Math.floor(input.maxReasoningTokens ?? 0)),
       includeUsage: true,
       sessionId: input.requestId,
     });
 
     const actualCostBrl = response.usage.requestCost !== null
-      ? response.usage.requestCost * (route.model.currency === 'USD' ? policy.fxRateUsdToBrl : 1)
+      ? response.usage.requestCost * (model.currency === 'USD' ? policy.fxRateUsdToBrl : 1)
       : calculateActualTextCost(
-          route.model,
+          model,
           response.usage.inputTokens,
           response.usage.outputTokens,
           policy.fxRateUsdToBrl,
@@ -119,7 +83,7 @@ export async function executeAuthorizedHorusText(
     const { error: reconciliationError } = await getServiceSupabase().rpc(
       'reconcile_horus_execution_attempt',
       {
-        p_attempt_id: authorization.attemptId,
+        p_attempt_id: input.attemptId,
         p_actual_cost_brl: actualCostBrl,
         p_status: 'COMPLETED',
         p_input_tokens: response.usage.inputTokens,
@@ -141,9 +105,9 @@ export async function executeAuthorizedHorusText(
     }
 
     return {
-      attemptId: authorization.attemptId,
-      providerId: route.provider.id,
-      modelId: route.model.id,
+      attemptId: input.attemptId,
+      providerId: input.providerId,
+      modelId: input.modelId,
       text: response.text,
       actualCostBrl,
       usage: {
@@ -160,7 +124,7 @@ export async function executeAuthorizedHorusText(
 
     try {
       await getServiceSupabase().rpc('reconcile_horus_execution_attempt', {
-        p_attempt_id: authorization.attemptId,
+        p_attempt_id: input.attemptId,
         p_actual_cost_brl: 0,
         p_status: 'FAILED',
         p_input_tokens: 0,
@@ -170,8 +134,8 @@ export async function executeAuthorizedHorusText(
         p_request_units: 0,
         p_image_units: 0,
         p_provider_request_id: null,
-        p_actual_provider: route.provider.id,
-        p_actual_model: route.model.id,
+        p_actual_provider: input.providerId,
+        p_actual_model: input.modelId,
         p_latency_ms: Date.now() - startedAt,
         p_raw_usage: { error: message },
       });
