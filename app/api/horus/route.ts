@@ -5,9 +5,9 @@ import { geminiCircuitBreaker } from '@/utils/circuitBreaker';
 
 /**
  * Hórus OS — Core Execution Endpoint.
- * Entrada canônica: request → LangGraph → memory/confidence → decision → execution log.
- * Provider execution permanece deliberadamente fora deste endpoint até que o
- * economic authorization contract esteja integrado ao graph.
+ * Entrada canônica: request → LangGraph → memory/confidence → decision → economic authorization → execution log.
+ * Provider execution permanece fora deste endpoint até que o provider registry/adapter canônico
+ * esteja conectado ao execution attempt autorizado.
  */
 export async function POST(req: Request) {
   const startedAt = new Date();
@@ -43,6 +43,9 @@ export async function POST(req: Request) {
       state: result,
       metadata: {
         endpoint: '/api/horus',
+        economic_authorized: result.economicAuthorized,
+        execution_attempt_id: result.executionAttemptId ?? null,
+        execution_budget_id: result.executionBudgetId ?? null,
       },
     });
 
@@ -54,6 +57,9 @@ export async function POST(req: Request) {
         data: {
           request_id: requestId,
           execution_log_id: executionLogId,
+          execution_attempt_id: result.executionAttemptId,
+          execution_budget_id: result.executionBudgetId,
+          economic_authorized: result.economicAuthorized,
           action: result.action,
           confidence_score: result.confidence,
           requires_human_review: result.requiresHuman,
