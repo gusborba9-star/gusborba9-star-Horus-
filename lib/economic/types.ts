@@ -113,6 +113,8 @@ export interface CostEstimate {
   maximumTotalCostBrl: number;
   fxRate: number;
   buffersBrl: {
+    exchangeBuffer: number;
+    safetyBuffer: number;
     providerFee: number;
     fx: number;
     pricingDrift: number;
