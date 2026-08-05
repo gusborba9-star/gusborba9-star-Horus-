@@ -28,6 +28,7 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Evidência de deployment Vercel correspondente ao SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7` em `READY`: `dpl_EiheEkniFqSTnKkdG3X4NtMXekEy`.
 - [x] Evidência adicional de deployment Vercel do SHA `b1103c66fe2187d60e990628213fe8a3a7bd00a4` em `READY`: `dpl_7ufWvANoN2gqtmL6DMN3YZRD79Bi`.
 - [x] Evidência adicional de deployment Vercel do SHA `fb024c6d01172a4fdf7ef9d5d02591c6392cb099` em `READY`: `dpl_FLrG6Kv55tPoJMJkW94kWrVS9Pek`.
+- [x] Evidência adicional de deployment Vercel do SHA `9ffa4b96f057666f911f351fb33b6917fd68b6bd` em `READY`: `dpl_EoxqzT6LNuBtZ96QwJeYxSBsGgnk`.
 - [ ] Evidência de `npm test` executado no mesmo SHA ainda não foi obtida por CI/ferramenta disponível.
 
 **Estado:** 🟡 IMPLEMENTADO / build e deployment comprovados; gate de testes permanece aberto.
@@ -58,11 +59,11 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Integrar execution log real: `public.horus_execution_logs`, migration canônica `supabase/migrations/20260805000000_create_horus_execution_logs.sql`, persistência de sucesso/revisão humana/erro em `lib/core/executionLog.ts` e integração no `/api/horus`; deployment READY no SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7`.
 - [ ] Integrar semantic cache real.
 - [~] Implementar confidence/human-in-the-loop real: score determinístico com limiar de `0.70` e decisão `human_review`/`route_to_service` integrados ao grafo; execução de testes ainda sem evidência CI.
-- [~] Integrar Economic Authorization canônico: `lib/core/economicAuthorization.ts` reutiliza `execution_budgets`, `execution_attempts` e `authorize_horus_execution_attempt`; o grafo calcula o limite de custo via `Cost Engine` e autoriza o `execution_attempt` antes da execução. O SHA `b1103c66fe2187d60e990628213fe8a3a7bd00a4` move a autenticação/permissão `ai.execute` para antes da reserva econômica, evitando reservar budget antes de uma falha de autorização. O SHA `fb024c6d01172a4fdf7ef9d5d02591c6392cb099` adiciona fallback econômico limitado aos três melhores candidatos antes da autorização.
-- [~] Integrar execução real de texto: `lib/core/textExecution.ts` reutiliza `ProviderAdapterRegistry`, adapters OpenRouter/Google, `execution_attempts`, `execution_usage` e `reconcile_horus_execution_attempt`; resultado, usage e actual cost retornam pelo `/api/horus`. Deployment READY do SHA `fb024c6d01172a4fdf7ef9d5d02591c6392cb099`: `dpl_FLrG6Kv55tPoJMJkW94kWrVS9Pek`.
-- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core → Memory → Decision → Economic Authorization → Router → Provider Adapter → Provider → Usage → Cost → Reconciliation → Execution Log está implementada para `TEXT_GENERATION`; fallback econômico limitado está integrado; semantic cache e demais capabilities ainda permanecem pendentes.
+- [~] Integrar Economic Authorization canônico: `lib/core/economicAuthorization.ts` reutiliza `execution_budgets`, `execution_attempts` e `authorize_horus_execution_attempt`; autenticação/permissão `ai.execute` ocorre antes da reserva econômica; agora também são aplicados maximum total cost, execution tree cost, minimum-margin guard e token budget gates antes da RPC econômica.
+- [~] Integrar execução real de texto: `lib/core/textExecution.ts` reutiliza `ProviderAdapterRegistry`, adapters OpenRouter/Google, `execution_attempts`, `execution_usage` e `reconcile_horus_execution_attempt`; resultado, usage e actual cost retornam pelo `/api/horus`. Pricing sem `priceVerifiedAt` ou já expirado não pode entrar no fluxo de autorização. Deployment READY no SHA `9ffa4b96f057666f911f351fb33b6917fd68b6bd`: `dpl_EoxqzT6LNuBtZ96QwJeYxSBsGgnk`.
+- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core → Memory → Decision → Economic Authorization → Router → Provider Adapter → Provider → Usage → Cost → Reconciliation → Execution Log está implementada para `TEXT_GENERATION`; hard economic gates de custo/margem/tree/token e pricing freshness estão integrados; semantic cache e capabilities adicionais ainda permanecem pendentes.
 
-**Estado:** 🟡 PARCIAL — vertical slice de execução de texto implementada, autenticação precede reserva econômica, fallback econômico limitado integrado e deployment final READY; `npm test` no SHA final permanece sem evidência disponível, e semantic cache/hard economic gates/demais capabilities ainda não estão fechados.
+**Estado:** 🟡 PARCIAL — vertical slice de execução de texto implementada e deployment final READY; economic hard gates de custo/margem/tree/token e pricing freshness integrados; `npm test` no SHA final permanece sem evidência disponível, semantic cache, endpoint pricing e economic safety tests ainda não estão fechados.
 
 ---
 
@@ -93,19 +94,19 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Overage system contract existente.
 - [x] Reconciliation system contract existente.
 - [x] Text Execution integrado às implementações sistêmicas canônicas.
-- [~] Bounded routing candidates integrado ao Router para suportar fallback econômico limitado antes da autorização.
+- [x] Bounded routing candidates integrado ao Router para suportar fallback econômico limitado antes da autorização.
+- [x] Pricing freshness aplicada no Core: modelos sem `priceVerifiedAt` ou com `expirationDate` vencida são rejeitados antes da autorização.
+- [x] Hard maximum-cost gate aplicado contra `execution_budgets.remaining_cost_brl` e `maximum_total_cost_brl`.
+- [x] Margin Guard aplicado contra `revenue_allocated_brl` e `minimum_margin_rate` do budget canônico.
+- [x] Kill Switch enforcement existente em `getEconomicPolicy`: `global_execution_enabled=false` interrompe o fluxo econômico antes da autorização.
+- [x] Execution Tree bound aplicado contra `execution_budgets.maximum_tree_cost_brl`.
+- [x] Atomic Execution Budget preservado pelo RPC canônico `authorize_horus_execution_attempt`, que bloqueia o budget e reserva cost/attempt/tokens em transação.
 - [ ] Pricing snapshot completo.
 - [ ] Provider endpoint pricing.
-- [ ] Pricing freshness.
-- [ ] Hard maximum-cost filter.
-- [ ] Margin Guard.
-- [ ] Kill Switch enforcement.
-- [ ] Execution Tree bound.
-- [ ] Atomic Execution Budget.
 - [ ] Actual Cost reconciliation completa.
 - [ ] Economic Safety tests.
 
-**Estado:** 🟡 PARCIAL. Economic Safety Gate permanece fechado.
+**Estado:** 🟡 PARCIAL. Hard gates principais de autorização estão integrados; Economic Safety Gate permanece fechado por ausência de testes econômicos completos, pricing snapshot/endpoint pricing e fechamento completo de actual-cost economics.
 
 ---
 
@@ -146,7 +147,7 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [ ] Executar `npm test` no SHA final e registrar evidência.
 - [ ] Inventariar testes existentes.
 - [ ] Mapear cobertura por domínio.
-- [ ] Adicionar testes onde houver lacunas comprovadas.
+- [ ] Adicionar testes econômicos de pricing freshness, hard cost, margin, tree bound e token budget.
 - [ ] Integrar database/integration/E2E/smoke quando aplicável.
 
 **Estado:** 🟡 PARCIAL.
