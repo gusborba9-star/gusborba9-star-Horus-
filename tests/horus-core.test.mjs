@@ -12,7 +12,7 @@ test('Hórus Core rejeita evento sem event_type', async () => {
   assert.equal(result.confidence, 0);
 });
 
-test('Hórus Core encaminha contexto suficiente para decisão automática', async () => {
+test('Hórus Core exige autorização econômica antes da execução automática', async () => {
   const result = await runHorusCore({
     event_type: 'operation.requested',
     source: 'test',
@@ -20,11 +20,14 @@ test('Hórus Core encaminha contexto suficiente para decisão automática', asyn
       intent: 'classify_request',
       operation: 'analysis',
       request_id: 'test-request',
+      input: 'test execution',
     },
   });
 
   assert.equal(result.requiresHuman, false);
-  assert.equal(result.action, 'route_to_service');
+  assert.equal(result.action, 'economic_authorization_required');
+  assert.equal(result.economicAuthorized, false);
+  assert.equal(result.error, 'economic_authorization_requires_budget_and_input');
   assert.equal(result.confidence, 0.85);
 });
 
