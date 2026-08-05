@@ -23,7 +23,6 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] ESLint 9.39.1 + Flat Config configurado.
 - [x] `@typescript-eslint/parser` associado a TS/TSX.
 - [x] `@next/eslint-plugin-next` registrado.
-- [x] `@next/eslint-plugin-next` registrado.
 - [x] `next.config.ts` mantém `ignoreBuildErrors: false`.
 - [x] Evidência de build no SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7`: Vercel concluiu o build em 41s.
 - [x] Evidência de deployment Vercel correspondente ao SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7` em `READY`: `dpl_EiheEkniFqSTnKkdG3X4NtMXekEy`.
