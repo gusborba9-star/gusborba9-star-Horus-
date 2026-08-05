@@ -27,6 +27,10 @@ const HorusState = Annotation.Root({
 
 export type HorusCoreState = typeof HorusState.State;
 
+function numericPayloadValue(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
 function validateInput(state: HorusCoreState): Partial<HorusCoreState> {
   if (!state.eventType) {
     return { error: 'event_type é obrigatório', confidence: 0, requiresHuman: true, action: 'invalid_request' };
@@ -97,9 +101,9 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
     providerId,
     modelId,
     capability,
-    inputTokens: state.payload.input_tokens,
-    outputTokens: state.payload.output_tokens,
-    reasoningTokens: state.payload.reasoning_tokens,
+    inputTokens: numericPayloadValue(state.payload.input_tokens),
+    outputTokens: numericPayloadValue(state.payload.output_tokens),
+    reasoningTokens: numericPayloadValue(state.payload.reasoning_tokens),
     endpointId: typeof state.payload.endpoint_id === 'string' ? state.payload.endpoint_id : undefined,
     fallbackFromAttemptId:
       typeof state.payload.fallback_from_attempt_id === 'string'
