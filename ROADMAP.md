@@ -57,10 +57,11 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Integrar execution log real: `public.horus_execution_logs`, migration canônica `supabase/migrations/20260805000000_create_horus_execution_logs.sql`, persistência de sucesso/revisão humana/erro em `lib/core/executionLog.ts` e integração no `/api/horus`; deployment READY no SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7`.
 - [ ] Integrar semantic cache real.
 - [~] Implementar confidence/human-in-the-loop real: score determinístico com limiar de `0.70` e decisão `human_review`/`route_to_service` integrados ao grafo; execução de testes ainda sem evidência CI.
-- [~] Integrar Economic Authorization canônico: `lib/core/economicAuthorization.ts` reutiliza `execution_budgets`, `execution_attempts` e `authorize_horus_execution_attempt`; o grafo exige `budget_id`, `provider_id`, `model_id` e `capability` antes de autorizar uma execução. A validação Vercel do SHA final está em andamento.
-- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core → Memory → Decision → Economic Authorization e Execution Log estão integrados; Budget, Router, Provider Adapter, execução real, usage, cost e reconciliation permanecem pendentes de integração canônica.
+- [~] Integrar Economic Authorization canônico: `lib/core/economicAuthorization.ts` reutiliza `execution_budgets`, `execution_attempts` e `authorize_horus_execution_attempt`; o grafo agora seleciona provider/model pelo `EconomicRouter`, calcula o limite de custo via `Cost Engine` e autoriza o `execution_attempt` antes da execução.
+- [~] Integrar execução real de texto: `lib/core/textExecution.ts` reutiliza `ProviderAdapterRegistry`, adapters OpenRouter/Google, `execution_attempts`, `execution_usage` e `reconcile_horus_execution_attempt`; resultado, usage e actual cost retornam pelo `/api/horus`. Validação Vercel do SHA final permanece em andamento.
+- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core → Memory → Decision → Economic Authorization → Router → Provider Adapter → Provider → Usage → Cost → Reconciliation → Execution Log está implementada para `TEXT_GENERATION`; semantic cache e demais capabilities ainda permanecem pendentes.
 
-**Estado:** 🟡 PARCIAL — LangGraph, Memory retrieval, confidence gate, Economic Authorization e execution log persistente integrados; semantic cache e cadeia econômica/provider completa ainda pendentes.
+**Estado:** 🟡 PARCIAL — vertical slice de execução de texto implementada; validação final de build/deployment/testes e expansão das demais capabilities ainda pendentes.
 
 ---
 
@@ -138,6 +139,7 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Script de testes existe.
 - [x] CI possui TypeScript, lint, tests e build.
 - [x] Testes unitários do Core adicionados em `tests/horus-core.test.mjs`.
+- [x] Teste do Core atualizado para exigir Economic Authorization antes da execução automática.
 - [ ] Executar `npm test` no SHA final e registrar evidência.
 - [ ] Inventariar testes existentes.
 - [ ] Mapear cobertura por domínio.
