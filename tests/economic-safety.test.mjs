@@ -28,7 +28,7 @@ const tierPolicies = {
 
 test('revenue cap is strictly below revenue after minimum margin', () => {
   assert.equal(maximumAuthorizedCostFromRevenue(1, 0.10), 0.9);
-  assert.equal(minimumRevenueForCost(10, 0.70), 33.33333333333333);
+  assert.equal(minimumRevenueForCost(10, 0.70), 33.33333334);
 });
 
 test('maximum cost uses hard output/reasoning caps rather than estimated output', () => {
