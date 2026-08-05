@@ -4,6 +4,7 @@ import { estimateTextCost } from '@/lib/economic/cost-engine';
 import { EconomicRouter } from '@/lib/economic/router';
 import { SupabaseModelRegistry, SupabaseProviderRegistry } from '@/lib/economic/supabase-registry';
 import { getEconomicPolicy } from '@/lib/economic/supabase-policy';
+import { requirePermission } from '@/lib/auth/server';
 import { authorizeHorusExecution } from './economicAuthorization';
 import { executeAuthorizedHorusText } from './textExecution';
 
@@ -90,6 +91,11 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
   if (state.error || state.requiresHuman || state.action !== 'route_to_service') {
     return { economicAuthorized: false };
   }
+
+  // Authorization is a hard economic side effect. Authenticate/authorize the
+  // caller before reserving any budget so a permission failure can never leave
+  // an execution attempt and budget reservation unreconciled.
+  await requirePermission('ai.execute');
 
   const budgetId = typeof state.payload.budget_id === 'string' ? state.payload.budget_id : '';
   const input = typeof state.payload.input === 'string' ? state.payload.input : '';
