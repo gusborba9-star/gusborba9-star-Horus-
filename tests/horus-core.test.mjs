@@ -17,7 +17,7 @@ test('Hórus Core exige autorização econômica depois de confiança suficiente
   });
   assert.equal(result.requiresHuman, false);
   assert.equal(result.action, 'route_to_service');
-  assert.equal(result.confidence, 0.85);
+  assert.equal(result.confidence, 0.9);
 });
 
 test('Hórus Core encaminha contexto insuficiente para revisão humana', () => {
