@@ -24,8 +24,8 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] `@typescript-eslint/parser` associado a TS/TSX.
 - [x] `@next/eslint-plugin-next` registrado.
 - [x] `next.config.ts` mantém `ignoreBuildErrors: false`.
-- [x] Evidência de build no SHA `de59a1c14aa5c0d87a3baa55d7d297a056242bd4`: Vercel instalou dependências, compilou Next.js, gerou 57 páginas e concluiu o build.
-- [x] Evidência de deployment Vercel correspondente ao SHA `de59a1c14aa5c0d87a3baa55d7d297a056242bd4` em `READY`: `dpl_5gjBvjJZh25bX4FFwkV1WsmWGpYL`.
+- [x] Evidência de build no SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7`: Vercel concluiu o build em 41s.
+- [x] Evidência de deployment Vercel correspondente ao SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7` em `READY`: `dpl_EiheEkniFqSTnKkdG3X4NtMXekEy`.
 - [ ] Evidência de `npm test` executado no mesmo SHA ainda não foi obtida por CI/ferramenta disponível.
 
 **Estado:** 🟡 IMPLEMENTADO / build e deployment comprovados; gate de testes permanece aberto.
@@ -53,12 +53,12 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Endpoint base `/api/horus` existe.
 - [x] Circuit breaker existente.
 - [~] Implementar/integrar LangGraph real: grafo canônico `lib/core/horusGraph.ts` criado e integrado a `/api/horus`; validação e deployment no SHA `de59a1c14aa5c0d87a3baa55d7d297a056242bd4` comprovados.
-- [ ] Integrar execution log real.
+- [x] Integrar execution log real: `public.horus_execution_logs`, migration canônica `supabase/migrations/20260805000000_create_horus_execution_logs.sql`, persistência de sucesso/revisão humana/erro em `lib/core/executionLog.ts` e integração no `/api/horus`; deployment READY no SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7`.
 - [ ] Integrar semantic cache real.
 - [~] Implementar confidence/human-in-the-loop real: score determinístico com limiar de `0.70` e decisão `human_review`/`route_to_service` integrados ao grafo; execução de testes ainda sem evidência CI.
-- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core e Core → Memory estão integrados; Service/Provider e autorização econômica permanecem deliberadamente fora do endpoint até integração canônica.
+- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core → Memory → Decision e Execution Log estão integrados; Economic Authorization, Budget, Router, Provider Adapter, execução e reconciliation permanecem pendentes de integração canônica.
 
-**Estado:** 🟡 PARCIAL — LangGraph, Memory retrieval e confidence gate integrados; execution log, semantic cache e provider/economic execution ainda pendentes.
+**Estado:** 🟡 PARCIAL — LangGraph, Memory retrieval, confidence gate e execution log persistente integrados; semantic cache e cadeia econômica/provider ainda pendentes.
 
 ---
 
