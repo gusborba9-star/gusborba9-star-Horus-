@@ -23,6 +23,7 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] ESLint 9.39.1 + Flat Config configurado.
 - [x] `@typescript-eslint/parser` associado a TS/TSX.
 - [x] `@next/eslint-plugin-next` registrado.
+- [x] `@next/eslint-plugin-next` registrado.
 - [x] `next.config.ts` mantém `ignoreBuildErrors: false`.
 - [x] Evidência de build no SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7`: Vercel concluiu o build em 41s.
 - [x] Evidência de deployment Vercel correspondente ao SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7` em `READY`: `dpl_EiheEkniFqSTnKkdG3X4NtMXekEy`.
@@ -56,9 +57,10 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Integrar execution log real: `public.horus_execution_logs`, migration canônica `supabase/migrations/20260805000000_create_horus_execution_logs.sql`, persistência de sucesso/revisão humana/erro em `lib/core/executionLog.ts` e integração no `/api/horus`; deployment READY no SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7`.
 - [ ] Integrar semantic cache real.
 - [~] Implementar confidence/human-in-the-loop real: score determinístico com limiar de `0.70` e decisão `human_review`/`route_to_service` integrados ao grafo; execução de testes ainda sem evidência CI.
-- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core → Memory → Decision e Execution Log estão integrados; Economic Authorization, Budget, Router, Provider Adapter, execução e reconciliation permanecem pendentes de integração canônica.
+- [~] Integrar Economic Authorization canônico: `lib/core/economicAuthorization.ts` reutiliza `execution_budgets`, `execution_attempts` e `authorize_horus_execution_attempt`; o grafo exige `budget_id`, `provider_id`, `model_id` e `capability` antes de autorizar uma execução. A validação Vercel do SHA final está em andamento.
+- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core → Memory → Decision → Economic Authorization e Execution Log estão integrados; Budget, Router, Provider Adapter, execução real, usage, cost e reconciliation permanecem pendentes de integração canônica.
 
-**Estado:** 🟡 PARCIAL — LangGraph, Memory retrieval, confidence gate e execution log persistente integrados; semantic cache e cadeia econômica/provider ainda pendentes.
+**Estado:** 🟡 PARCIAL — LangGraph, Memory retrieval, confidence gate, Economic Authorization e execution log persistente integrados; semantic cache e cadeia econômica/provider completa ainda pendentes.
 
 ---
 
@@ -218,61 +220,3 @@ Para cada módulo provar:
 - [ ] Metrics/correlation IDs.
 
 **Estado:** 🔍 NÃO DETERMINADO.
-
----
-
-# 13 — CLEANUP
-
-## Fase 1 — Audit
-
-- [~] Inventariar `fix_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN` por indisponibilidade do índice de código.
-- [~] Inventariar `patch_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN`.
-- [~] Inventariar `rewrite_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN`.
-- [~] Inventariar `update_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN`.
-- [~] Inventariar `generate_*`: nenhum consumidor operacional foi encontrado nos pontos de integração disponíveis; inventário recursivo completo permanece `UNKNOWN`.
-- [x] Remover `format.js` após confirmação de artefato histórico sem consumidor atual.
-- [x] Remover `add_break_words.js` após confirmação de artefato histórico sem consumidor atual.
-- [ ] Classificar completamente os scripts JS restantes por filesystem.
-- [ ] Classificar órfãos e duplicatas restantes com evidência recursiva.
-
-## Fase 2 — Cleanup
-
-- [x] Remover `db/schema.sql` e `supabase_schema.sql`; ambos eram cópias byte-for-byte do mesmo snapshot histórico e a cadeia canônica permanece `supabase/migrations/`.
-- [x] Nenhum dos snapshots removidos permanece referenciado nos artefatos de integração verificados.
-- [ ] Fechar inventário recursivo de referências dinâmicas restantes.
-
-**Regra:** `UNKNOWN ≠ ORPHAN`. Itens não comprovados permanecem preservados.
-
----
-
-# 14 — GATE ORDER
-
-```text
-FOUNDATION
-   ↓
-ARCHITECTURE DISCOVERY
-   ↓
-BUILD GATE
-   ↓
-ARCHITECTURE GATE
-   ↓
-SECURITY GATE
-   ↓
-ECONOMIC SAFETY INTEGRATION
-   ↓
-API MIGRATION
-   ↓
-AGENTS / PERSONAL / STUDIO / MEMORY EXPANSION
-   ↓
-PRODUCTION GATE
-```
-
-Uma camada superior não deve ser marcada como concluída enquanto uma dependência inferior estiver `BLOCKED` ou sem evidência.
-
----
-
-# 15 — HISTORICAL FOUNDATION
-
-O roadmap original descrevia uma visão de "Agência de Empregos Digitais Universal", event sourcing, Generic Connector Interface, human-in-the-loop, Memory Graph e MVP Maria. Esses objetivos estratégicos permanecem históricos; sua implementação atual deve ser determinada pelo Blueprint e pela evidência do repositório, não pelo checklist antigo.
-
-Nenhum item histórico é considerado `COMPLETE` apenas porque estava marcado `[x]` no roadmap anterior.
