@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { assertValidIdempotencyKey } from '../lib/core/idempotency.ts';
 
 function hasAvailableCredits(balance, held, requested) {
   return balance - held >= requested;
@@ -11,12 +12,10 @@ test('credit reservation cannot exceed available credits', () => {
 });
 
 test('idempotency keys must be non-empty', () => {
-  assert.throws(() => {
-    if (!'operation-123') throw new Error('INVALID_IDEMPOTENCY_KEY');
-  }, /INVALID_IDEMPOTENCY_KEY/);
-  assert.doesNotThrow(() => {
-    if (!'operation-123') throw new Error('INVALID_IDEMPOTENCY_KEY');
-  });
+  assert.throws(() => assertValidIdempotencyKey(''), /INVALID_IDEMPOTENCY_KEY/);
+  assert.throws(() => assertValidIdempotencyKey('   '), /INVALID_IDEMPOTENCY_KEY/);
+  assert.throws(() => assertValidIdempotencyKey(null), /INVALID_IDEMPOTENCY_KEY/);
+  assert.doesNotThrow(() => assertValidIdempotencyKey('operation-123'));
 });
 
 test('privileged operations are not represented as user-scoped authorization', () => {
