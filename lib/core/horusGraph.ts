@@ -87,14 +87,23 @@ function routeDecision(state: HorusCoreState): Partial<HorusCoreState> {
   return { action: state.requiresHuman ? 'human_review' : 'route_to_service' };
 }
 
+function isFreshPricing(model: { priceVerifiedAt: string | null; expirationDate: string | null }): boolean {
+  if (!model.priceVerifiedAt) return false;
+  const verifiedAt = new Date(model.priceVerifiedAt).getTime();
+  if (!Number.isFinite(verifiedAt)) return false;
+  if (verifiedAt > Date.now()) return false;
+  if (model.expirationDate) {
+    const expiration = new Date(model.expirationDate).getTime();
+    if (!Number.isFinite(expiration) || expiration <= Date.now()) return false;
+  }
+  return true;
+}
+
 async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partial<HorusCoreState>> {
   if (state.error || state.requiresHuman || state.action !== 'route_to_service') {
     return { economicAuthorized: false };
   }
 
-  // Authorization is a hard economic side effect. Authenticate/authorize the
-  // caller before reserving any budget so a permission failure can never leave
-  // an execution attempt and budget reservation unreconciled.
   await requirePermission('ai.execute');
 
   const budgetId = typeof state.payload.budget_id === 'string' ? state.payload.budget_id : '';
@@ -138,8 +147,15 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
   }, 3);
 
   let lastAuthorizationError = 'economic_authorization_denied';
+  let freshCandidateCount = 0;
 
   for (const candidate of candidates) {
+    if (!isFreshPricing(candidate.model)) {
+      lastAuthorizationError = `pricing_stale:${candidate.model.id}`;
+      continue;
+    }
+
+    freshCandidateCount += 1;
     const estimate = estimateTextCost(candidate.model, inputTokens, maxOutputTokens, policy, {
       maxOutputTokens,
       maxReasoningTokens,
@@ -152,6 +168,8 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
       modelId: candidate.model.id,
       capability: candidate.model.capability,
       maximumCostBrl: estimate.maximumProviderCostBrl,
+      maximumTotalCostBrl: estimate.maximumTotalCostBrl,
+      minimumRevenueBrl: estimate.minimumRevenueBrl,
       inputTokens,
       outputTokens: maxOutputTokens,
       reasoningTokens: maxReasoningTokens,
@@ -171,13 +189,10 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
     lastAuthorizationError = result.error ?? lastAuthorizationError;
   }
 
-  const [fallbackCandidate] = candidates;
   return {
     economicAuthorized: false,
     executionBudgetId: budgetId,
-    routedProviderId: fallbackCandidate?.provider.id,
-    routedModelId: fallbackCandidate?.model.id,
-    action: 'economic_authorization_denied',
+    action: freshCandidateCount === 0 ? 'economic_pricing_unavailable' : 'economic_authorization_denied',
     error: lastAuthorizationError,
   };
 }
