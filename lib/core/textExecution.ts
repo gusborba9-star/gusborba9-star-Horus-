@@ -50,7 +50,7 @@ export async function executeAuthorizedHorusText(
     throw new Error('INVALID_MAX_OUTPUT_TOKENS');
   }
 
-  const model = await models.get(input.modelId);
+  const model = await models.get(input.providerId, input.modelId);
   if (!model || model.providerId !== input.providerId || model.capability !== 'TEXT_GENERATION') {
     throw new Error('EXECUTION_MODEL_NOT_AVAILABLE');
   }
