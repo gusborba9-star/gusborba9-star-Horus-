@@ -6,6 +6,8 @@ export type EconomicAuthorizationInput = {
   modelId: string;
   capability: string;
   maximumCostBrl: number;
+  maximumTotalCostBrl?: number;
+  minimumRevenueBrl?: number;
   inputTokens?: number;
   outputTokens?: number;
   reasoningTokens?: number;
@@ -31,14 +33,24 @@ export async function authorizeHorusExecution(
 ): Promise<EconomicAuthorizationResult> {
   const supabase = getServiceSupabase();
   const maximumCostBrl = Number(input.maximumCostBrl);
+  const maximumTotalCostBrl = Number(input.maximumTotalCostBrl ?? input.maximumCostBrl);
+  const minimumRevenueBrl = Number(input.minimumRevenueBrl ?? 0);
 
   if (!Number.isFinite(maximumCostBrl) || maximumCostBrl < 0) {
     return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'invalid_maximum_cost_brl' };
   }
 
+  if (!Number.isFinite(maximumTotalCostBrl) || maximumTotalCostBrl < maximumCostBrl) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'invalid_maximum_total_cost_brl' };
+  }
+
+  if (!Number.isFinite(minimumRevenueBrl) || minimumRevenueBrl < 0) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'invalid_minimum_revenue_brl' };
+  }
+
   const { data: budget, error: budgetError } = await supabase
     .from('execution_budgets')
-    .select('id, remaining_cost_brl, remaining_attempts, status')
+    .select('id, remaining_cost_brl, remaining_attempts, remaining_input_tokens, remaining_output_tokens, remaining_reasoning_tokens, revenue_allocated_brl, minimum_margin_rate, maximum_provider_cost_brl, maximum_total_cost_brl, maximum_tree_cost_brl, status')
     .eq('id', input.budgetId)
     .maybeSingle();
 
@@ -67,6 +79,39 @@ export async function authorizeHorusExecution(
     return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_budget_cost_exhausted' };
   }
 
+  if (maximumTotalCostBrl > Number(budget.maximum_total_cost_brl)) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_maximum_total_cost_exceeded' };
+  }
+
+  if (maximumTotalCostBrl > Number(budget.maximum_tree_cost_brl)) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_tree_cost_exceeded' };
+  }
+
+  if (minimumRevenueBrl > Number(budget.revenue_allocated_brl)) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_margin_guard_failed' };
+  }
+
+  const maximumAuthorizedByMargin = Number(budget.revenue_allocated_brl) * (1 - Number(budget.minimum_margin_rate));
+  if (!Number.isFinite(maximumAuthorizedByMargin) || maximumTotalCostBrl > maximumAuthorizedByMargin + 1e-8) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_minimum_margin_failed' };
+  }
+
+  const inputTokens = nonNegativeInteger(input.inputTokens);
+  const outputTokens = nonNegativeInteger(input.outputTokens);
+  const reasoningTokens = nonNegativeInteger(input.reasoningTokens);
+
+  if (inputTokens > Number(budget.remaining_input_tokens)) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_input_token_budget_exhausted' };
+  }
+
+  if (outputTokens > Number(budget.remaining_output_tokens)) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_output_token_budget_exhausted' };
+  }
+
+  if (reasoningTokens > Number(budget.remaining_reasoning_tokens)) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_reasoning_token_budget_exhausted' };
+  }
+
   const { count, error: attemptsError } = await supabase
     .from('execution_attempts')
     .select('id', { count: 'exact', head: true })
@@ -85,9 +130,9 @@ export async function authorizeHorusExecution(
     p_model_id: input.modelId,
     p_capability: input.capability,
     p_maximum_cost_brl: maximumCostBrl,
-    p_input_tokens: nonNegativeInteger(input.inputTokens),
-    p_output_tokens: nonNegativeInteger(input.outputTokens),
-    p_reasoning_tokens: nonNegativeInteger(input.reasoningTokens),
+    p_input_tokens: inputTokens,
+    p_output_tokens: outputTokens,
+    p_reasoning_tokens: reasoningTokens,
     p_endpoint_id: input.endpointId ?? null,
     p_fallback_from_attempt_id: input.fallbackFromAttemptId ?? null,
   });
