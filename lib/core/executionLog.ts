@@ -18,30 +18,83 @@ export async function persistHorusExecutionLog(input: HorusExecutionLogInput): P
       ? 'HUMAN_REVIEW'
       : 'COMPLETED';
 
-  const { data, error } = await getServiceSupabase()
-    .from('horus_execution_logs')
-    .insert({
-      request_id: input.requestId,
-      event_type: input.eventType,
-      source: input.source,
-      action: input.state.action,
-      status,
-      confidence: input.state.confidence,
-      requires_human_review: input.state.requiresHuman,
-      memory_matches: input.state.memoryContext.length,
-      error_message: input.state.error ?? null,
-      started_at: input.startedAt.toISOString(),
-      completed_at: completedAt.toISOString(),
-      latency_ms: Math.max(0, completedAt.getTime() - input.startedAt.getTime()),
-      metadata: input.metadata ?? {},
-    })
-    .select('id')
-    .single();
+  try {
+    const { data, error } = await getServiceSupabase()
+      .from('horus_execution_logs')
+      .insert({
+        request_id: input.requestId,
+        event_type: input.eventType,
+        source: input.source,
+        action: input.state.action,
+        status,
+        confidence: input.state.confidence,
+        requires_human_review: input.state.requiresHuman,
+        memory_matches: input.state.memoryContext.length,
+        error_message: input.state.error ?? null,
+        started_at: input.startedAt.toISOString(),
+        completed_at: completedAt.toISOString(),
+        latency_ms: Math.max(0, completedAt.getTime() - input.startedAt.getTime()),
+        metadata: input.metadata ?? {},
+      })
+      .select('id')
+      .single();
 
-  if (error) {
-    console.error('[Hórus Execution Log] Falha ao persistir evento:', error.message);
+    if (error) {
+      console.error('[Hórus Execution Log] Falha ao persistir evento:', error.message);
+      return null;
+    }
+
+    return data?.id ?? null;
+  } catch (error) {
+    console.error(
+      '[Hórus Execution Log] Erro inesperado ao persistir evento:',
+      error instanceof Error ? error.message : error,
+    );
     return null;
   }
+}
 
-  return data?.id ?? null;
+export async function persistHorusExecutionError(input: {
+  requestId: string;
+  eventType: string;
+  source: string;
+  startedAt: Date;
+  error: unknown;
+}): Promise<string | null> {
+  const completedAt = new Date();
+  const message = input.error instanceof Error ? input.error.message : 'Erro interno de execução';
+
+  try {
+    const { data, error } = await getServiceSupabase()
+      .from('horus_execution_logs')
+      .insert({
+        request_id: input.requestId,
+        event_type: input.eventType,
+        source: input.source,
+        action: 'execution_error',
+        status: 'ERROR',
+        confidence: 0,
+        requires_human_review: false,
+        memory_matches: 0,
+        error_message: message,
+        started_at: input.startedAt.toISOString(),
+        completed_at: completedAt.toISOString(),
+        latency_ms: Math.max(0, completedAt.getTime() - input.startedAt.getTime()),
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[Hórus Execution Log] Falha ao persistir erro:', error.message);
+      return null;
+    }
+
+    return data?.id ?? null;
+  } catch (error) {
+    console.error(
+      '[Hórus Execution Log] Erro inesperado ao persistir erro:',
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
 }
