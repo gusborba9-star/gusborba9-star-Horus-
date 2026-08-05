@@ -5,6 +5,7 @@ export type EconomicAuthorizationInput = {
   providerId: string;
   modelId: string;
   capability: string;
+  maximumCostBrl: number;
   inputTokens?: number;
   outputTokens?: number;
   reasoningTokens?: number;
@@ -16,7 +17,7 @@ export type EconomicAuthorizationResult = {
   authorized: boolean;
   attemptId?: string;
   budgetId: string;
-  maximumCostBrl?: number;
+  maximumCostBrl: number;
   error?: string;
 };
 
@@ -29,10 +30,15 @@ export async function authorizeHorusExecution(
   input: EconomicAuthorizationInput,
 ): Promise<EconomicAuthorizationResult> {
   const supabase = getServiceSupabase();
+  const maximumCostBrl = Number(input.maximumCostBrl);
+
+  if (!Number.isFinite(maximumCostBrl) || maximumCostBrl < 0) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'invalid_maximum_cost_brl' };
+  }
 
   const { data: budget, error: budgetError } = await supabase
     .from('execution_budgets')
-    .select('id, maximum_provider_cost_brl, remaining_cost_brl, remaining_attempts, status')
+    .select('id, remaining_cost_brl, remaining_attempts, status')
     .eq('id', input.budgetId)
     .maybeSingle();
 
@@ -41,35 +47,24 @@ export async function authorizeHorusExecution(
   }
 
   if (!budget) {
-    return {
-      authorized: false,
-      budgetId: input.budgetId,
-      error: 'execution_budget_not_found',
-    };
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_budget_not_found' };
   }
 
-  if (budget.status !== 'ACTIVE') {
+  if (!['AUTHORIZED', 'RUNNING'].includes(String(budget.status))) {
     return {
       authorized: false,
       budgetId: input.budgetId,
+      maximumCostBrl,
       error: `execution_budget_not_active:${budget.status}`,
     };
   }
 
   if (Number(budget.remaining_attempts) <= 0) {
-    return {
-      authorized: false,
-      budgetId: input.budgetId,
-      error: 'execution_budget_attempts_exhausted',
-    };
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_budget_attempts_exhausted' };
   }
 
-  if (Number(budget.remaining_cost_brl) <= 0) {
-    return {
-      authorized: false,
-      budgetId: input.budgetId,
-      error: 'execution_budget_cost_exhausted',
-    };
+  if (maximumCostBrl > Number(budget.remaining_cost_brl)) {
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: 'execution_budget_cost_exhausted' };
   }
 
   const { count, error: attemptsError } = await supabase
@@ -82,7 +77,6 @@ export async function authorizeHorusExecution(
   }
 
   const attemptNumber = (count ?? 0) + 1;
-  const maximumCostBrl = Number(budget.maximum_provider_cost_brl);
 
   const { data, error } = await supabase.rpc('authorize_horus_execution_attempt', {
     p_budget_id: input.budgetId,
@@ -99,12 +93,7 @@ export async function authorizeHorusExecution(
   });
 
   if (error) {
-    return {
-      authorized: false,
-      budgetId: input.budgetId,
-      maximumCostBrl,
-      error: error.message,
-    };
+    return { authorized: false, budgetId: input.budgetId, maximumCostBrl, error: error.message };
   }
 
   const attempt = Array.isArray(data) ? data[0] : data;
@@ -121,10 +110,5 @@ export async function authorizeHorusExecution(
     };
   }
 
-  return {
-    authorized: true,
-    attemptId,
-    budgetId: input.budgetId,
-    maximumCostBrl,
-  };
+  return { authorized: true, attemptId, budgetId: input.budgetId, maximumCostBrl };
 }
