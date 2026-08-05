@@ -1,12 +1,19 @@
 import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
 import { MemoryGraph } from '@/lib/memoryGraph';
+import { estimateTextCost } from '@/lib/economic/cost-engine';
+import { EconomicRouter } from '@/lib/economic/router';
+import { SupabaseModelRegistry, SupabaseProviderRegistry } from '@/lib/economic/supabase-registry';
+import { getEconomicPolicy } from '@/lib/economic/supabase-policy';
 import { authorizeHorusExecution } from './economicAuthorization';
+import { executeAuthorizedHorusText } from './textExecution';
 
 export type HorusCoreInput = {
   event_type?: string;
   payload?: Record<string, unknown>;
   source?: string;
 };
+
+const router = new EconomicRouter(new SupabaseProviderRegistry(), new SupabaseModelRegistry());
 
 const HorusState = Annotation.Root({
   eventType: Annotation<string>,
@@ -23,6 +30,11 @@ const HorusState = Annotation.Root({
   economicAuthorized: Annotation<boolean>,
   executionAttemptId: Annotation<string | undefined>,
   executionBudgetId: Annotation<string | undefined>,
+  routedProviderId: Annotation<string | undefined>,
+  routedModelId: Annotation<string | undefined>,
+  executionText: Annotation<string | undefined>,
+  actualCostBrl: Annotation<number | undefined>,
+  usage: Annotation<Record<string, unknown> | undefined>,
 });
 
 export type HorusCoreState = typeof HorusState.State;
@@ -80,41 +92,68 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
   }
 
   const budgetId = typeof state.payload.budget_id === 'string' ? state.payload.budget_id : '';
-  const providerId = typeof state.payload.provider_id === 'string' ? state.payload.provider_id : '';
-  const modelId = typeof state.payload.model_id === 'string' ? state.payload.model_id : '';
+  const input = typeof state.payload.input === 'string' ? state.payload.input : '';
   const capability = typeof state.payload.capability === 'string'
     ? state.payload.capability
-    : typeof state.payload.operation === 'string'
-      ? state.payload.operation
-      : '';
+    : 'TEXT_GENERATION';
+  const maxOutputTokens = numericPayloadValue(state.payload.max_output_tokens) ?? 1024;
+  const maxReasoningTokens = numericPayloadValue(state.payload.max_reasoning_tokens) ?? 0;
+  const inputTokens = Math.max(1, Math.ceil(input.length / 4));
 
-  if (!budgetId || !providerId || !modelId || !capability) {
+  if (!budgetId || !input) {
     return {
       economicAuthorized: false,
       action: 'economic_authorization_required',
-      error: 'economic_authorization_requires_budget_provider_model_capability',
+      error: 'economic_authorization_requires_budget_and_input',
     };
   }
 
+  if (capability !== 'TEXT_GENERATION') {
+    return {
+      economicAuthorized: false,
+      action: 'provider_execution_not_supported',
+      error: `provider_execution_not_supported:${capability}`,
+    };
+  }
+
+  if (!Number.isSafeInteger(maxOutputTokens) || maxOutputTokens <= 0) {
+    return { economicAuthorized: false, action: 'invalid_execution_budget', error: 'INVALID_MAX_OUTPUT_TOKENS' };
+  }
+
+  const policy = await getEconomicPolicy();
+  const route = await router.route({
+    capability: 'TEXT_GENERATION',
+    qualityRequired: numericPayloadValue(state.payload.quality_required),
+    inputTokens,
+    maxOutputTokens,
+    maxReasoningTokens,
+    maxAttempts: 1,
+    allowFallback: false,
+  });
+
+  const estimate = estimateTextCost(route.model, inputTokens, maxOutputTokens, policy, {
+    maxOutputTokens,
+    maxReasoningTokens,
+    maxAttempts: 1,
+  });
+
   const result = await authorizeHorusExecution({
     budgetId,
-    providerId,
-    modelId,
-    capability,
-    inputTokens: numericPayloadValue(state.payload.input_tokens),
-    outputTokens: numericPayloadValue(state.payload.output_tokens),
-    reasoningTokens: numericPayloadValue(state.payload.reasoning_tokens),
-    endpointId: typeof state.payload.endpoint_id === 'string' ? state.payload.endpoint_id : undefined,
-    fallbackFromAttemptId:
-      typeof state.payload.fallback_from_attempt_id === 'string'
-        ? state.payload.fallback_from_attempt_id
-        : undefined,
+    providerId: route.provider.id,
+    modelId: route.model.id,
+    capability: route.model.capability,
+    maximumCostBrl: estimate.maximumProviderCostBrl,
+    inputTokens,
+    outputTokens: maxOutputTokens,
+    reasoningTokens: maxReasoningTokens,
   });
 
   if (!result.authorized) {
     return {
       economicAuthorized: false,
       executionBudgetId: budgetId,
+      routedProviderId: route.provider.id,
+      routedModelId: route.model.id,
       action: 'economic_authorization_denied',
       error: result.error ?? 'economic_authorization_denied',
     };
@@ -124,6 +163,37 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
     economicAuthorized: true,
     executionBudgetId: result.budgetId,
     executionAttemptId: result.attemptId,
+    routedProviderId: route.provider.id,
+    routedModelId: route.model.id,
+    error: undefined,
+  };
+}
+
+async function executeProvider(state: HorusCoreState): Promise<Partial<HorusCoreState>> {
+  if (!state.economicAuthorized || !state.executionAttemptId || !state.routedProviderId || !state.routedModelId) {
+    return {};
+  }
+
+  const input = typeof state.payload.input === 'string' ? state.payload.input : '';
+  const maxOutputTokens = numericPayloadValue(state.payload.max_output_tokens) ?? 1024;
+  const maxReasoningTokens = numericPayloadValue(state.payload.max_reasoning_tokens) ?? 0;
+
+  const result = await executeAuthorizedHorusText({
+    attemptId: state.executionAttemptId,
+    providerId: state.routedProviderId,
+    modelId: state.routedModelId,
+    input,
+    maxOutputTokens,
+    maxReasoningTokens,
+    temperature: numericPayloadValue(state.payload.temperature),
+    requestId: typeof state.payload.request_id === 'string' ? state.payload.request_id : crypto.randomUUID(),
+  });
+
+  return {
+    action: 'execution_completed',
+    executionText: result.text,
+    actualCostBrl: result.actualCostBrl,
+    usage: result.usage,
     error: undefined,
   };
 }
@@ -134,12 +204,14 @@ const graph = new StateGraph(HorusState)
   .addNode('assess_confidence', assessConfidence)
   .addNode('route_decision', routeDecision)
   .addNode('economic_authorization', authorizeEconomicExecution)
+  .addNode('provider_execution', executeProvider)
   .addEdge(START, 'validate_input')
   .addEdge('validate_input', 'retrieve_memory')
   .addEdge('retrieve_memory', 'assess_confidence')
   .addEdge('assess_confidence', 'route_decision')
   .addEdge('route_decision', 'economic_authorization')
-  .addEdge('economic_authorization', END)
+  .addEdge('economic_authorization', 'provider_execution')
+  .addEdge('provider_execution', END)
   .compile();
 
 export async function runHorusCore(input: HorusCoreInput): Promise<HorusCoreState> {
@@ -155,5 +227,10 @@ export async function runHorusCore(input: HorusCoreInput): Promise<HorusCoreStat
     economicAuthorized: false,
     executionAttemptId: undefined,
     executionBudgetId: undefined,
+    routedProviderId: undefined,
+    routedModelId: undefined,
+    executionText: undefined,
+    actualCostBrl: undefined,
+    usage: undefined,
   });
 }
