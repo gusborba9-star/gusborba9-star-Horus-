@@ -127,51 +127,58 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
   }
 
   const policy = await getEconomicPolicy();
-  const route = await router.route({
+  const candidates = await router.routeCandidates({
     capability: 'TEXT_GENERATION',
     qualityRequired: numericPayloadValue(state.payload.quality_required),
     inputTokens,
     maxOutputTokens,
     maxReasoningTokens,
     maxAttempts: 1,
-    allowFallback: false,
-  });
+    allowFallback: true,
+  }, 3);
 
-  const estimate = estimateTextCost(route.model, inputTokens, maxOutputTokens, policy, {
-    maxOutputTokens,
-    maxReasoningTokens,
-    maxAttempts: 1,
-  });
+  let lastAuthorizationError = 'economic_authorization_denied';
 
-  const result = await authorizeHorusExecution({
-    budgetId,
-    providerId: route.provider.id,
-    modelId: route.model.id,
-    capability: route.model.capability,
-    maximumCostBrl: estimate.maximumProviderCostBrl,
-    inputTokens,
-    outputTokens: maxOutputTokens,
-    reasoningTokens: maxReasoningTokens,
-  });
+  for (const candidate of candidates) {
+    const estimate = estimateTextCost(candidate.model, inputTokens, maxOutputTokens, policy, {
+      maxOutputTokens,
+      maxReasoningTokens,
+      maxAttempts: 1,
+    });
 
-  if (!result.authorized) {
-    return {
-      economicAuthorized: false,
-      executionBudgetId: budgetId,
-      routedProviderId: route.provider.id,
-      routedModelId: route.model.id,
-      action: 'economic_authorization_denied',
-      error: result.error ?? 'economic_authorization_denied',
-    };
+    const result = await authorizeHorusExecution({
+      budgetId,
+      providerId: candidate.provider.id,
+      modelId: candidate.model.id,
+      capability: candidate.model.capability,
+      maximumCostBrl: estimate.maximumProviderCostBrl,
+      inputTokens,
+      outputTokens: maxOutputTokens,
+      reasoningTokens: maxReasoningTokens,
+    });
+
+    if (result.authorized) {
+      return {
+        economicAuthorized: true,
+        executionBudgetId: result.budgetId,
+        executionAttemptId: result.attemptId,
+        routedProviderId: candidate.provider.id,
+        routedModelId: candidate.model.id,
+        error: undefined,
+      };
+    }
+
+    lastAuthorizationError = result.error ?? lastAuthorizationError;
   }
 
+  const [fallbackCandidate] = candidates;
   return {
-    economicAuthorized: true,
-    executionBudgetId: result.budgetId,
-    executionAttemptId: result.attemptId,
-    routedProviderId: route.provider.id,
-    routedModelId: route.model.id,
-    error: undefined,
+    economicAuthorized: false,
+    executionBudgetId: budgetId,
+    routedProviderId: fallbackCandidate?.provider.id,
+    routedModelId: fallbackCandidate?.model.id,
+    action: 'economic_authorization_denied',
+    error: lastAuthorizationError,
   };
 }
 
