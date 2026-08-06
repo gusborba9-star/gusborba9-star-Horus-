@@ -54,6 +54,7 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
     const estimate = estimateTextCost(candidate.model, inputTokens, maxOutputTokens, policy, { maxOutputTokens, maxReasoningTokens, maxAttempts: 1 });
     const result = await authorizeHorusExecution({ budgetId, providerId: candidate.model.providerId, modelId: candidate.model.id, capability: candidate.model.capability, maximumCostBrl: estimate.maximumProviderCostBrl, maximumTotalCostBrl: estimate.maximumTotalCostBrl, minimumRevenueBrl: estimate.minimumRevenueBrl, inputTokens, outputTokens: maxOutputTokens, reasoningTokens: maxReasoningTokens, endpointId: candidate.endpointPricing?.endpointId ?? endpointId });
     if (result.authorized) {
+      if (!result.attemptId) return { economicAuthorized: false, cacheHit: false, action: 'economic_authorization_denied', error: 'ECONOMIC_AUTHORIZATION_MISSING_ATTEMPT_ID' };
       const base = { economicAuthorized: true, executionBudgetId: result.budgetId, executionAttemptId: result.attemptId, pricingSnapshotId: result.pricingSnapshotId ?? snapshot.id, endpointId: candidate.endpointPricing?.endpointId ?? endpointId, routedProviderId: candidate.model.providerId, routedModelId: candidate.model.id, error: undefined };
       if (embedding) {
         const cache = await lookupSemanticCache({ embedding, eventType: state.eventType, source: state.source, capability: candidate.model.capability, providerId: candidate.model.providerId, modelId: candidate.model.id, endpointId: candidate.endpointPricing?.endpointId ?? endpointId, pricingSnapshotId: result.pricingSnapshotId ?? snapshot.id });
@@ -68,6 +69,7 @@ async function authorizeEconomicExecution(state: HorusCoreState): Promise<Partia
   }
   return { economicAuthorized: false, cacheHit: false, executionBudgetId: budgetId, pricingSnapshotId: snapshot.id, action: 'economic_authorization_denied', error: lastAuthorizationError };
 }
+
 async function executeProvider(state: HorusCoreState): Promise<Partial<HorusCoreState>> {
   if (!state.economicAuthorized || state.cacheHit || !state.executionAttemptId || !state.routedProviderId || !state.routedModelId) return {};
   const input = typeof state.payload.input === 'string' ? state.payload.input : '';
