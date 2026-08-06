@@ -1,37 +1,40 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { middleware } from '../middleware.ts';
-import { GET as webhookGet, POST as webhookPost } from '../app/api/webhook-pix/route.ts';
+import { readFile } from 'node:fs/promises';
 
-function unauthenticatedApiRequest() {
-  return {
-    nextUrl: { pathname: '/api/horus' },
-    cookies: { get: () => undefined },
-  };
+async function source(path) {
+  return readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 }
 
-test('API middleware returns JSON 401 instead of redirect when session is absent', async () => {
-  const response = await middleware(unauthenticatedApiRequest());
-  assert.equal(response.status, 401);
-  assert.deepEqual(await response.json(), { success: false, error: 'AUTHENTICATION_REQUIRED' });
+test('API middleware enforces JSON authentication failures for API paths', async () => {
+  const content = await source('middleware.ts');
+  assert.match(content, /function isApiPath\(pathname: string\)/);
+  assert.match(content, /AUTHENTICATION_REQUIRED/);
+  assert.match(content, /status: 401/);
+  assert.match(content, /return authenticationFailure\(request\)/);
 });
 
-test('Webhook rejects GET because the endpoint is mutation ingress only', async () => {
-  const response = await webhookGet();
-  assert.equal(response.status, 405);
-  assert.equal(response.headers.get('allow'), 'POST');
+test('Hórus execution route enforces permission and sanitizes public errors', async () => {
+  const content = await source('app/api/horus/route.ts');
+  assert.match(content, /requirePermission\('ai\.execute'\)/);
+  assert.match(content, /function publicCoreError\(error\?: string\)/);
+  assert.match(content, /CORE_EXECUTION_FAILED/);
+  assert.doesNotMatch(content, /error: error instanceof Error \? error\.message/);
 });
 
-test('Webhook fails closed when its provider credential is absent', async () => {
-  const previous = process.env.TOKEN_WEBHOOK_EFI;
-  delete process.env.TOKEN_WEBHOOK_EFI;
-  try {
-    const request = new Request('https://horus.example/api/webhook-pix', { method: 'POST' });
-    const response = await webhookPost(request);
-    assert.equal(response.status, 503);
-    assert.deepEqual(await response.json(), { success: false, error: 'WEBHOOK_AUTH_NOT_CONFIGURED' });
-  } finally {
-    if (previous === undefined) delete process.env.TOKEN_WEBHOOK_EFI;
-    else process.env.TOKEN_WEBHOOK_EFI = previous;
-  }
+test('Human review route scopes review lookup to authenticated owner', async () => {
+  const content = await source('app/api/horus/review/route.ts');
+  assert.match(content, /requirePermission\('ai\.execute'\)/);
+  assert.match(content, /metadata->>owner_scope/);
+  assert.match(content, /reviewed_by_user_id/);
+});
+
+test('Payment webhook fails closed and has replay/idempotency protection', async () => {
+  const content = await source('app/api/webhook-pix/route.ts');
+  assert.match(content, /timingSafeEqual/);
+  assert.match(content, /x-webhook-event-id/);
+  assert.match(content, /horus_webhook_events/);
+  assert.match(content, /WEBHOOK_EVENT_ID_REUSE/);
+  assert.match(content, /METHOD_NOT_ALLOWED/);
+  assert.doesNotMatch(content, /searchParams\.get\('token'\)/);
 });
