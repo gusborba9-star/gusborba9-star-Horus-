@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
+import { requirePermission } from '@/lib/auth/server';
 import { persistHorusExecutionError, persistHorusExecutionLog } from '@/lib/core/executionLog';
 import { runHorusCore } from '@/lib/core/horusGraph';
 import { geminiCircuitBreaker } from '@/utils/circuitBreaker';
+
+function apiError(error: unknown): { status: number; code: string } {
+  if (error instanceof Error) {
+    if (error.message === 'AUTHENTICATION_REQUIRED') return { status: 401, code: 'AUTHENTICATION_REQUIRED' };
+    if (error.message === 'FORBIDDEN') return { status: 403, code: 'FORBIDDEN' };
+  }
+  return { status: 500, code: 'INTERNAL_SERVER_ERROR' };
+}
 
 export async function POST(req: Request) {
   const startedAt = new Date();
@@ -10,9 +19,10 @@ export async function POST(req: Request) {
   let source = '';
 
   try {
+    await requirePermission('ai.execute');
     const body = await req.json();
     const { event_type, payload, source: requestSource } = body ?? {};
-    const normalizedPayload = payload && typeof payload === 'object' ? payload : {};
+    const normalizedPayload = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
     eventType = typeof event_type === 'string' ? event_type : '';
     source = typeof requestSource === 'string' ? requestSource : '';
     if (typeof normalizedPayload.request_id === 'string' && normalizedPayload.request_id.trim()) requestId = normalizedPayload.request_id;
@@ -58,8 +68,13 @@ export async function POST(req: Request) {
       error: result.error,
     }, { status });
   } catch (error) {
-    console.error('[Hórus Core] Erro de orquestração:', error);
+    const authError = apiError(error);
+    if (authError.status === 401 || authError.status === 403) {
+      return NextResponse.json({ success: false, error: authError.code }, { status: authError.status });
+    }
+
+    console.error('[Hórus Core] Erro de orquestração:', error instanceof Error ? error.message : 'unknown error');
     const executionLogId = await persistHorusExecutionError({ requestId, eventType, source, startedAt, error });
-    return NextResponse.json({ success: false, data: { request_id: requestId, execution_log_id: executionLogId }, error: error instanceof Error ? error.message : 'Erro interno de orquestração' }, { status: 500 });
+    return NextResponse.json({ success: false, data: { request_id: requestId, execution_log_id: executionLogId }, error: authError.code }, { status: authError.status });
   }
 }
