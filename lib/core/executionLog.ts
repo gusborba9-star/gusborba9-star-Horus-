@@ -1,7 +1,30 @@
 import { getServiceSupabase } from '@/lib/supabase';
 import type { HorusCoreState } from './horusGraph';
 
-export type HorusExecutionLogInput = { requestId: string; eventType: string; source: string; startedAt: Date; state: HorusCoreState; metadata?: Record<string, unknown> };
+export type HorusExecutionLogOwnership = {
+  userId?: string | null;
+  organizationId?: string | null;
+  ownerScope?: string | null;
+};
+
+export type HorusExecutionLogInput = {
+  requestId: string;
+  eventType: string;
+  source: string;
+  startedAt: Date;
+  state: HorusCoreState;
+  metadata?: Record<string, unknown>;
+  ownership?: HorusExecutionLogOwnership;
+};
+
+function ownershipMetadata(ownership?: HorusExecutionLogOwnership): Record<string, unknown> {
+  if (!ownership) return {};
+  return {
+    owner_scope: ownership.ownerScope ?? null,
+    owner_user_id: ownership.userId ?? null,
+    owner_organization_id: ownership.organizationId ?? null,
+  };
+}
 
 export async function persistHorusExecutionLog(input: HorusExecutionLogInput): Promise<string | null> {
   const completedAt = new Date();
@@ -20,7 +43,12 @@ export async function persistHorusExecutionLog(input: HorusExecutionLogInput): P
       started_at: input.startedAt.toISOString(),
       completed_at: completedAt.toISOString(),
       latency_ms: Math.max(0, completedAt.getTime() - input.startedAt.getTime()),
-      metadata: { ...(input.metadata ?? {}), pricing_snapshot_id: input.state.pricingSnapshotId ?? null, endpoint_id: input.state.endpointId ?? null },
+      metadata: {
+        ...(input.metadata ?? {}),
+        ...ownershipMetadata(input.ownership),
+        pricing_snapshot_id: input.state.pricingSnapshotId ?? null,
+        endpoint_id: input.state.endpointId ?? null,
+      },
     }).select('id').single();
     if (error) { console.error('[Hórus Execution Log] Falha ao persistir evento:', error.message); return null; }
     return data?.id ?? null;
@@ -30,14 +58,34 @@ export async function persistHorusExecutionLog(input: HorusExecutionLogInput): P
   }
 }
 
-export async function persistHorusExecutionError(input: { requestId: string; eventType: string; source: string; startedAt: Date; error: unknown }): Promise<string | null> {
+export async function persistHorusExecutionError(input: {
+  requestId: string;
+  eventType: string;
+  source: string;
+  startedAt: Date;
+  error: unknown;
+  ownership?: HorusExecutionLogOwnership;
+}): Promise<string | null> {
   const completedAt = new Date();
   const message = input.error instanceof Error ? input.error.message : 'Erro interno de execução';
   try {
     const { data, error } = await getServiceSupabase().from('horus_execution_logs').insert({
-      request_id: input.requestId, event_type: input.eventType, source: input.source, action: 'execution_error', status: 'ERROR', confidence: 0,
-      requires_human_review: false, memory_matches: 0, error_message: message, started_at: input.startedAt.toISOString(), completed_at: completedAt.toISOString(),
-      latency_ms: Math.max(0, completedAt.getTime() - input.startedAt.getTime()), metadata: { error_type: input.error instanceof Error ? input.error.name : 'unknown' },
+      request_id: input.requestId,
+      event_type: input.eventType,
+      source: input.source,
+      action: 'execution_error',
+      status: 'ERROR',
+      confidence: 0,
+      requires_human_review: false,
+      memory_matches: 0,
+      error_message: message,
+      started_at: input.startedAt.toISOString(),
+      completed_at: completedAt.toISOString(),
+      latency_ms: Math.max(0, completedAt.getTime() - input.startedAt.getTime()),
+      metadata: {
+        error_type: input.error instanceof Error ? input.error.name : 'unknown',
+        ...ownershipMetadata(input.ownership),
+      },
     }).select('id').single();
     if (error) { console.error('[Hórus Execution Log] Falha ao persistir erro:', error.message); return null; }
     return data?.id ?? null;
