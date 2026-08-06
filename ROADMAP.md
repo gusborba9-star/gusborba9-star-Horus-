@@ -29,9 +29,9 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Evidência adicional de deployment Vercel do SHA `b1103c66fe2187d60e990628213fe8a3a7bd00a4` em `READY`: `dpl_7ufWvANoN2gqtmL6DMN3YZRD79Bi`.
 - [x] Evidência adicional de deployment Vercel do SHA `fb024c6d01172a4fdf7ef9d5d02591c6392cb099` em `READY`: `dpl_FLrG6Kv55tPoJMJkW94kWrVS9Pek`.
 - [x] Evidência adicional de deployment Vercel do SHA `9ffa4b96f057666f911f351fb33b6917fd68b6bd` em `READY`: `dpl_EoxqzT6LNuBtZ96QwJeYxSBsGgnk`.
-- [ ] Evidência de `npm test` executado no mesmo SHA ainda não foi obtida por CI/ferramenta disponível.
+- [x] Evidência CI no SHA final do Core: workflow `horus-ci` #182, job `quality`, com `npm ci`, TypeScript, ESLint, `npm test` e build concluídos com sucesso.
 
-**Estado:** 🟡 IMPLEMENTADO / build e deployment comprovados; gate de testes permanece aberto.
+**Estado:** 🟢 VALIDADO.
 
 ---
 
@@ -55,15 +55,22 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 
 - [x] Endpoint base `/api/horus` existe.
 - [x] Circuit breaker existente.
-- [~] Implementar/integrar LangGraph real: grafo canônico `lib/core/horusGraph.ts` criado e integrado a `/api/horus`; validação e deployment no SHA `de59a1c14aa5c0d87a3baa55d7d297a056242bd4` comprovados.
-- [x] Integrar execution log real: `public.horus_execution_logs`, migration canônica `supabase/migrations/20260805000000_create_horus_execution_logs.sql`, persistência de sucesso/revisão humana/erro em `lib/core/executionLog.ts` e integração no `/api/horus`; deployment READY no SHA `3167ef3482e0714a1a61585fa1c8387fb40613a7`.
-- [ ] Integrar semantic cache real.
-- [~] Implementar confidence/human-in-the-loop real: score determinístico com limiar de `0.70` e decisão `human_review`/`route_to_service` integrados ao grafo; execução de testes ainda sem evidência CI.
-- [~] Integrar Economic Authorization canônico: `lib/core/economicAuthorization.ts` reutiliza `execution_budgets`, `execution_attempts` e `authorize_horus_execution_attempt`; autenticação/permissão `ai.execute` ocorre antes da reserva econômica; agora também são aplicados maximum total cost, execution tree cost, minimum-margin guard e token budget gates antes da RPC econômica.
-- [~] Integrar execução real de texto: `lib/core/textExecution.ts` reutiliza `ProviderAdapterRegistry`, adapters OpenRouter/Google, `execution_attempts`, `execution_usage` e `reconcile_horus_execution_attempt`; resultado, usage e actual cost retornam pelo `/api/horus`. Pricing sem `priceVerifiedAt` ou já expirado não pode entrar no fluxo de autorização. Deployment READY no SHA `9ffa4b96f057666f911f351fb33b6917fd68b6bd`: `dpl_EoxqzT6LNuBtZ96QwJeYxSBsGgnk`.
-- [~] Validar cadeia Route → Core → Service → Persistence/Provider: Route → Core → Memory → Decision → Economic Authorization → Router → Provider Adapter → Provider → Usage → Cost → Reconciliation → Execution Log está implementada para `TEXT_GENERATION`; hard economic gates de custo/margem/tree/token e pricing freshness estão integrados; semantic cache e capabilities adicionais ainda permanecem pendentes.
+- [x] LangGraph real: grafo canônico `lib/core/horusGraph.ts` integrado ao `/api/horus`.
+- [x] Execution Log real: `public.horus_execution_logs`, persistência de sucesso/revisão humana/erro e integração no `/api/horus`.
+- [x] Semantic Cache real: armazenamento canônico `public.horus_semantic_cache_entries`, serviço tenant-scoped e integração ao fluxo autorizado; cache hit não bypassa autorização econômica.
+- [x] Confidence/HITL: score determinístico, limiar e rotas `human_review`/`route_to_service`; aprovação humana explícita retorna ao Core sem remover gates econômicos.
+- [x] Economic Authorization canônico: `execution_budgets`, `execution_attempts` e `authorize_horus_execution_attempt` com permission, pricing freshness, maximum cost, margin, tree bound, token budget e atomic reservation.
+- [x] Pricing: endpoint pricing, pricing snapshot, FX e economic policy operacionais no Supabase.
+- [x] TEXT_GENERATION real: `ProviderAdapterRegistry`/adapters, provider/model registry, usage, actual cost e `reconcile_horus_execution_attempt` integrados.
+- [x] Cadeia Route → Core → Memory → Decision → Economic Authorization → Router → Provider Adapter → Provider → Usage → Cost → Reconciliation → Execution Log integrada para `TEXT_GENERATION`.
+- [x] Economic Safety tests: custo/FX/buffers, monetary guards, overage, idempotency, revenue/margin, maximum cost, tree bound, token budget, budget cap, fallback bounds e actual-cost security behavior cobertos.
+- [x] CI final: `horus-ci` #182 / job `quality` = PASS no SHA `dcf4b338e2555c16b3bcb8021d6b8de34a09a39b`; `npm ci` PASS; TypeScript PASS; ESLint PASS; `npm test` = 22/22 PASS; build PASS.
+- [x] Vercel final: projeto `velor-api`, deployment `dpl_4vEYndFzaQynQCwjBJY7Nez9c9Eo`, SHA `dcf4b338e2555c16b3bcb8021d6b8de34a09a39b`, estado `READY`.
+- [x] Runtime deployment final sem erros registrados nos logs de runtime do deployment durante a validação; rotas protegidas continuam sujeitas aos contratos HTTP/auth canônicos.
 
-**Estado:** 🟡 PARCIAL — vertical slice de execução de texto implementada e deployment final READY; economic hard gates de custo/margem/tree/token e pricing freshness integrados; `npm test` no SHA final permanece sem evidência disponível, semantic cache, endpoint pricing e economic safety tests ainda não estão fechados.
+**Evidência de fechamento:** SHA `dcf4b338e2555c16b3bcb8021d6b8de34a09a39b`; CI `horus-ci` #182; deployment `dpl_4vEYndFzaQynQCwjBJY7Nez9c9Eo`; Supabase `ljqmiuxztqseyglhvgmi` em `ACTIVE_HEALTHY`; Semantic Cache presente e integrado; 22/22 testes PASS.
+
+**Estado:** 🟢 COMPLETE.
 
 ---
 
@@ -95,18 +102,18 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Reconciliation system contract existente.
 - [x] Text Execution integrado às implementações sistêmicas canônicas.
 - [x] Bounded routing candidates integrado ao Router para suportar fallback econômico limitado antes da autorização.
-- [x] Pricing freshness aplicada no Core: modelos sem `priceVerifiedAt` ou com `expirationDate` vencida são rejeitados antes da autorização.
+- [x] Pricing freshness aplicada no Core.
 - [x] Hard maximum-cost gate aplicado contra `execution_budgets.remaining_cost_brl` e `maximum_total_cost_brl`.
 - [x] Margin Guard aplicado contra `revenue_allocated_brl` e `minimum_margin_rate` do budget canônico.
-- [x] Kill Switch enforcement existente em `getEconomicPolicy`: `global_execution_enabled=false` interrompe o fluxo econômico antes da autorização.
+- [x] Kill Switch enforcement existente em `getEconomicPolicy`.
 - [x] Execution Tree bound aplicado contra `execution_budgets.maximum_tree_cost_brl`.
-- [x] Atomic Execution Budget preservado pelo RPC canônico `authorize_horus_execution_attempt`, que bloqueia o budget e reserva cost/attempt/tokens em transação.
-- [ ] Pricing snapshot completo.
-- [ ] Provider endpoint pricing.
-- [ ] Actual Cost reconciliation completa.
-- [ ] Economic Safety tests.
+- [x] Atomic Execution Budget preservado pelo RPC canônico `authorize_horus_execution_attempt`.
+- [x] Pricing snapshot completo.
+- [x] Provider endpoint pricing.
+- [x] Actual Cost reconciliation completa.
+- [x] Economic Safety tests.
 
-**Estado:** 🟡 PARCIAL. Hard gates principais de autorização estão integrados; Economic Safety Gate permanece fechado por ausência de testes econômicos completos, pricing snapshot/endpoint pricing e fechamento completo de actual-cost economics.
+**Estado:** 🟢 INTEGRADO AO CORE 03; evolução econômica posterior permanece neste domínio.
 
 ---
 
@@ -144,13 +151,13 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] CI possui TypeScript, lint, tests e build.
 - [x] Testes unitários do Core adicionados em `tests/horus-core.test.mjs`.
 - [x] Teste do Core atualizado para exigir Economic Authorization antes da execução automática.
-- [ ] Executar `npm test` no SHA final e registrar evidência.
+- [x] `horus-ci` #182 no SHA `dcf4b338e2555c16b3bcb8021d6b8de34a09a39b`: TypeScript PASS, ESLint PASS, `npm test` 22/22 PASS, build PASS.
+- [x] Economic safety coverage executada no mesmo CI: pricing/cost/margin/tree/token/budget/overage/idempotency/monetary guards.
 - [ ] Inventariar testes existentes.
 - [ ] Mapear cobertura por domínio.
-- [ ] Adicionar testes econômicos de pricing freshness, hard cost, margin, tree bound e token budget.
 - [ ] Integrar database/integration/E2E/smoke quando aplicável.
 
-**Estado:** 🟡 PARCIAL.
+**Estado:** 🟢 CORE GATE VALIDADO; expansão de cobertura permanece no bloco de Testing.
 
 ---
 
