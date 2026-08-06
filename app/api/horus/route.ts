@@ -8,8 +8,43 @@ function apiError(error: unknown): { status: number; code: string } {
   if (error instanceof Error) {
     if (error.message === 'AUTHENTICATION_REQUIRED') return { status: 401, code: 'AUTHENTICATION_REQUIRED' };
     if (error.message === 'FORBIDDEN') return { status: 403, code: 'FORBIDDEN' };
+    if (error.name === 'SyntaxError') return { status: 400, code: 'INVALID_JSON' };
   }
   return { status: 500, code: 'INTERNAL_SERVER_ERROR' };
+}
+
+function publicCoreError(error?: string): string | undefined {
+  if (!error) return undefined;
+  const base = error.split(':', 1)[0];
+  const safe = /^[A-Za-z][A-Za-z0-9_]*$/.test(base);
+  if (!safe) return 'CORE_EXECUTION_FAILED';
+  const known = new Set([
+    'economic_authorization_requires_budget_and_input',
+    'provider_execution_not_supported',
+    'INVALID_MAX_OUTPUT_TOKENS',
+    'PRICING_STALE_OR_UNAVAILABLE',
+    'economic_pricing_unavailable',
+    'economic_authorization_denied',
+    'economic_authorization_missing_attempt_id',
+    'execution_budget_not_found',
+    'execution_budget_not_active',
+    'execution_budget_attempts_exhausted',
+    'execution_budget_cost_exhausted',
+    'execution_maximum_total_cost_exceeded',
+    'execution_tree_cost_exceeded',
+    'execution_margin_guard_failed',
+    'execution_minimum_margin_failed',
+    'execution_input_token_budget_exhausted',
+    'execution_output_token_budget_exhausted',
+    'execution_reasoning_token_budget_exhausted',
+    'PRICING_SNAPSHOT_REQUIRED',
+    'ECONOMIC_BUDGET_EXHAUSTED',
+    'TOKEN_BUDGET_EXCEEDED',
+    'EXECUTION_ATTEMPT_LIMIT_EXCEEDED',
+    'DUPLICATE_EXECUTION_ATTEMPT',
+    'INVALID_ATTEMPT_BUDGET',
+  ]);
+  return known.has(base) ? base : 'CORE_EXECUTION_FAILED';
 }
 
 export async function POST(req: Request) {
@@ -76,11 +111,11 @@ export async function POST(req: Request) {
         semantic_cache_hit: result.cacheHit,
         memory_matches: result.memoryContext.length,
       },
-      error: result.error,
+      error: publicCoreError(result.error),
     }, { status });
   } catch (error) {
     const authError = apiError(error);
-    if (authError.status === 401 || authError.status === 403) {
+    if (authError.status === 401 || authError.status === 403 || authError.status === 400) {
       return NextResponse.json({ success: false, error: authError.code }, { status: authError.status });
     }
 
