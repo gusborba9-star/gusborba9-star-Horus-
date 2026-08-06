@@ -83,20 +83,13 @@ export async function executeAuthorizedCachedText(input: {
   };
 }
 
-export async function executeAuthorizedHorusText(
-  input: HorusTextExecutionInput,
-): Promise<HorusTextExecutionResult> {
+export async function executeAuthorizedHorusText(input: HorusTextExecutionInput): Promise<HorusTextExecutionResult> {
   await requirePermission('ai.execute');
-
   if (!input.input.trim()) throw new Error('EMPTY_INPUT');
-  if (!Number.isSafeInteger(input.maxOutputTokens) || input.maxOutputTokens <= 0) {
-    throw new Error('INVALID_MAX_OUTPUT_TOKENS');
-  }
+  if (!Number.isSafeInteger(input.maxOutputTokens) || input.maxOutputTokens <= 0) throw new Error('INVALID_MAX_OUTPUT_TOKENS');
 
   const model = await models.get(input.providerId, input.modelId);
-  if (!model || model.providerId !== input.providerId || model.capability !== 'TEXT_GENERATION') {
-    throw new Error('EXECUTION_MODEL_NOT_AVAILABLE');
-  }
+  if (!model || model.providerId !== input.providerId || model.capability !== 'TEXT_GENERATION') throw new Error('EXECUTION_MODEL_NOT_AVAILABLE');
 
   const policy = await getEconomicPolicy();
   const adapter = adapters.get(input.providerId);
@@ -115,33 +108,24 @@ export async function executeAuthorizedHorusText(
 
     const actualCostBrl = response.usage.requestCost !== null
       ? response.usage.requestCost * (model.currency === 'USD' ? policy.fxRateUsdToBrl : 1)
-      : calculateActualTextCost(
-          model,
-          response.usage.inputTokens,
-          response.usage.outputTokens,
-          policy.fxRateUsdToBrl,
-          response.usage.reasoningTokens,
-        );
+      : calculateActualTextCost(model, response.usage.inputTokens, response.usage.outputTokens, policy.fxRateUsdToBrl, response.usage.reasoningTokens);
 
-    const { error: reconciliationError } = await getServiceSupabase().rpc(
-      'reconcile_horus_execution_attempt',
-      {
-        p_attempt_id: input.attemptId,
-        p_actual_cost_brl: actualCostBrl,
-        p_status: 'COMPLETED',
-        p_input_tokens: response.usage.inputTokens,
-        p_output_tokens: response.usage.outputTokens,
-        p_reasoning_tokens: response.usage.reasoningTokens,
-        p_cached_input_tokens: response.usage.cachedInputTokens,
-        p_request_units: 0,
-        p_image_units: 0,
-        p_actual_provider: response.actualProvider,
-        p_actual_model: response.actualModel,
-        p_latency_ms: response.latencyMs || Date.now() - startedAt,
-        p_raw_usage: response.raw ?? {},
-      },
-    );
-
+    const { error: reconciliationError } = await getServiceSupabase().rpc('reconcile_horus_execution_attempt', {
+      p_attempt_id: input.attemptId,
+      p_actual_cost_brl: actualCostBrl,
+      p_status: 'COMPLETED',
+      p_input_tokens: response.usage.inputTokens,
+      p_output_tokens: response.usage.outputTokens,
+      p_reasoning_tokens: response.usage.reasoningTokens,
+      p_cached_input_tokens: response.usage.cachedInputTokens,
+      p_request_units: 0,
+      p_image_units: 0,
+      p_provider_request_id: response.providerRequestId,
+      p_actual_provider: response.actualProvider,
+      p_actual_model: response.actualModel,
+      p_latency_ms: response.latencyMs || Date.now() - startedAt,
+      p_raw_usage: response.raw ?? {},
+    });
     if (reconciliationError) throw new Error(`RECONCILIATION_FAILED:${reconciliationError.message}`);
 
     await writeSemanticCache({
@@ -154,34 +138,13 @@ export async function executeAuthorizedHorusText(
       endpointId: input.endpointId,
       pricingSnapshotId: input.pricingSnapshotId,
       responseText: response.text,
-      usage: {
-        inputTokens: response.usage.inputTokens,
-        outputTokens: response.usage.outputTokens,
-        reasoningTokens: response.usage.reasoningTokens,
-        cachedInputTokens: response.usage.cachedInputTokens,
-        providerRequestId: response.providerRequestId,
-      },
+      usage: { inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens, reasoningTokens: response.usage.reasoningTokens, cachedInputTokens: response.usage.cachedInputTokens, providerRequestId: response.providerRequestId },
       metadata: { actualCostBrl },
     });
 
-    return {
-      attemptId: input.attemptId,
-      providerId: input.providerId,
-      modelId: input.modelId,
-      text: response.text,
-      actualCostBrl,
-      usage: {
-        inputTokens: response.usage.inputTokens,
-        outputTokens: response.usage.outputTokens,
-        reasoningTokens: response.usage.reasoningTokens,
-        cachedInputTokens: response.usage.cachedInputTokens,
-        latencyMs: response.latencyMs,
-        providerRequestId: response.providerRequestId,
-      },
-    };
+    return { attemptId: input.attemptId, providerId: input.providerId, modelId: input.modelId, text: response.text, actualCostBrl, usage: { inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens, reasoningTokens: response.usage.reasoningTokens, cachedInputTokens: response.usage.cachedInputTokens, latencyMs: response.latencyMs, providerRequestId: response.providerRequestId } };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'PROVIDER_EXECUTION_FAILED';
-
     try {
       await getServiceSupabase().rpc('reconcile_horus_execution_attempt', {
         p_attempt_id: input.attemptId,
@@ -193,6 +156,7 @@ export async function executeAuthorizedHorusText(
         p_cached_input_tokens: 0,
         p_request_units: 0,
         p_image_units: 0,
+        p_provider_request_id: null,
         p_actual_provider: input.providerId,
         p_actual_model: input.modelId,
         p_latency_ms: Date.now() - startedAt,
@@ -201,7 +165,6 @@ export async function executeAuthorizedHorusText(
     } catch (reconciliationError) {
       console.error('[Hórus Core] Falha ao reconciliar execução malsucedida:', reconciliationError);
     }
-
     throw error;
   }
 }
