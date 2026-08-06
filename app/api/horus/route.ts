@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       metadata: {
         endpoint: '/api/horus',
         economic_authorized: result.economicAuthorized,
+        semantic_cache_hit: result.cacheHit,
         execution_attempt_id: result.executionAttemptId ?? null,
         execution_budget_id: result.executionBudgetId ?? null,
         routed_provider_id: result.routedProviderId ?? null,
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
         action: result.action,
         confidence_score: result.confidence,
         requires_human_review: result.requiresHuman,
+        semantic_cache_hit: result.cacheHit,
         memory_matches: result.memoryContext.length,
       },
       error: result.error,
