@@ -12,6 +12,9 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ljqmiuxztqseyglhvgmi.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_Jmz78HPb__KT2zqC3AslIg_8CkWkmIq
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
