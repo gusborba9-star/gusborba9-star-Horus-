@@ -32,7 +32,7 @@ function LoginForm() {
       });
       if (!sessionResponse.ok) throw new Error('Não foi possível estabelecer a sessão segura.');
 
-      const next = searchParams.get('next');
+      const next = searchParams?.get('next');
       router.replace(next?.startsWith('/') ? next : '/dashboard');
       router.refresh();
     } catch (err) {
