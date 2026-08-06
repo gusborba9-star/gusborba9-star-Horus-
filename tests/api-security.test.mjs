@@ -38,3 +38,20 @@ test('Payment webhook fails closed and has replay/idempotency protection', async
   assert.match(content, /METHOD_NOT_ALLOWED/);
   assert.doesNotMatch(content, /searchParams\.get\('token'\)/);
 });
+
+test('Legacy provider routes are inert and cannot bypass Core authorization/economics', async () => {
+  const chat = await source('app/api/chat/route.ts');
+  const router = await source('app/api/horus-router/route.ts');
+  const charge = await source('app/api/charge/route.ts');
+
+  for (const content of [chat, router]) {
+    assert.match(content, /ROUTE_DEPRECATED_USE_HORUS_CORE/);
+    assert.match(content, /status: 410/);
+    assert.doesNotMatch(content, /openrouter\.ai\/api\/v1\/chat\/completions/);
+    assert.doesNotMatch(content, /GoogleGenAI/);
+  }
+
+  assert.match(charge, /ROUTE_DEPRECATED_BILLING_CONTRACT_REQUIRED/);
+  assert.match(charge, /status: 410/);
+  assert.doesNotMatch(charge, /paymentService/);
+});
