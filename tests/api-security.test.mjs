@@ -1,12 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { NextRequest } from 'next/server';
 import { middleware } from '../middleware.ts';
 import { GET as webhookGet, POST as webhookPost } from '../app/api/webhook-pix/route.ts';
 
+function unauthenticatedApiRequest() {
+  return {
+    nextUrl: { pathname: '/api/horus' },
+    cookies: { get: () => undefined },
+  };
+}
+
 test('API middleware returns JSON 401 instead of redirect when session is absent', async () => {
-  const request = new NextRequest('https://horus.example/api/horus', { method: 'POST' });
-  const response = await middleware(request);
+  const response = await middleware(unauthenticatedApiRequest());
   assert.equal(response.status, 401);
   assert.deepEqual(await response.json(), { success: false, error: 'AUTHENTICATION_REQUIRED' });
 });
@@ -21,7 +26,7 @@ test('Webhook fails closed when its provider credential is absent', async () => 
   const previous = process.env.TOKEN_WEBHOOK_EFI;
   delete process.env.TOKEN_WEBHOOK_EFI;
   try {
-    const request = new NextRequest('https://horus.example/api/webhook-pix', { method: 'POST' });
+    const request = new Request('https://horus.example/api/webhook-pix', { method: 'POST' });
     const response = await webhookPost(request);
     assert.equal(response.status, 503);
     assert.deepEqual(await response.json(), { success: false, error: 'WEBHOOK_AUTH_NOT_CONFIGURED' });
