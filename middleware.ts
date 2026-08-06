@@ -9,15 +9,29 @@ function isPublicPath(pathname: string) {
   return pathname.startsWith('/_next/') || pathname.startsWith('/favicon');
 }
 
+function isApiPath(pathname: string) {
+  return pathname.startsWith('/api/');
+}
+
+function authenticationFailure(request: NextRequest) {
+  if (isApiPath(request.nextUrl.pathname)) {
+    return NextResponse.json({ success: false, error: 'AUTHENTICATION_REQUIRED' }, { status: 401 });
+  }
+  return redirectToLogin(request);
+}
+
 export async function middleware(request: NextRequest) {
   if (isPublicPath(request.nextUrl.pathname)) return NextResponse.next();
 
   const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
-  if (!token) return redirectToLogin(request);
+  if (!token) return authenticationFailure(request);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
+    if (isApiPath(request.nextUrl.pathname)) {
+      return NextResponse.json({ success: false, error: 'AUTHENTICATION_INFRASTRUCTURE_UNAVAILABLE' }, { status: 503 });
+    }
     return NextResponse.json({ error: 'Authentication infrastructure is not configured.' }, { status: 503 });
   }
 
@@ -27,7 +41,7 @@ export async function middleware(request: NextRequest) {
   const { data, error } = await supabase.auth.getUser(token);
 
   if (error || !data.user) {
-    const response = redirectToLogin(request);
+    const response = authenticationFailure(request);
     response.cookies.set(ACCESS_TOKEN_COOKIE, '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 0 });
     return response;
   }
