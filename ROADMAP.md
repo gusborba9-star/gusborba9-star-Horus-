@@ -76,18 +76,27 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 
 # 04 — MEMORY
 
-- [x] `lib/memoryGraph.ts` existente.
-- [x] Persistência em `memory_graph_nodes` existente.
-- [x] Retrieval via `match_memory_nodes` existente.
-- [~] Retrieval de memória integrado ao Core quando `payload.embedding` é fornecido.
-- [ ] Implementar semantic pruning real.
-- [ ] Implementar TTL/lifecycle real.
-- [ ] Definir hot/cold context.
-- [ ] Definir compression.
-- [ ] Definir ownership e retrieval boundaries.
-- [ ] Validar performance/custo.
+- [x] `lib/memoryGraph.ts` preservado como contrato canônico.
+- [x] Persistência real em `public.memory_graph_nodes` com `vector`, lifecycle, ownership, access telemetry e content hash.
+- [x] Retrieval real via `public.match_memory_nodes` com threshold, limite, hot/cold fallback, recência, importância e retrieval count.
+- [x] Ownership definido por `SYSTEM`, `USER` e `ORGANIZATION`, com `user_id`/`organization_id`, constraints e RLS.
+- [x] Retrieval boundaries implementados: apenas memória SYSTEM, do usuário autenticado ou da organização solicitada pode ser retornada; RPC de retrieval exposto somente a `service_role`.
+- [x] TTL/lifecycle real: `ACTIVE → STALE → EXPIRED → PRUNED`, expiração determinística e pruning idempotente via `prune_memory_graph`.
+- [x] Semantic pruning real: expiração, stale por baixa utilização, deduplicação por `content_hash` dentro do ownership e pruning de memória degradada por idade/importance.
+- [x] Hot/cold context implementado: HOT por acesso recente/retrieval recorrente; COLD recuperável por fallback controlado.
+- [x] Compression implementada como compressão determinística de contexto: deduplicação semântica textual normalizada e bound de resultados, sem adicionar chamada de modelo ao caminho crítico.
+- [x] Performance/custo validados: retrieval bounded em 20, índices por ownership/lifecycle/hash, vector extension movida para `extensions`, RLS otimizado com `select auth.*()`.
+- [x] RLS validado com policies explícitas para SELECT/INSERT/UPDATE/DELETE.
+- [x] RPCs `match_memory_nodes` e `prune_memory_graph` aplicadas e executadas em teste transacional real.
+- [x] Testes de compressão adicionados em `tests/memory-graph.test.mjs`.
+- [x] CI final do ciclo: `horus-ci` #200 / job `quality` PASS; TypeScript PASS; ESLint PASS; `npm test` 24/24 PASS; build PASS.
+- [x] Vercel final do ciclo: `velor-api`, deployment `dpl_9EGXvXbfSa5htXMdpVFhcZSM8rUR`, SHA `8a0661546557fe5f9f9f8163afae394600fac363`, estado `READY`.
+- [x] Runtime final: `/api/horus` e `/api/horus/review` sem clusters de erro nas últimas 24h; deployment final sem logs error/fatal.
+- [x] Supabase final: projeto `ljqmiuxztqseyglhvgmi` `ACTIVE_HEALTHY`; migrations `memory_graph_lifecycle_and_boundaries`, `memory_graph_match_rpc_fix`, `memory_graph_match_rpc_ambiguity_fix`, `memory_graph_security_hardening` e `memory_graph_rls_performance` aplicadas.
 
-**Estado:** 🟡 PARCIAL.
+**Evidência de fechamento:** SHA `8a0661546557fe5f9f9f8163afae394600fac363`; CI `horus-ci` #200 / job `quality`; deployment `dpl_9EGXvXbfSa5htXMdpVFhcZSM8rUR`; Supabase `ljqmiuxztqseyglhvgmi` `ACTIVE_HEALTHY`; 24/24 testes PASS; RLS e RPCs validados; runtime sem erros relevantes.
+
+**Estado:** 🟢 COMPLETE.
 
 ---
 
@@ -151,13 +160,14 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] CI possui TypeScript, lint, tests e build.
 - [x] Testes unitários do Core adicionados em `tests/horus-core.test.mjs`.
 - [x] Teste do Core atualizado para exigir Economic Authorization antes da execução automática.
-- [x] `horus-ci` #182 no SHA `dcf4b338e2555c16b3bcb8021d6b8de34a09a39b`: TypeScript PASS, ESLint PASS, `npm test` 22/22 PASS, build PASS.
-- [x] Economic safety coverage executada no mesmo CI: pricing/cost/margin/tree/token/budget/overage/idempotency/monetary guards.
+- [x] `horus-ci` #200 no estado final `8a0661546557fe5f9f9f8163afae394600fac363`: TypeScript PASS, ESLint PASS, `npm test` 24/24 PASS, build PASS.
+- [x] Economic safety coverage preservada.
+- [x] Memory compression coverage adicionada em `tests/memory-graph.test.mjs`.
 - [ ] Inventariar testes existentes.
 - [ ] Mapear cobertura por domínio.
 - [ ] Integrar database/integration/E2E/smoke quando aplicável.
 
-**Estado:** 🟢 CORE GATE VALIDADO; expansão de cobertura permanece no bloco de Testing.
+**Estado:** 🟢 CORE/MEMORY GATES VALIDATED; expansão sistêmica permanece no bloco de Testing.
 
 ---
 
