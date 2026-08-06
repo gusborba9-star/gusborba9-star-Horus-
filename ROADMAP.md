@@ -128,14 +128,16 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 
 # 06 — API / ROUTING
 
-- [x] Rotas existentes parcialmente auditadas.
-- [ ] Inventário completo de `app/api/**`.
-- [ ] Route graph completo.
-- [ ] Eliminar/identificar legacy bypasses.
-- [x] Unificar application → economic authorization → router → adapter → provider para a vertical slice `TEXT_GENERATION`.
-- [ ] Validar auth/error contracts integralmente.
+- [x] Rotas relevantes do branch identificadas: `/api/horus`, `/api/horus/review`, `/api/auth/session`, `/api/webhook-pix`.
+- [x] `/api/horus` protegido por `ai.execute` e erro de autenticação retorna JSON 401/403 em vez de redirect.
+- [x] `/api/horus` mantém o caminho canônico Core → Economic Authorization → Router → Adapter → Provider.
+- [x] `/api/horus/review` protegido por `ai.execute` e lookup de review limitado ao `owner_scope` autenticado.
+- [x] Erros internos das rotas não são devolvidos como mensagem arbitrária ao cliente.
+- [x] Webhook de pagamento permanece fora da sessão de usuário e possui autenticação por segredo em comparação constant-time.
+- [x] Bypass econômico não foi introduzido pelas rotas validadas; execução de provider continua subordinada ao Core/Economic Authorization.
+- [ ] Evidência independente de `horus-ci` para o SHA final do ciclo.
 
-**Estado:** 🟡 PARCIAL.
+**Estado:** 🟡 IN_PROGRESS — implementação e deployment operacional corrigidos; fechamento formal aguarda evidência CI final no SHA final.
 
 ---
 
@@ -144,13 +146,20 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] Separação user-scoped/system client no Economic Core.
 - [x] Operações financeiras privilegiadas encaminhadas a contratos sistêmicos.
 - [x] `ai.execute` verificado antes da reserva econômica no fluxo Core.
-- [ ] Auditoria global de RLS.
-- [ ] Auditoria global de SECURITY DEFINER.
-- [ ] Auditoria de service-role usage.
-- [ ] Auditoria de secrets/env.
-- [ ] Auditoria de webhooks e privileged operations.
+- [x] API `/api/horus` protegida por autenticação + autorização e contrato de erro seguro.
+- [x] Human Review limitado ao `owner_scope` autenticado; logs novos carregam ownership no metadata.
+- [x] Webhook Efí endurecido: token apenas em header, comparação constant-time, `x-webhook-event-id` obrigatório, detecção de reuso de event id e método GET bloqueado.
+- [x] `horus_webhook_events` existente validado como boundary de replay/idempotência.
+- [x] SECURITY DEFINER relevantes auditados: funções econômicas privilegiadas são `EXECUTE` apenas para `service_role`/`postgres`; `reserve_horus_credits` permanece `authenticated` por ser user-scoped e valida `auth.uid()` internamente.
+- [x] RLS relevante auditado: tabelas user-scoped possuem policies; tabelas sistêmicas sem policies permanecem acessíveis apenas pelos fluxos server/service-role correspondentes.
+- [x] Service-role usage revisado nos módulos Core/Memory/Economic: uso permanece restrito a operações sistêmicas/privilegiadas.
+- [x] Secrets não são expostos via `NEXT_PUBLIC_*`; provider/service-role/payment credentials permanecem server-only.
+- [x] Runtime Vercel do ciclo sem erros registrados nas rotas `/api/horus`, `/api/horus/review` e `/api/webhook-pix` na janela validada.
+- [ ] Evidência independente de `horus-ci` para o SHA final do ciclo.
 
-**Estado:** 🟡 PARCIAL.
+**Estado:** 🟡 IN_PROGRESS — controles técnicos principais implementados e validados; fechamento formal aguarda CI final no SHA final.
+
+**Evidência operacional do ciclo:** Supabase `ljqmiuxztqseyglhvgmi` `ACTIVE_HEALTHY`; advisors de segurança sem falha crítica, com `reserve_horus_credits` identificado como SECURITY DEFINER user-scoped e autenticado por `auth.uid()`; Vercel `velor-api` deployment `dpl_AMmH7q9fjaVLUpcwryeyqFJvkVG2` para SHA `6b9b0024062f5ce8bfb957d5f5709d4984e4eb4b` = `READY`; runtime sem erros.
 
 ---
 
@@ -163,11 +172,13 @@ O Blueprint define o que significa existir, integrar e concluir uma estrutura. E
 - [x] `horus-ci` #200 no estado final `8a0661546557fe5f9f9f8163afae394600fac363`: TypeScript PASS, ESLint PASS, `npm test` 24/24 PASS, build PASS.
 - [x] Economic safety coverage preservada.
 - [x] Memory compression coverage adicionada em `tests/memory-graph.test.mjs`.
+- [x] Testes de contrato de API/Security adicionados em `tests/api-security.test.mjs`.
+- [ ] Evidência CI do ciclo 06+07 no SHA final.
 - [ ] Inventariar testes existentes.
 - [ ] Mapear cobertura por domínio.
 - [ ] Integrar database/integration/E2E/smoke quando aplicável.
 
-**Estado:** 🟢 CORE/MEMORY GATES VALIDATED; expansão sistêmica permanece no bloco de Testing.
+**Estado:** 🟡 IN_PROGRESS — cobertura específica de API/Security adicionada; CI final do ciclo não está disponível para o SHA final.
 
 ---
 
@@ -186,7 +197,7 @@ Auditar e integrar, sem criar módulos paralelos:
 - [ ] Music
 - [ ] Presentations
 - [ ] Video
-- [ ] Websites
+- [Websites]
 - [ ] APIs
 - [ ] Automations
 
@@ -243,3 +254,17 @@ Para cada módulo provar:
 - [ ] Metrics/correlation IDs.
 
 **Estado:** 🔍 NÃO DETERMINADO.
+
+---
+
+# 06 + 07 — EXECUTION EVIDENCE
+
+- Final source state: branch `chore/horus-foundation-rebuild`.
+- Latest documented source SHA: `f7505dfa68123408d962a7827a330714cf2f47ad`.
+- Vercel deployment for the immediately preceding validated source SHA `6b9b0024062f5ce8bfb957d5f5709d4984e4eb4b`: `dpl_AMmH7q9fjaVLUpcwryeyqFJvkVG2`, project `velor-api`, `READY`.
+- Runtime errors for `/api/horus`, `/api/horus/review` and `/api/webhook-pix`: none in the validation window.
+- Supabase project `ljqmiuxztqseyglhvgmi`: `ACTIVE_HEALTHY`.
+- Security boundary migration history includes `horus_api_security_surface_hardening`, `horus_webhook_idempotency_boundary`, `horus_webhook_event_idempotency` and compensating cleanup `remove_unused_webhook_event_extension`.
+- `horus-ci` workflow exists and defines `npm ci → TypeScript → ESLint → npm test → build`, but no workflow run is exposed by the available GitHub Actions run query for the current/final SHAs; combined GitHub status currently exposes Vercel only.
+
+**06 + 07 status:** `IN_PROGRESS` pending independent CI evidence on the final SHA. No code, database, Vercel or runtime blocker remains identified in this execution.
