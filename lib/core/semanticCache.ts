@@ -7,30 +7,10 @@ const DEFAULT_SIMILARITY_THRESHOLD = 0.92;
 const MAX_CANDIDATES = 24;
 
 type CacheScope = { ownerScope: string };
-
-type SemanticCacheLookupInput = {
-  embedding?: number[];
-  eventType: string;
-  source: string;
-  capability: string;
-  providerId: string;
-  modelId: string;
-  endpointId?: string;
-  pricingSnapshotId?: string;
-};
-
-type SemanticCacheWriteInput = SemanticCacheLookupInput & {
-  responseText: string;
-  usage: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-};
-
-type SemanticCacheHit = {
-  id: string;
-  responseText: string;
-  usage: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-};
+type SemanticCacheLookupInput = { embedding?: number[]; eventType: string; source: string; capability: string; providerId: string; modelId: string; endpointId?: string; pricingSnapshotId?: string };
+type SemanticCacheWriteInput = SemanticCacheLookupInput & { responseText: string; usage: Record<string, unknown>; metadata?: Record<string, unknown> };
+type SemanticCacheHit = { id: string; responseText: string; usage: Record<string, unknown>; metadata: Record<string, unknown> };
+type SemanticCacheRow = { id: string; embedding: unknown; response_text: string; usage: Record<string, unknown> | null; metadata: Record<string, unknown> | null };
 
 function finiteEmbedding(value: unknown): value is number[] {
   return Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'number' && Number.isFinite(item));
@@ -41,11 +21,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   let normA = 0;
   let normB = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
+  for (let i = 0; i < a.length; i += 1) { dot += a[i] * b[i]; normA += a[i] * a[i]; normB += b[i] * b[i]; }
   if (normA === 0 || normB === 0) return -1;
   return dot / Math.sqrt(normA * normB);
 }
@@ -56,16 +32,7 @@ async function getCacheScope(): Promise<CacheScope> {
 }
 
 function semanticKey(input: SemanticCacheLookupInput): string {
-  const canonical = JSON.stringify({
-    eventType: input.eventType,
-    source: input.source,
-    capability: input.capability,
-    providerId: input.providerId,
-    modelId: input.modelId,
-    endpointId: input.endpointId ?? null,
-    pricingSnapshotId: input.pricingSnapshotId ?? null,
-  });
-  return createHash('sha256').update(canonical).digest('hex');
+  return createHash('sha256').update(JSON.stringify({ eventType: input.eventType, source: input.source, capability: input.capability, providerId: input.providerId, modelId: input.modelId, endpointId: input.endpointId ?? null, pricingSnapshotId: input.pricingSnapshotId ?? null })).digest('hex');
 }
 
 function ttlSeconds(): number {
@@ -84,42 +51,32 @@ export async function lookupSemanticCache(input: SemanticCacheLookupInput): Prom
   const db = getServiceSupabase();
   const now = new Date().toISOString();
 
-  await db.from('horus_semantic_cache_entries')
-    .update({ invalidated_at: now })
-    .eq('owner_scope', ownerScope)
-    .lt('expires_at', now)
-    .is('invalidated_at', null);
+  await db.from('horus_semantic_cache_entries').update({ invalidated_at: now }).eq('owner_scope', ownerScope).lt('expires_at', now).is('invalidated_at', null);
 
-  const { data, error } = await db
-    .from('horus_semantic_cache_entries')
+  let query = db.from('horus_semantic_cache_entries')
     .select('id, embedding, response_text, usage, metadata')
     .eq('owner_scope', ownerScope)
     .eq('capability', input.capability)
     .eq('provider_id', input.providerId)
     .eq('model_id', input.modelId)
-    .eq('endpoint_id', input.endpointId ?? null)
-    .eq('pricing_snapshot_id', input.pricingSnapshotId ?? null)
     .is('invalidated_at', null)
     .gt('expires_at', now)
     .order('created_at', { ascending: false })
     .limit(MAX_CANDIDATES);
+  query = input.endpointId ? query.eq('endpoint_id', input.endpointId) : query.is('endpoint_id', null);
+  query = input.pricingSnapshotId ? query.eq('pricing_snapshot_id', input.pricingSnapshotId) : query.is('pricing_snapshot_id', null);
 
+  const { data, error } = await query;
   if (error) throw new Error(`SEMANTIC_CACHE_LOOKUP_FAILED:${error.message}`);
 
-  let best: { similarity: number; row: any } | null = null;
-  for (const row of data ?? []) {
+  let best: { similarity: number; row: SemanticCacheRow } | null = null;
+  for (const row of (data ?? []) as SemanticCacheRow[]) {
     if (!finiteEmbedding(row.embedding)) continue;
     const similarity = cosineSimilarity(input.embedding, row.embedding);
     if (similarity >= similarityThreshold() && (!best || similarity > best.similarity)) best = { similarity, row };
   }
-
   if (!best) return null;
-  return {
-    id: best.row.id,
-    responseText: best.row.response_text,
-    usage: best.row.usage ?? {},
-    metadata: { ...(best.row.metadata ?? {}), similarity: best.similarity, cache: 'semantic' },
-  };
+  return { id: best.row.id, responseText: best.row.response_text, usage: best.row.usage ?? {}, metadata: { ...(best.row.metadata ?? {}), similarity: best.similarity, cache: 'semantic' } };
 }
 
 export async function writeSemanticCache(input: SemanticCacheWriteInput): Promise<void> {
@@ -127,11 +84,9 @@ export async function writeSemanticCache(input: SemanticCacheWriteInput): Promis
   const { ownerScope } = await getCacheScope();
   const db = getServiceSupabase();
   const expiresAt = new Date(Date.now() + ttlSeconds() * 1000).toISOString();
-  const key = semanticKey(input);
-
   const { error } = await db.from('horus_semantic_cache_entries').upsert({
     owner_scope: ownerScope,
-    semantic_key: key,
+    semantic_key: semanticKey(input),
     embedding: input.embedding,
     event_type: input.eventType,
     source: input.source,
@@ -146,6 +101,5 @@ export async function writeSemanticCache(input: SemanticCacheWriteInput): Promis
     expires_at: expiresAt,
     invalidated_at: null,
   }, { onConflict: 'owner_scope,semantic_key' });
-
   if (error) throw new Error(`SEMANTIC_CACHE_WRITE_FAILED:${error.message}`);
 }
