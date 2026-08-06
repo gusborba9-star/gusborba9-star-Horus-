@@ -17,8 +17,8 @@ test('API middleware enforces JSON authentication failures for API paths', async
 test('Hórus execution route enforces permission and sanitizes public errors', async () => {
   const content = await source('app/api/horus/route.ts');
   assert.match(content, /requirePermission\('ai\.execute'\)/);
-  assert.match(content, /function publicCoreError\(error\?: string\)/);
-  assert.match(content, /CORE_EXECUTION_FAILED/);
+  assert.match(content, /function apiError\(error: unknown\)/);
+  assert.match(content, /INTERNAL_SERVER_ERROR/);
   assert.doesNotMatch(content, /error: error instanceof Error \? error\.message/);
 });
 
