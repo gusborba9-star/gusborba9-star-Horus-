@@ -17,19 +17,30 @@ export async function POST(req: Request) {
   let requestId = crypto.randomUUID();
   let eventType = '';
   let source = '';
+  let ownerScope: string | null = null;
+  let ownerUserId: string | null = null;
+  let ownerOrganizationId: string | null = null;
 
   try {
-    await requirePermission('ai.execute');
+    const authorization = await requirePermission('ai.execute');
+    ownerUserId = authorization.user.id;
+    ownerOrganizationId = authorization.user.organizationId;
+    ownerScope = ownerOrganizationId ? `org:${ownerOrganizationId}` : `user:${ownerUserId}`;
+
     const body = await req.json();
-    const { event_type, payload, source: requestSource } = body ?? {};
-    const normalizedPayload = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ success: false, error: 'INVALID_REQUEST_BODY' }, { status: 400 });
+    }
+    const { event_type, payload, source: requestSource } = body as Record<string, unknown>;
+    const normalizedPayload = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {};
     eventType = typeof event_type === 'string' ? event_type : '';
     source = typeof requestSource === 'string' ? requestSource : '';
-    if (typeof normalizedPayload.request_id === 'string' && normalizedPayload.request_id.trim()) requestId = normalizedPayload.request_id;
+    if (typeof normalizedPayload.request_id === 'string' && normalizedPayload.request_id.trim()) requestId = normalizedPayload.request_id.trim();
 
     const result = await geminiCircuitBreaker.execute(() => runHorusCore({ event_type: eventType, payload: normalizedPayload, source }));
     const executionLogId = await persistHorusExecutionLog({
       requestId, eventType, source, startedAt, state: result,
+      ownership: { ownerScope, userId: ownerUserId, organizationId: ownerOrganizationId },
       metadata: {
         endpoint: '/api/horus',
         economic_authorized: result.economicAuthorized,
@@ -74,7 +85,14 @@ export async function POST(req: Request) {
     }
 
     console.error('[Hórus Core] Erro de orquestração:', error instanceof Error ? error.message : 'unknown error');
-    const executionLogId = await persistHorusExecutionError({ requestId, eventType, source, startedAt, error });
+    const executionLogId = await persistHorusExecutionError({
+      requestId,
+      eventType,
+      source,
+      startedAt,
+      error,
+      ownership: { ownerScope, userId: ownerUserId, organizationId: ownerOrganizationId },
+    });
     return NextResponse.json({ success: false, data: { request_id: requestId, execution_log_id: executionLogId }, error: authError.code }, { status: authError.status });
   }
 }
