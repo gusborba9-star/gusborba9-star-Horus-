@@ -1,13 +1,14 @@
 # Hórus — Roadmap de Execução
 
-> Este arquivo é a **visão de execução** do Hórus. A arquitetura, governança, contratos, evidências e regras de integração vivem no **Hórus Engineering Blueprint** em `docs/blueprint/HORUS-ENGINEERING-BLUEPRINT.md`.
+> Este arquivo é a visão de execução do Hórus. A arquitetura, governança, contratos, evidências e regras de integração vivem no Hórus Engineering Blueprint em `docs/blueprint/HORUS-ENGINEERING-BLUEPRINT.md`.
 >
-> Regra central: **nenhuma estrutura nova pode ser criada sem demonstrar como ela se conecta à arquitetura existente.**
+> Regra central: nenhuma estrutura nova pode ser criada sem demonstrar como ela se conecta à arquitetura existente.
 
 ## Fonte de verdade
 
-- **Blueprint arquitetural:** `docs/blueprint/HORUS-ENGINEERING-BLUEPRINT.md`
-- **Roadmap:** este arquivo
+- Blueprint arquitetural: `docs/blueprint/HORUS-ENGINEERING-BLUEPRINT.md`
+- Roadmap: este arquivo
+- Evidência de fechamento 06 + 07: `docs/blueprint/06-07-API-SECURITY-CLOSURE.md`
 
 ---
 
@@ -105,43 +106,61 @@
 
 # 06 — API / ROUTING
 
-- [x] Route graph operacional identificado: `/api/horus`, `/api/horus/review`, `/api/auth/session`, `/api/webhook-pix`, `/api/chat`, `/api/horus-router`, `/api/charge`.
-- [x] `/api/horus` protegido por `ai.execute` e mantém Core → Economic Authorization → Router → Adapter → Provider.
-- [x] `/api/horus/review` protegido por `ai.execute` e lookup limitado ao `owner_scope` autenticado.
-- [x] `/api/auth/session` permanece como boundary de sessão Supabase.
-- [x] `/api/webhook-pix` permanece fora da sessão e exige segredo server-side + `x-webhook-event-id`.
-- [x] `/api/chat` desativada como legacy provider bypass com HTTP 410 `ROUTE_DEPRECATED_USE_HORUS_CORE`.
-- [x] `/api/horus-router` desativada como legacy provider bypass com HTTP 410 `ROUTE_DEPRECATED_USE_HORUS_CORE`.
-- [x] `/api/charge` desativada como legacy mock-financial endpoint com HTTP 410 `ROUTE_DEPRECATED_BILLING_CONTRACT_REQUIRED`.
-- [x] Erros internos das rotas canônicas não são expostos como mensagens arbitrárias.
-- [x] Bypass econômico/provider removido das rotas legadas identificadas.
-- [x] `tests/api-security.test.mjs` cobre os três tombstones e ausência de provider bypass.
+- [x] `/api/horus` canônica, protegida por `ai.execute` e conectada ao Core → Economic Authorization → Router → Adapter → Provider.
+- [x] `/api/horus/review` autenticada e ownership-bound ao `owner_scope`.
+- [x] `/api/auth/session` preservada como boundary de sessão.
+- [x] `/api/webhook-pix` protegida por segredo server-side, event id obrigatório e replay/idempotency.
+- [x] `/api/chat` tombstone HTTP 410 `ROUTE_DEPRECATED_USE_HORUS_CORE`.
+- [x] `/api/horus-router` tombstone HTTP 410 `ROUTE_DEPRECATED_USE_HORUS_CORE`.
+- [x] `/api/charge` tombstone HTTP 410 `ROUTE_DEPRECATED_BILLING_CONTRACT_REQUIRED`.
+- [x] Bypasses diretos de provider e mock financeiro removidos das rotas legadas identificadas.
+- [x] Erros internos não são expostos como mensagens arbitrárias.
+- [x] `tests/api-security.test.mjs` cobre autenticação, contratos de erro, ownership, webhook replay/idempotency e tombstones.
+- [x] TypeScript/type validation PASS no production build.
+- [x] ESLint PASS no production build.
+- [x] `npm test`: 29/29 PASS.
+- [x] Production build PASS.
+- [x] Vercel `velor-api`: deployment `dpl_8ADkpE5t2hSBE6Pc5sWMpup89yBz`, SHA `92ef5c728aa59cd9729886d7118574d096267542`, READY.
+- [x] Runtime sem erro/fatal na janela de validação.
 
-**Evidência operacional:** Vercel `velor-api`, SHA `befdabf72750b3424098320ba90cdb6462c6881f`, deployment `dpl_9VFLitmjDUmT447z3khFJ6iHGXKb`, `READY`; build sem erros; runtime error clusters inexistentes na janela validada.
+**Evidência formal:** implementação `befdabf72750b3424098320ba90cdb6462c6881f`; SHA canônico de validação/deployment `92ef5c728aa59cd9729886d7118574d096267542`.
 
-**Estado técnico:** 🟢 IMPLEMENTADO/VALIDADO.
+**Nota de CI:** a integração GitHub disponível não recupera uma execução independente `horus-ci` para o SHA de validação. Isso não é convertido em CI PASS por inferência; os gates técnicos independentes estão evidenciados por type validation, lint, 29/29 testes, build, Vercel e runtime.
+
+**Estado:** 🟢 COMPLETE.
 
 ---
 
 # 07 — SECURITY
 
-- [x] Separação user-scoped/system client preservada.
 - [x] `ai.execute` verificado antes da reserva econômica.
 - [x] Human Review limitado ao `owner_scope` autenticado.
-- [x] Webhook Efí: token somente em header, comparação constant-time, event id obrigatório, replay/idempotência e GET bloqueado.
-- [x] `horus_webhook_events` possui unique `(provider,event_id)` e acesso efetivo restrito a `service_role`/`postgres`.
-- [x] SECURITY DEFINER econômicos privilegiados limitados a `service_role`/`postgres`; `reserve_horus_credits` permanece user-scoped e valida `auth.uid()`.
-- [x] RLS habilitado nas tabelas públicas relevantes; tabelas sistêmicas sem policies não concedem acesso a roles de cliente.
-- [x] Secrets provider/service-role/payment permanecem server-only.
-- [x] Provider bypasses legados removidos de `/api/chat` e `/api/horus-router`.
-- [x] Mock financial output removido de `/api/charge`.
-- [x] Testes API/Security ampliados para os bypasses identificados.
-- [x] Security migrations aplicadas no Supabase: `horus_api_security_surface_hardening`, `horus_webhook_idempotency_boundary`, `webhook_event_idempotency`, `remove_unused_webhook_event_extension`.
-- [x] Supabase advisors sem finding CRITICAL; o WARN existente é `reserve_horus_credits` SECURITY DEFINER user-scoped, cuja exposição a `authenticated` é intencional e protegida por `auth.uid()`.
+- [x] Webhook protegido por segredo server-side, comparação constant-time, event id obrigatório, replay/idempotency e GET bloqueado.
+- [x] `horus_webhook_events` possui unique `(provider,event_id)` e acesso direto de cliente bloqueado.
+- [x] `horus_execution_logs` protegido e reservado ao caminho privilegiado.
+- [x] `horus_semantic_cache_entries` protegido e reservado ao caminho privilegiado.
+- [x] Funções econômicas privilegiadas limitadas a `service_role`/`postgres`.
+- [x] `reserve_horus_credits` permanece `authenticated + SECURITY DEFINER` por contrato user-scoped e valida `auth.uid()` internamente.
+- [x] RLS habilitado na superfície pública relevante; tabelas sistêmicas sem policies não concedem acesso direto a `anon`/`authenticated`.
+- [x] Secrets de provider/service-role/payment permanecem server-only.
+- [x] Provider bypasses legados removidos.
+- [x] Mock financeiro removido.
+- [x] Migrations aplicadas e confirmadas no Supabase real.
+- [x] Security Advisor: CRITICAL = 0; WARN = 1, intencional em `reserve_horus_credits`; INFOs classificados conforme exposição real.
+- [x] Testes API/Security e economic safety executados dentro dos 29 testes aprovados.
+- [x] TypeScript/type validation PASS.
+- [x] ESLint PASS.
+- [x] Production build PASS.
+- [x] Vercel `velor-api` deployment `dpl_8ADkpE5t2hSBE6Pc5sWMpup89yBz` READY.
+- [x] Runtime sem erro/fatal na janela auditada.
 
-**Evidência operacional:** Supabase `ljqmiuxztqseyglhvgmi`; RLS/grants verificados; Vercel `velor-api`, SHA `befdabf72750b3424098320ba90cdb6462c6881f`, deployment `dpl_9VFLitmjDUmT447z3khFJ6iHGXKb`, READY; runtime sem erros.
+**Migrations confirmadas:** `horus_api_security_surface_hardening`, `horus_webhook_idempotency_boundary`, `webhook_event_idempotency`, `remove_unused_webhook_event_extension`.
 
-**Estado técnico:** 🟢 IMPLEMENTADO/VALIDADO.
+**Evidência formal:** Supabase `ljqmiuxztqseyglhvgmi`; validação/deployment SHA `92ef5c728aa59cd9729886d7118574d096267542`.
+
+**Nota de CI:** `horus-ci` independente não é recuperável pela integração GitHub disponível; não é marcado como PASS por inferência.
+
+**Estado:** 🟢 COMPLETE.
 
 ---
 
@@ -155,11 +174,7 @@
 - [x] API/Security contract coverage.
 - [x] Cobertura para tombstones de `/api/chat`, `/api/horus-router` e `/api/charge`.
 
-**Evidência:** Vercel build do SHA final concluído sem erros e deployment READY.
-
-**Nota:** o conector GitHub Actions disponível nesta execução não expôs uma execução `horus-ci` para o SHA final; o status combinado do SHA expõe Vercel, sem check CI independente. CI não é marcado como PASS sem essa evidência.
-
-**Estado:** 🟡 VALIDATION EVIDENCE.
+**Estado:** 🔵 PRÓXIMO.
 
 ---
 
@@ -231,18 +246,24 @@
 
 ---
 
-# 06 + 07 — EXECUTION EVIDENCE
+# 06 + 07 — FINAL EXECUTION EVIDENCE
 
-- Branch final: `chore/horus-foundation-rebuild`.
-- Código final: `befdabf72750b3424098320ba90cdb6462c6881f`.
-- Correções principais: `cfc64b2d301b793a412f5cd90c8c2f06f31290f0`, `8865ba2e04946029d117a9f0ccb7ecf5c68cef35`, `9c2a5974bb339d266ffe8739eb6941f5cba684e3`, consolidadas pelo commit de testes `befdabf72750b3424098320ba90cdb6462c6881f`.
-- Supabase: `ljqmiuxztqseyglhvgmi`, migrations de security boundary aplicadas e RLS/grants verificados.
-- Vercel: `velor-api` / `dpl_9VFLitmjDUmT447z3khFJ6iHGXKb` / `READY`.
-- Runtime: nenhum cluster de erro nas rotas API validadas na janela selecionada.
-- GitHub combined status do SHA final: Vercel success; nenhum check `horus-ci` independente exposto pelo conector disponível.
+- Branch: `chore/horus-foundation-rebuild`.
+- Implementation SHA: `befdabf72750b3424098320ba90cdb6462c6881f`.
+- Validation/deployment SHA: `92ef5c728aa59cd9729886d7118574d096267542`.
+- `6955d21e...` and `19944e4f...` are documentation commits and are not reinterpreted as implementation SHAs.
+- Supabase: `ljqmiuxztqseyglhvgmi`; security migrations applied; RLS, grants and function boundaries verified.
+- Vercel: `velor-api`; deployment `dpl_8ADkpE5t2hSBE6Pc5sWMpup89yBz`; READY; validation SHA `92ef5c...`.
+- Tests: 29/29 PASS.
+- TypeScript: PASS in production build.
+- ESLint: PASS in production build.
+- Build: PASS.
+- Runtime: no relevant error/fatal cluster in validation window.
+- Security Advisor: 0 CRITICAL, 1 intentional WARN, INFOs classified.
+- Formal independent CI: **NOT RECOVERABLE THROUGH THE AVAILABLE GITHUB INTEGRATION**; no CI PASS inferred or fabricated.
 
-**06 — API / ROUTING:** 🟢 IMPLEMENTADO/VALIDADO TECNICAMENTE.
+**06 — API / ROUTING:** 🟢 COMPLETE.
 
-**07 — SECURITY:** 🟢 IMPLEMENTADO/VALIDADO TECNICAMENTE.
+**07 — SECURITY:** 🟢 COMPLETE.
 
-**Formal CI gate:** não marcado como PASS sem evidência independente do workflow no SHA final.
+**Next:** 08 — TESTING.
