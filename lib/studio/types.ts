@@ -20,6 +20,8 @@ export const CONNECTOR_PERMISSIONS = [
 ] as const;
 export type ConnectorPermission = (typeof CONNECTOR_PERMISSIONS)[number];
 
+export type ProjectEnvironment = 'PREVIEW' | 'STAGING' | 'PRODUCTION';
+
 export type ProjectState = {
   identity: Record<string, unknown>;
   objective: string;
@@ -29,13 +31,14 @@ export type ProjectState = {
   capabilities: StudioCapability[];
   connectors: string[];
   executionGraph: Record<string, unknown>;
-  environment: 'PREVIEW' | 'STAGING' | 'PRODUCTION';
+  environment: ProjectEnvironment;
   environmentState: Record<string, unknown>;
   delivery: Record<string, unknown>;
 };
 
 export type OptimizedExecutionSpec = {
   userPrompt: string;
+  optimizedExecutionPrompt: string;
   objective: string;
   changeClass: ChangeClass;
   context: Record<string, unknown>;
@@ -43,6 +46,11 @@ export type OptimizedExecutionSpec = {
   projectState: Record<string, unknown>;
   capabilities: StudioCapability[];
   connectors: string[];
+  executionStrategy: {
+    planningDepth: 'DETERMINISTIC' | 'ECONOMIC' | 'DEEP' | 'FULL_REBUILD';
+    recomputePolicy: 'DELTA_ONLY' | 'AFFECTED_ARTIFACTS' | 'PROJECT_WIDE';
+    requiresReplan: boolean;
+  };
   economicConstraints: {
     maxCostBrl: number | null;
     economicAuthorizationRequired: boolean;
