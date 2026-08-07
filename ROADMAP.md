@@ -33,3 +33,51 @@ Objetivo: Garantir que o Memory Graph do Hórus possa escalar infinitamente sem 
 - [ ] Definição do Grafo LangGraph e Nodes do Gerente IA
 - [ ] Integrar Supabase pg_vector e criar DB schemas
 - [ ] MVP Maria (WhatsApp, Agendamento, Stripe)
+
+---
+
+## 09 — STUDIO
+
+**Estado:** 🟡 PARTIAL — fechamento definitivo do estado atualmente comprovável.
+
+### Comprovado / implementado
+
+- Project Engine persistente sobre `studio_projects`.
+- Project state com identity, objective, context, requirements, architecture, capabilities, connectors, execution graph, environment, delivery e intelligence snapshot.
+- Revision Engine persistente sobre `studio_project_revisions`.
+- Change classification: MICRO / LOW / MEDIUM / MAJOR / REBUILD.
+- Nexus optimized execution specification.
+- Capability inference usando a registry canônica existente.
+- Connector Engine com permissões granulares.
+- Vault-backed connector credential boundary.
+- Authorized read adapters para GitHub, Vercel e Supabase.
+- Production mutation bloqueada no PATCH genérico.
+- Studio UI centrado em Nexus + Project + Revision, não em ferramentas independentes.
+- Contract tests e workflow CI adicionados.
+- Migration `horus_studio_runtime_closure` aplicada no Supabase.
+
+### Ainda não comprovado / bloqueadores objetivos
+
+- [ ] preview deployment real e dedicado;
+- [ ] staging deployment/promotion real;
+- [ ] production deployment + approval + rollback correlation;
+- [ ] live connector E2E com credencial autorizada;
+- [ ] execução real completa através de Economic Authorization → Provider Adapter → Usage → Reconciliation → Delivery;
+- [ ] `npm test`, TypeScript, ESLint e production build executados no SHA final;
+- [ ] deployment e runtime Vercel do repositório Hórus comprovados.
+
+**Closure:** `docs/blueprint/09-STUDIO-CLOSURE.md`
+
+## 10 — AGENTS
+
+**Estado:** 🔒 NÃO INICIADO — não iniciar como parte do fechamento do 09.
+
+## 11 — PERSONAL
+
+**Estado:** 🔍 NÃO DETERMINADO / FUTURO.
+
+## 12 — OBSERVABILITY
+
+**Estado:** 🔍 NÃO DETERMINADO — bloco independente.
+
+O fechamento de 09 não representa conclusão de Observability. Execution Log, eventos e estado operacional usados pelo Studio não equivalem a observabilidade end-to-end, tracing, métricas, dashboards, alerting ou reconstrução operacional completa.
