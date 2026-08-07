@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildExecutionGraph, buildPlan, classifyComplexity, selectCapabilities, selectIntegrations } from '../lib/studio/capabilities.ts';
+import { buildPlan, classifyComplexity, selectCapabilities, selectIntegrations } from '../lib/studio/capabilities.ts';
 import { allowedConnectorPermissions, isProductionPermission, resolveConnectorPermission } from '../lib/studio/connectors.ts';
 
 test('Studio capability selection composes a multimodal project from intent', () => {
@@ -11,7 +11,8 @@ test('Studio capability selection composes a multimodal project from intent', ()
 test('Studio plan creates a dynamic dependency graph', () => {
   const plan = buildPlan('crie um SaaS com site, API e dashboard', 'PREVIEW');
   assert.equal(plan.environment, 'PREVIEW');
-  assert.equal(plan.approval_required, false);
+  assert.equal(plan.approval_required, true);
+  assert.equal(plan.complexity, 'MAJOR_REBUILD');
   assert.equal(plan.execution_graph.length, plan.capabilities.length);
   assert.deepEqual(plan.execution_graph[0].depends_on, []);
   assert.deepEqual(plan.execution_graph[1].depends_on, ['capability-1']);
