@@ -1,63 +1,83 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { useEffect, useState } from 'react';
 
-export function ParticleBackground() {
-  const [nodes, setNodes] = useState<{ id: number; x: number; y: number; size: number; delay: number; duration: number }[]>([]);
-  const [connections, setConnections] = useState<{ id: string; from: number; to: number; opacity: number }[]>([]);
+type ParticleNode = {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  delay: number;
+  duration: number;
+};
 
-  useEffect(() => {
-    // Generate organic neural nodes
-    const nodeCount = 35;
-    const newNodes = Array.from({ length: nodeCount }).map((_, i) => ({
-      id: i,
-      x: 10 + Math.random() * 80, // Keep mostly in center 80%
-      y: 10 + Math.random() * 80,
-      size: Math.random() * 2 + 0.5,
-      delay: Math.random() * 10,
-      duration: 15 + Math.random() * 20,
-    }));
-    
-    // Generate discreet luminous connections
-    const newConnections: any[] = [];
-    for (let i = 0; i < nodeCount; i++) {
-      for (let j = i + 1; j < nodeCount; j++) {
-        const dx = newNodes[i].x - newNodes[j].x;
-        const dy = newNodes[i].y - newNodes[j].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        if (dist < 15) { // Only connect close nodes
-          newConnections.push({
-            id: `${i}-${j}`,
-            from: i,
-            to: j,
-            opacity: 1 - (dist / 15), // Fade out at max distance
-          });
-        }
+type ParticleConnection = {
+  id: string;
+  from: number;
+  to: number;
+  opacity: number;
+  duration: number;
+  delay: number;
+};
+
+function seeded(seed: number): number {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function createParticleNodes(nodeCount: number): ParticleNode[] {
+  return Array.from({ length: nodeCount }, (_, i) => ({
+    id: i,
+    x: 10 + seeded(i * 5 + 1) * 80,
+    y: 10 + seeded(i * 5 + 2) * 80,
+    size: seeded(i * 5 + 3) * 2 + 0.5,
+    delay: seeded(i * 5 + 4) * 10,
+    duration: 15 + seeded(i * 5 + 5) * 20,
+  }));
+}
+
+function createConnections(nodes: ParticleNode[]): ParticleConnection[] {
+  const connections: ParticleConnection[] = [];
+  for (let i = 0; i < nodes.length; i += 1) {
+    for (let j = i + 1; j < nodes.length; j += 1) {
+      const dx = nodes[i].x - nodes[j].x;
+      const dy = nodes[i].y - nodes[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 15) {
+        const seed = i * nodes.length + j;
+        connections.push({
+          id: `${i}-${j}`,
+          from: i,
+          to: j,
+          opacity: 1 - dist / 15,
+          duration: 8 + seeded(seed * 2 + 1) * 5,
+          delay: seeded(seed * 2 + 2) * 10,
+        });
       }
     }
+  }
+  return connections;
+}
 
-    setNodes(newNodes);
-    setConnections(newConnections);
-  }, []);
+const PARTICLE_NODES = createParticleNodes(35);
+const PARTICLE_CONNECTIONS = createConnections(PARTICLE_NODES);
 
+export function ParticleBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#080808]">
-      {/* Deep premium gradient background */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_var(--tw-gradient-stops))] from-[#1C1C1C]/30 via-[#080808] to-[#080808]"></div>
-      
-      {/* Liquid glass / Liquid metal ambient glow */}
-      <motion.div 
-        animate={{ 
+
+      <motion.div
+        animate={{
           scale: [1, 1.1, 1],
           opacity: [0.1, 0.2, 0.1]
         }}
         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
         className="absolute top-[20%] left-[20%] w-[60%] h-[60%] rounded-full bg-gradient-to-tr from-[#FAFAFA]/5 to-transparent blur-[120px]"
       />
-      <motion.div 
-        animate={{ 
+      <motion.div
+        animate={{
           scale: [1, 1.2, 1],
           opacity: [0.05, 0.1, 0.05]
         }}
@@ -65,13 +85,12 @@ export function ParticleBackground() {
         className="absolute bottom-[20%] right-[20%] w-[50%] h-[50%] rounded-full bg-gradient-to-bl from-[#D4AF37]/5 to-transparent blur-[140px]"
       />
 
-      {/* SVG Canvas for Connections */}
       <svg className="absolute inset-0 w-full h-full" style={{ filter: 'blur(0.5px)' }}>
-        {connections.map((conn) => {
-          const fromNode = nodes[conn.from];
-          const toNode = nodes[conn.to];
+        {PARTICLE_CONNECTIONS.map((conn) => {
+          const fromNode = PARTICLE_NODES[conn.from];
+          const toNode = PARTICLE_NODES[conn.to];
           if (!fromNode || !toNode) return null;
-          
+
           return (
             <motion.line
               key={conn.id}
@@ -84,10 +103,10 @@ export function ParticleBackground() {
               initial={{ opacity: 0 }}
               animate={{ opacity: [0, conn.opacity * 0.3, 0] }}
               transition={{
-                duration: 8 + Math.random() * 5,
+                duration: conn.duration,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: Math.random() * 10
+                delay: conn.delay
               }}
             />
           );
@@ -100,8 +119,7 @@ export function ParticleBackground() {
         </defs>
       </svg>
 
-      {/* Neural Nodes / Intelligent Particles */}
-      {nodes.map((node) => (
+      {PARTICLE_NODES.map((node) => (
         <motion.div
           key={node.id}
           className="absolute rounded-full"
