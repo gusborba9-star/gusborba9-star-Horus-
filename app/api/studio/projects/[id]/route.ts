@@ -18,7 +18,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const environment: StudioEnvironment | undefined = ['PREVIEW','STAGING','PRODUCTION'].includes(body.environment) ? body.environment : undefined;
     const patch: Parameters<typeof updateProject>[1] = {};
     if (typeof body.name === 'string') patch.name = body.name.trim();
-    if (objective) { patch.objective = objective; patch.architecture = buildPlan(objective, environment ?? 'PREVIEW'); }
+    if (objective) { patch.objective = objective; patch.architecture = { ...buildPlan(objective, environment ?? 'PREVIEW') }; }
     if (environment) patch.environment = environment;
     if (typeof body.status === 'string') patch.status = body.status;
     if (Array.isArray(body.requirements)) patch.requirements = body.requirements.filter((value: unknown): value is string => typeof value === 'string');
@@ -44,22 +44,10 @@ export async function POST(req: Request, { params }: Params) {
     if (!objective) return NextResponse.json({ success: false, error: 'OBJECTIVE_REQUIRED' }, { status: 400 });
     const environment = body.environment === 'PRODUCTION' ? 'PRODUCTION' : body.environment === 'STAGING' ? 'STAGING' : 'PREVIEW';
     const plan = buildPlan(objective, environment);
-    const result = await runHorusCore({
-      event_type: 'studio.project.execute',
-      source: 'studio',
-      payload: { project_id: id, request_id: requestId, objective, execution_graph: plan.execution_graph, capabilities: plan.capabilities, integrations: plan.integrations, environment },
-    });
+    const result = await runHorusCore({ event_type: 'studio.project.execute', source: 'studio', payload: { project_id: id, request_id: requestId, objective, execution_graph: plan.execution_graph, capabilities: plan.capabilities, integrations: plan.integrations, environment } });
     const ownerScope = user.organizationId ? `org:${user.organizationId}` : `user:${user.id}`;
-    const executionLogId = await persistHorusExecutionLog({
-      requestId,
-      eventType: 'studio.project.execute',
-      source: 'studio',
-      startedAt,
-      state: result,
-      ownership: { ownerScope, userId: user.id, organizationId: user.organizationId },
-      metadata: { project_id: id, capabilities: plan.capabilities, integrations: plan.integrations, environment },
-    });
-    await updateProject(id, { status: 'REVIEW', architecture: plan });
+    const executionLogId = await persistHorusExecutionLog({ requestId, eventType: 'studio.project.execute', source: 'studio', startedAt, state: result, ownership: { ownerScope, userId: user.id, organizationId: user.organizationId }, metadata: { project_id: id, capabilities: plan.capabilities, integrations: plan.integrations, environment } });
+    await updateProject(id, { status: 'REVIEW', architecture: { ...plan } });
     await createRevision(id, user.id, { plan, result: { error: result.error ?? null, action: result.action } });
     return NextResponse.json({ success: !result.error, data: { request_id: requestId, execution_log_id: executionLogId, plan, result } }, { status: result.error ? 400 : 200 });
   } catch (error) {
