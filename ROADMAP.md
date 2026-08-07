@@ -63,8 +63,7 @@ Objetivo: Garantir que o Memory Graph do Hórus possa escalar infinitamente sem 
 - [ ] staging deployment/promotion real;
 - [ ] production deployment + approval + rollback correlation executados em ambiente real;
 - [ ] execução local de `npm test`, TypeScript, ESLint e production build neste ambiente (o ambiente de execução local não possui checkout do repositório);
-- [ ] CI formal associado ao SHA final: a integração GitHub não retornou workflow run recuperável;
-- [ ] deployment do SHA final `fcff65e082d7e77bc7fdc80fe3e61193a3826953` ainda estava em BUILDING na última consulta. O SHA anterior `307f1bce1ef83c9ee294f399d33bd6a7ba586672` possui deployment Vercel READY comprovado.
+- [ ] CI formal associado ao SHA de validação atual — validação CI está sendo executada em branch isolada antes de qualquer nova decisão de fechamento;
 
 ### Vercel
 
@@ -77,9 +76,5 @@ Projeto `ljqmiuxztqseyglhvgmi` está `ACTIVE_HEALTHY`. A migration `horus_studio
 ### Boundary de bloco
 
 03–08 não foram reabertos arquiteturalmente.
-
-10 — AGENTS permanece **🔒 NÃO INICIADO**.
-
-12 — OBSERVABILITY permanece **🔍 NÃO DETERMINADO — bloco independente**. O uso de Execution Log, eventos e estado operacional pelo Studio não fecha observabilidade end-to-end, tracing, métricas, dashboards ou alerting.
-
-**Closure:** `docs/blueprint/09-STUDIO-CLOSURE.md`
+10 — AGENTS não iniciado.
+12 — OBSERVABILITY permanece independente.
