@@ -55,7 +55,6 @@ export default function NexusDiscoveryFlow({ moduleName, moduleIcon: Icon, onFin
       initialMsg = `Iniciando arquitetura para ${moduleName}. Qual é o objetivo operacional que deseja alcançar com este projeto?`;
     }
     
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setArchitecture({
        features: initialFeatures,
        status: 'Aguardando parâmetros',
@@ -63,7 +62,6 @@ export default function NexusDiscoveryFlow({ moduleName, moduleIcon: Icon, onFin
        investment: 'Calculando...'
     });
     
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages([{ id: 'init', role: 'nexus', content: initialMsg }]);
   }, [moduleName]);
 
@@ -147,7 +145,6 @@ export default function NexusDiscoveryFlow({ moduleName, moduleIcon: Icon, onFin
         }
       }
 
-      // Automatically advance status based on steps (heurística simples para UI)
       setStep(prev => {
         const nextStep = prev + 1;
         if (nextStep === 1) {
@@ -294,7 +291,6 @@ export default function NexusDiscoveryFlow({ moduleName, moduleIcon: Icon, onFin
          </div>
          
          <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-            {/* Status */}
             <div className="mb-8">
                <span className="text-[10px] text-[#FAFAFA]/40 font-bold uppercase tracking-widest block mb-3">Status da Operação</span>
                <div className="flex items-center gap-3 bg-[#141414] border border-[#1C1C1C] p-3 rounded-lg">
@@ -302,8 +298,6 @@ export default function NexusDiscoveryFlow({ moduleName, moduleIcon: Icon, onFin
                   <span className="text-xs font-medium text-[#FAFAFA]">{architecture.status}</span>
                </div>
             </div>
-            
-            {/* Capacidades */}
             <div className="mb-8">
                <span className="text-[10px] text-[#FAFAFA]/40 font-bold uppercase tracking-widest block mb-4">Capacidades Orquestradas</span>
                <ul className="space-y-4">
@@ -321,11 +315,8 @@ export default function NexusDiscoveryFlow({ moduleName, moduleIcon: Icon, onFin
                   )}
                </ul>
             </div>
-            
-            {/* Inteligencia Financeira */}
             <div className="pt-6 border-t border-[#1C1C1C]">
                <span className="text-[10px] text-[#FAFAFA]/40 font-bold uppercase tracking-widest block mb-4">Escopo Computacional</span>
-               
                <div className="space-y-4">
                   <div className="flex justify-between items-center bg-[#141414] p-3 rounded-lg border border-[#1C1C1C]">
                      <span className="text-[11px] text-[#FAFAFA]/60 font-medium">Complexidade</span>
@@ -338,8 +329,6 @@ export default function NexusDiscoveryFlow({ moduleName, moduleIcon: Icon, onFin
                </div>
             </div>
          </div>
-         
-         {/* Ações */}
          <div className="p-6 border-t border-[#1C1C1C] space-y-3 bg-[#0A0A0C] shrink-0">
             {isReady ? (
                <>
@@ -362,51 +351,27 @@ export default function NexusDiscoveryFlow({ moduleName, moduleIcon: Icon, onFin
             )}
          </div>
       </div>
-      
-      {/* Payment Modal */}
       {showPayment && (
         <div className="fixed inset-0 bg-[#080808]/90 z-50 flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-300">
            <div className="bg-[#101010] border border-[#1C1C1C] rounded-3xl p-10 max-w-md w-full relative shadow-2xl">
               <button onClick={() => setShowPayment(false)} className="absolute top-6 right-6 text-[#FAFAFA]/30 hover:text-[#FAFAFA] text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1"><X className="w-3 h-3"/> Fechar</button>
-              
               <div className="text-center mb-10">
-                 <div className="w-16 h-16 rounded-full bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-6">
-                    <Target className="w-8 h-8 text-[#D4AF37]" />
-                 </div>
+                 <div className="w-16 h-16 rounded-full bg-[#D4AF37]/10 flex items-center justify-center mx-auto mb-6"><Target className="w-8 h-8 text-[#D4AF37]" /></div>
                  <h2 className="text-2xl font-light text-[#FAFAFA] tracking-wide mb-4">Liberação de Recursos</h2>
                  <p className="text-xs text-[#FAFAFA]/60 font-light leading-relaxed">
-                    {isSubscriptionMode 
-                      ? 'Sua operação utilizará a capacidade da sua assinatura corporativa. O Nexus finalizará a configuração estrutural em minutos, porém possuirá até 24 horas para a entrega definitiva e calibração operacional. Confirme para iniciar o provisionamento.' 
-                      : 'Este projeto pontual utilizará Hórus Credits™. O Nexus possuirá até 24 horas para a entrega definitiva e calibração operacional. Escaneie o QR Code via Pix para adicionar créditos e iniciar a produção imediatamente.'}
+                    {isSubscriptionMode ? 'Sua operação utilizará a capacidade da sua assinatura corporativa. O Nexus finalizará a configuração estrutural em minutos, porém possuirá até 24 horas para a entrega definitiva e calibração operacional. Confirme para iniciar o provisionamento.' : 'Este projeto pontual utilizará Hórus Credits™. O Nexus possuirá até 24 horas para a entrega definitiva e calibração operacional. Escaneie o QR Code via Pix para adicionar créditos e iniciar a produção imediatamente.'}
                  </p>
               </div>
-
               {!isSubscriptionMode && (
                  <div className="bg-[#FAFAFA] p-4 rounded-2xl mx-auto w-56 h-56 flex items-center justify-center mb-8 shadow-inner relative overflow-hidden group hover:scale-105 transition-transform cursor-pointer">
-                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <span className="text-black font-bold text-[10px] uppercase tracking-widest bg-white/90 px-4 py-2 rounded-full shadow-lg">Copiar Código</span>
-                    </div>
-                    <div className="w-full h-full border-[2px] border-dashed border-[#1C1C1C]/20 rounded-xl flex items-center justify-center">
-                       <span className="text-[#101010]/40 font-bold text-xs uppercase tracking-widest">QR Code Pix</span>
-                    </div>
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><span className="text-black font-bold text-[10px] uppercase tracking-widest bg-white/90 px-4 py-2 rounded-full shadow-lg">Copiar Código</span></div>
+                    <div className="w-full h-full border-[2px] border-dashed border-[#1C1C1C]/20 rounded-xl flex items-center justify-center"><span className="text-[#101010]/40 font-bold text-xs uppercase tracking-widest">QR Code Pix</span></div>
                  </div>
               )}
-
-              <div className="text-[9px] text-[#D4AF37]/60 uppercase tracking-[0.2em] font-bold text-center mb-6 flex items-center justify-center gap-2">
-                 <BrainCircuit className="w-3 h-3" /> Orçamento calculado pelo Nexus Cognitive Core™
-              </div>
-              
+              <div className="text-[9px] text-[#D4AF37]/60 uppercase tracking-[0.2em] font-bold text-center mb-6 flex items-center justify-center gap-2"><BrainCircuit className="w-3 h-3" /> Orçamento calculado pelo Nexus Cognitive Core™</div>
               <div className="flex justify-between items-center bg-[#141414] p-5 rounded-2xl border border-[#1C1C1C]">
-                 <div>
-                    <span className="text-[10px] font-bold text-[#FAFAFA]/40 uppercase tracking-widest block mb-1">Custo Estimado</span>
-                    <span className="text-lg font-light text-[#D4AF37]">
-                       {isSubscriptionMode ? 'Incluso' : '750'} 
-                       {!isSubscriptionMode && <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]/50 ml-1">Créditos</span>}
-                    </span>
-                 </div>
-                 <button className="px-5 py-3 bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20 hover:text-[#E5D2A0] font-bold text-[10px] uppercase tracking-widest rounded-xl border border-[#D4AF37]/20 transition-colors">
-                    {isSubscriptionMode ? 'Confirmar Deploy' : 'Pagar Valor Integral'}
-                 </button>
+                 <div><span className="text-[10px] font-bold text-[#FAFAFA]/40 uppercase tracking-widest block mb-1">Custo Estimado</span><span className="text-lg font-light text-[#D4AF37]">{isSubscriptionMode ? 'Incluso' : '750'} {!isSubscriptionMode && <span className="text-[9px] font-bold uppercase tracking-widest text-[#D4AF37]/50 ml-1">Créditos</span>}</span></div>
+                 <button className="px-5 py-3 bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20 hover:text-[#E5D2A0] font-bold text-[10px] uppercase tracking-widest rounded-xl border border-[#D4AF37]/20 transition-colors">{isSubscriptionMode ? 'Confirmar Deploy' : 'Pagar Valor Integral'}</button>
               </div>
            </div>
         </div>

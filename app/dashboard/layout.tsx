@@ -14,7 +14,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const navItems = [

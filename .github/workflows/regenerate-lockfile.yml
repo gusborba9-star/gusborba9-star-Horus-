@@ -1,0 +1,29 @@
+name: regenerate-lockfile
+on:
+  push:
+    branches: [chore/horus-foundation-rebuild]
+permissions:
+  contents: write
+jobs:
+  regenerate:
+    if: github.event.head_commit.message == 'ci: trigger lockfile regeneration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/horus-foundation-rebuild
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm install --package-lock-only --ignore-scripts
+      - run: git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          git diff --cached --quiet || git commit -m 'chore: regenerate package lockfile'
+          git push origin chore/horus-foundation-rebuild
+      - run: git rm .github/workflows/regenerate-lockfile.yml && git commit -m 'chore: remove one-time lockfile regeneration workflow' && git push origin chore/horus-foundation-rebuild
