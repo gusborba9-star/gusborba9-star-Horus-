@@ -2,7 +2,8 @@
 
 **Evidence date:** 2026-08-07
 **Branch:** `main`
-**Functional implementation head:** `5abe8e8efb51d46687cc1a69cdd09e22c4177dd4`
+**Functional implementation head:** `1e7792c0994884f3e0dd7546d86e550c437b7e98`
+**Documentation head at final closure:** to be set by the final documentation commit
 **Decision:** 🟡 PARTIAL
 
 ## Executive finding
@@ -28,7 +29,7 @@ This cycle integrated the existing database surface instead of creating a parall
 - Canonical Node contract test script and TypeScript script added.
 - Canonical GitHub Actions workflow added.
 - Duplicate revision route removed.
-- Studio runtime migration applied to the existing Supabase project.
+- Studio runtime migration applied to the existing Supabase project and recorded in `supabase/migrations/20260807230403_horus_studio_runtime_closure.sql`.
 
 ## Database evidence
 
