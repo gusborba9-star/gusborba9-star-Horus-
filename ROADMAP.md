@@ -78,8 +78,10 @@
 - [x] UI do Studio substituída por workspace universal de projetos; módulos antigos permanecem como superfícies legadas sem serem tratados como produtos independentes.
 - [x] Testes unitários/contratuais do planner e permission boundary adicionados.
 - [x] Migrations 09 aplicadas e confirmadas no Supabase real.
+- [x] Vercel final READY com 47/47 testes e production build.
+- [x] Runtime error aggregation sem erros no período auditado.
 
-**Estado:** 🟢 COMPLETE tecnicamente para a infraestrutura de execução/planning do Studio.
+**Estado:** 🟢 COMPLETE.
 
 **Limite explícito:** execução externa real depende de connector secret autorizado/configurado no ambiente; o código não expõe providers ao usuário nem cria bypass do Core/Economic/Security. Não há declaração de sucesso de uma operação externa de produção sem credencial/evidência real.
 
@@ -110,9 +112,13 @@
 
 - Supabase project: `ljqmiuxztqseyglhvgmi`.
 - Applied migrations: `horus_studio_project_engine`, `horus_studio_capability_registry`.
-- Functional implementation head: `75f547150def5b4775b13ebad0da81a91aee4b22`.
-- Vercel deployment for functional head: `dpl_A8jeeDiuQYTpRGb8zKxzNkxwPipT` (build observed without error events; final READY must be confirmed by deployment state before treating deployment gate as closed).
-- Formal GitHub Actions run: no recoverable `horus-ci` execution exposed for the current branch through the available integration.
+- Functional implementation / validation SHA: `90b9daa37290275f2d020032c9ce8f2995812005`.
+- Vercel deployment: `dpl_EARQiwD5vmVUi6jSpkMKYduLJ4S3`.
+- Vercel state: `READY`.
+- Build: 47/47 PASS; Next.js production build completed; type/lint validation completed.
+- Runtime: no runtime errors in selected recent window.
+- Formal GitHub Actions `horus-ci`: no recoverable independent run through the available integration.
+- Closure: `docs/blueprint/09-STUDIO-CLOSURE.md`.
 - No new production architecture was created outside Core/Economic/Security contracts.
 
 **Next:** 10 — AGENTS.
