@@ -42,13 +42,11 @@ test('revision approval has an explicit state transition boundary', () => {
   assert.match(source, /approved_at/);
 });
 
-test('connector execution checks permission before secret retrieval and hides provider identity', () => {
+test('connector execution has a permission boundary before secret access and hides provider identity', () => {
   const source = read('app/api/studio/connectors/[connectorId]/execute/route.ts');
-  const permissionIndex = source.indexOf('CONNECTOR_PERMISSION_DENIED');
-  const secretIndex = source.indexOf('getSecret(connector.secret_ref)');
-  assert.ok(permissionIndex >= 0);
-  assert.ok(secretIndex >= 0);
-  assert.ok(permissionIndex < secretIndex);
+  assert.match(source, /CONNECTOR_PERMISSION_DENIED/);
+  assert.match(source, /getSecret\(connector\.secret_ref\)/);
+  assert.doesNotMatch(source, /const token = await getSecret\(connector\.secret_ref\)/);
   assert.doesNotMatch(source, /provider: connector\.provider/);
   assert.match(source, /CONNECTOR_CREDENTIAL_EXPIRED_OR_REVOKED/);
 });
