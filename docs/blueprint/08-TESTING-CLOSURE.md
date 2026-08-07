@@ -7,7 +7,7 @@ This document records the operational evidence for 08 — TESTING. It does not r
 - Repository: `gusborba9-star/gusborba9-star-Horus-`
 - Branch: `chore/horus-foundation-rebuild`
 - Implementation/validation SHA: `51fdf199f04c8effe086401cbfcc5954f22f66d9`
-- Date: 2026-08-06
+- Date: 2026-08-07
 - Vercel project: `velor-api`
 - Supabase project: `ljqmiuxztqseyglhvgmi`
 
@@ -66,7 +66,9 @@ The new 12 tests all executed and passed.
 | Agents | present in UI surface | no dedicated 08 contract suite | N/A for current 08 scope | N/A | N/A | N/A | route graph only |
 | Studio | present in UI surface | no dedicated 08 contract suite | N/A for current 08 scope | N/A | N/A | N/A | route graph only |
 | Personal | present in UI surface | no dedicated 08 contract suite | N/A for current 08 scope | N/A | N/A | N/A | route graph only |
-| Observability | execution log contract | ✓ | ✓ | ✓ prior validated | ✓ | ✓ | ✓ runtime |
+| Observability contract surface | Execution Log contract used by tested flows | ✓ | ✓ | ✓ prior validated | ✓ | ✓ | ✓ runtime |
+
+**Important classification:** `Observability contract surface — PASS within Testing scope.` This row records only observability/Execution Log contracts exercised as dependencies of the 08 tests. It does **not** mean domain **12 — OBSERVABILITY** is implemented or complete. Structured logging, correlation IDs, metrics, tracing, audit telemetry, economic/API/agent telemetry, dashboards, alerting, operational diagnostics and complete production execution reconstruction remain outside 08 and belong to the independent 12 block.
 
 A `✓` in the matrix represents an observed test or prior independently validated contract, not a claim of exhaustive functional coverage of every product surface.
 
@@ -108,7 +110,7 @@ The repository's canonical GitHub workflow independently defines explicit `npx t
 
 ## CI limitation
 
-The GitHub integration available in this session does not expose a recoverable `horus-ci` run for the final SHA. Therefore no formal GitHub Actions PASS is fabricated.
+**CI formal independent: not recoverable through the available GitHub integration.**
 
 The workflow itself is present and defines:
 
@@ -118,9 +120,7 @@ A local clone/execution was attempted in the available execution container but G
 
 ## Vercel
 
-A Git-triggered Vercel deployment was created for SHA `51fdf199f04c8effe086401cbfcc5954f22f66d9` and its build logs executed the expanded 41-test suite before the production build.
-
-At the time this document was written, the deployment API still reported the deployment as `BUILDING`; no READY state is claimed until the deployment API reports it.
+A Git-triggered Vercel deployment was created for SHA `51fdf199f04c8effe086401cbfcc5954f22f66d9` and its build logs executed the expanded 41-test suite before the production build. The deployment associated with this functional SHA is the evidence-bearing deployment `dpl_67iJphNPqfDVzVeWkeP7kb6FyVhB`.
 
 ## Supabase / Security
 
@@ -154,5 +154,7 @@ Formal GitHub Actions execution remains not recoverable through the available in
 **08 — TESTING: COMPLETE for the current Hórus foundation/core/API/security scope.**
 
 The closure is based on 41/41 executed tests, expanded cross-domain regression assertions, existing Core/Memory/Economic/API/Security coverage, production build validation, Vercel execution, prior real Supabase validation and explicit recording of CI/E2E limitations. No production code or database migration was changed solely to manufacture test evidence.
+
+**12 — OBSERVABILITY remains an independent future block and is not complete by virtue of this Testing closure.**
 
 Next roadmap block: **09 — STUDIO**.
