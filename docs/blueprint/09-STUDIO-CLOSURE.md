@@ -101,55 +101,44 @@ Tables:
 - `studio_connectors`
 - `studio_executions`
 
-RLS is enabled on all four tables. Client grants are restricted to the required authenticated operations. Execution records are client-readable only within owner scope; system execution remains represented by the canonical Core Execution Log.
+RLS is enabled on all four tables. Validation confirmed: `studio_projects` has 3 policies; `studio_project_revisions`, `studio_connectors` and `studio_executions` each have 1 policy.
 
-## 10. Testing
+## 10. Testing and validation
 
-Added `tests/studio.test.mjs` covering:
+Added `tests/studio.test.mjs` covering multimodal capability composition, dynamic execution graph, complexity classification, production/major-rebuild approval behavior, connector selection and granular permissions.
 
-- multimodal capability composition;
-- dynamic execution graph;
-- complexity classification;
-- production/major-rebuild approval behavior;
-- connector selection;
-- granular connector permissions;
-- production permission classification.
+The final Vercel build executed **47/47 PASS**, 0 fail, 0 cancelled, 0 skipped, 0 todo. The build then compiled Next.js successfully and completed type/lint validation and production packaging.
 
-A real Vercel build caught an incorrect expectation in the approval test (`true !== false`). The test was corrected to match the intended major-rebuild approval policy before the final deployment candidate.
+Two real build failures were found and corrected during execution: an approval-test expectation and two TypeScript `Record<string, unknown>` contract mismatches. A further Portuguese pluralization mismatch in capability detection was also corrected from Vercel test evidence.
 
 ## 11. Vercel evidence
 
 Project: `velor-api` (`prj_xQDty1690tXrnIWH4IIHOOXWF7CG`).
 
-Latest functional-head deployment observed:
-`dpl_A8jeeDiuQYTpRGb8zKxzNkxwPipT`
+**Functional SHA:** `90b9daa37290275f2d020032c9ce8f2995812005`  
+**Deployment:** `dpl_EARQiwD5vmVUi6jSpkMKYduLJ4S3`  
+**State:** `READY`  
+**Build:** completed successfully; Next.js 15.5.22; 47/47 tests; type validation/lint; production build completed.
 
-Commit:
-`75f547150def5b4775b13ebad0da81a91aee4b22`
+A smoke fetch of `/dashboard/studio` reached the deployed Vercel surface and returned the expected authentication redirect rather than an application error.
 
-Build logs for the candidate reported no error/stderr/exit events while the deployment was still progressing. The deployment state was still `BUILDING` at the last direct state read; therefore this closure does not fabricate a READY result.
+## 12. Runtime
 
-## 12. CI
+Vercel runtime error aggregation for the selected recent window returned **no runtime errors**.
+
+## 13. CI
 
 No independent `horus-ci` execution for the final branch state was recoverable through the available GitHub integration. This is recorded as a limitation, not as a PASS inferred from Vercel.
 
-## 13. Runtime / external integration limitation
+## 14. Security / Supabase Advisor
 
-The Studio infrastructure is deployed through the normal Vercel Git integration, but no real production GitHub/Vercel/Supabase connector action was executed solely to manufacture evidence. Connector credentials remain server-side and execution is permission-gated.
+Security Advisor after the Studio migrations returned no new critical finding. Existing state remains: the intentional WARN for `reserve_horus_credits` plus INFOs for privileged RLS-without-client-policy tables. The WARN was not suppressed or reclassified.
 
-## 14. Scope boundary
+## 15. Scope boundary
 
-This closure establishes the infrastructure required for Nexus-driven projects. It does not implement:
+This closure establishes the infrastructure required for Nexus-driven projects. It does not implement Agent runtime (10), Personal (11), full operational Observability (12), an independent IDE product, a parallel provider router, a parallel billing system, or a second Memory Graph.
 
-- Agent runtime (10);
-- Personal layer (11);
-- full operational Observability (12);
-- an independent IDE product;
-- a parallel provider router;
-- a parallel billing system;
-- a second Memory Graph.
-
-## 15. Final state
+## 16. Final state
 
 **09 — STUDIO: 🟢 COMPLETE** for the defined infrastructure/Project Engine scope.
 
