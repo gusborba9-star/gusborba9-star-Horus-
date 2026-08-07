@@ -14,7 +14,7 @@ const CAPABILITY_KEYWORDS: Array<{ id: StudioCapabilityId; terms: string[] }> = 
   { id: 'AUDIO', terms: ['áudio', 'voz', 'podcast', 'narração'] },
   { id: 'VIDEO', terms: ['vídeo', 'filme', 'reels', 'animação'] },
   { id: 'CAMPAIGNS', terms: ['campanha', 'marketing', 'publicidade', 'anúncio'] },
-  { id: 'AUTOMATIONS', terms: ['automação', 'workflow', 'rotina', 'processo'] },
+  { id: 'AUTOMATIONS', terms: ['automação', 'automações', 'workflow', 'rotina', 'processo'] },
 ];
 
 function hasTerm(text: string, terms: string[]): boolean {
@@ -31,7 +31,7 @@ export function selectCapabilities(objective: string): StudioCapabilityId[] {
 export function classifyComplexity(objective: string, capabilities: StudioCapabilityId[]): StudioPlan['complexity'] {
   const text = objective.trim().toLowerCase();
   if (capabilities.length >= 5 || /plataforma|ecossistema|reconstruir|enterprise|arquitetura/.test(text)) return 'MAJOR_REBUILD';
-  if (capabilities.length >= 3 || /sistema|integração|saas|automação/.test(text)) return 'ARCHITECTURAL';
+  if (capabilities.length >= 3 || /sistema|integração|saas|automação|automações/.test(text)) return 'ARCHITECTURAL';
   if (capabilities.length === 2 || text.length > 180) return 'LOCALIZED';
   return 'SIMPLE';
 }
@@ -45,25 +45,12 @@ export function selectIntegrations(capabilities: StudioCapabilityId[]): StudioCo
 }
 
 export function buildExecutionGraph(capabilities: StudioCapabilityId[]): StudioPlan['execution_graph'] {
-  return capabilities.map((capability, index) => ({
-    id: `capability-${index + 1}`,
-    capability,
-    depends_on: index === 0 ? [] : [`capability-${index}`],
-  }));
+  return capabilities.map((capability, index) => ({ id: `capability-${index + 1}`, capability, depends_on: index === 0 ? [] : [`capability-${index}`] }));
 }
 
 export function buildPlan(objective: string, environment: StudioPlan['environment'] = 'PREVIEW'): StudioPlan {
   const capabilities = selectCapabilities(objective);
   const integrations = selectIntegrations(capabilities);
   const complexity = classifyComplexity(objective, capabilities);
-  return {
-    objective: objective.trim(),
-    complexity,
-    capabilities,
-    integrations,
-    execution_graph: buildExecutionGraph(capabilities),
-    approval_required: environment === 'PRODUCTION' || complexity === 'MAJOR_REBUILD',
-    environment,
-    estimated_cost_brl: null,
-  };
+  return { objective: objective.trim(), complexity, capabilities, integrations, execution_graph: buildExecutionGraph(capabilities), approval_required: environment === 'PRODUCTION' || complexity === 'MAJOR_REBUILD', environment, estimated_cost_brl: null };
 }
