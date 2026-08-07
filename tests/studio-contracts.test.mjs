@@ -42,6 +42,17 @@ test('revision approval has an explicit state transition boundary', () => {
   assert.match(source, /approved_at/);
 });
 
+test('revision lifecycle prevents promotion without preview, staging and approval gates', () => {
+  const source = read('app/api/studio/projects/[projectId]/revisions/[revisionId]/lifecycle/route.ts');
+  assert.match(source, /PREVIEW_READY/);
+  assert.match(source, /STAGING_READY/);
+  assert.match(source, /PRODUCTION_APPROVED/);
+  assert.match(source, /PREVIEW_VALIDATION_REQUIRED/);
+  assert.match(source, /STAGING_VALIDATION_REQUIRED/);
+  assert.match(source, /PRODUCTION_APPROVAL_REQUIRED/);
+  assert.match(source, /ROLLBACK_REQUESTED/);
+});
+
 test('connector execution has a permission boundary before secret access and hides provider identity', () => {
   const source = read('app/api/studio/connectors/[connectorId]/execute/route.ts');
   assert.match(source, /CONNECTOR_PERMISSION_DENIED/);
