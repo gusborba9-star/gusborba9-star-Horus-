@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 import { requireStudioUser } from '@/lib/studio/auth';
 import { getServiceSupabase } from '@/lib/supabase';
-import { CONNECTOR_PERMISSIONS, CONNECTOR_PROVIDERS, type ConnectorProvider } from '@/lib/studio/types';
+import {
+  CONNECTOR_PERMISSIONS,
+  CONNECTOR_PROVIDERS,
+  type ConnectorPermission,
+  type ConnectorProvider,
+} from '@/lib/studio/types';
+
+function isConnectorPermission(value: unknown): value is ConnectorPermission {
+  return typeof value === 'string' && (CONNECTOR_PERMISSIONS as readonly string[]).includes(value);
+}
 
 export async function GET(request: Request) {
   try {
@@ -21,8 +30,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const provider = String(body.provider) as ConnectorProvider;
     if (!CONNECTOR_PROVIDERS.includes(provider)) throw new Error('UNSUPPORTED_CONNECTOR');
-    const permissions = Array.isArray(body.permissions) ? body.permissions.filter((p: unknown): p is string => typeof p === 'string') : [];
-    if (permissions.some((p) => !CONNECTOR_PERMISSIONS.includes(p as never))) throw new Error('INVALID_CONNECTOR_PERMISSION');
+
+    const permissions: ConnectorPermission[] = Array.isArray(body.permissions)
+      ? body.permissions.filter(isConnectorPermission)
+      : [];
+    const submittedPermissions = Array.isArray(body.permissions) ? body.permissions : [];
+    if (permissions.length !== submittedPermissions.length) throw new Error('INVALID_CONNECTOR_PERMISSION');
     if (!permissions.length) throw new Error('CONNECTOR_PERMISSION_REQUIRED');
     if (provider === 'github' && !permissions.some((p) => p === 'READ_REPOSITORY' || p === 'READ_FILES')) throw new Error('GITHUB_READ_PERMISSION_REQUIRED');
 
