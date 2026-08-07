@@ -194,6 +194,8 @@
 
 **Limitação explícita:** a suíte 08 é de regressão/contrato sistêmico e não reivindica E2E de todos os produtos Studio/Agents/Personal nem execução real de provider com custo externo. Live provider execution é deliberadamente excluída do caminho de teste para evitar efeitos econômicos externos.
 
+**Limite de Observability:** o 08 testa somente contratos de observabilidade/Execution Log necessários aos fluxos sob teste. Isso **não representa fechamento do domínio 12 — OBSERVABILITY**, que permanece um bloco independente.
+
 **Estado:** 🟢 COMPLETE.
 
 ---
@@ -264,29 +266,7 @@
 
 **Estado:** 🔍 NÃO DETERMINADO.
 
----
-
-# 06 + 07 — FINAL EXECUTION EVIDENCE
-
-- Branch: `chore/horus-foundation-rebuild`.
-- Implementation SHA: `befdabf72750b3424098320ba90cdb6462c6881f`.
-- Validation/deployment SHA: `92ef5c728aa59cd9729886d7118574d096267542`.
-- `6955d21e...` and `19944e4f...` are documentation commits and are not reinterpreted as implementation SHAs.
-- Supabase: `ljqmiuxztqseyglhvgmi`; security migrations applied; RLS, grants and function boundaries verified.
-- Vercel: `velor-api`; deployment `dpl_8ADkpE5t2hSBE6Pc5sWMpup89yBz`; READY; validation SHA `92ef5c...`.
-- Tests: 29/29 PASS.
-- TypeScript: PASS in production build.
-- ESLint: PASS in production build.
-- Build: PASS.
-- Runtime: no relevant error/fatal cluster in validation window.
-- Security Advisor: 0 CRITICAL, 1 intentional WARN, INFOs classified.
-- Formal independent CI: **NOT RECOVERABLE THROUGH THE AVAILABLE GITHUB INTEGRATION**; no CI PASS inferred or fabricated.
-
-**06 — API / ROUTING:** 🟢 COMPLETE.
-
-**07 — SECURITY:** 🟢 COMPLETE.
-
-**Next:** 08 — TESTING.
+**Regra de escopo:** testes de Execution Log/observability executados no 08 são apenas contratos de suporte aos fluxos de Testing; não antecipam nem completam este domínio.
 
 ---
 
@@ -303,6 +283,7 @@
 - Security Advisor: 0 CRITICAL, 1 intentional WARN, INFOs classified.
 - Formal GitHub Actions CI: **NOT RECOVERABLE THROUGH THE AVAILABLE GITHUB INTEGRATION**.
 - Local shell execution: attempted but GitHub network/DNS was unavailable in the execution container; no local PASS inferred.
+- Observability classification: **contract surface PASS within 08; domain 12 remains independent and NOT DETERMINED**.
 
 **08 — TESTING:** 🟢 COMPLETE.
 
