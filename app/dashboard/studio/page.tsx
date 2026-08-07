@@ -1,66 +1,146 @@
 'use client';
 
-import { 
-  Music, Video, Code, Megaphone, Zap, ArrowLeft, Target
-} from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { ArrowRight, BrainCircuit, GitBranch, Layers3, Plus, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+
+interface Project { id: string; name: string; objective: string; status: string; environment: string; capabilities: string[]; updated_at: string; }
+interface Revision { id: string; version: number; change_class: string; approval_state: string; optimized_spec: Record<string, unknown>; created_at: string; }
 
 export default function StudioHome() {
-  const router = useRouter();
-  
-  const modules = [
-     { name: 'Studio Dev', desc: 'SaaS, Aplicativos, APIs e Dashboards.', icon: Code, link: '/dashboard/studio/dev' },
-     { name: 'Studio Música', desc: 'Composição algorítmica e produção.', icon: Music, link: '/dashboard/studio/music' },
-     { name: 'Studio Vídeo', desc: 'Produção audiovisual e renderização.', icon: Video, link: '/dashboard/studio/video' },
-     { name: 'Studio Campanhas', desc: 'Estratégia, copy e orquestração.', icon: Megaphone, link: '/dashboard/studio/campaigns' },
-     { name: 'Equipes Cognitivas', desc: 'Configuração de equipes cognitivas.', icon: Zap, link: '/dashboard/agents' },
-  ];
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selected, setSelected] = useState<Project | null>(null);
+  const [revisions, setRevisions] = useState<Revision[]>([]);
+  const [name, setName] = useState('');
+  const [objective, setObjective] = useState('');
+  const [request, setRequest] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  async function authFetch(path: string, init?: RequestInit) {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error('AUTHENTICATION_REQUIRED');
+    return fetch(path, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}), Authorization: `Bearer ${token}` } });
+  }
+
+  async function loadProjects() {
+    setLoading(true);
+    try {
+      const response = await authFetch('/api/studio/projects');
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'PROJECT_LOAD_FAILED');
+      setProjects(payload.projects ?? []);
+      if (!selected && payload.projects?.[0]) setSelected(payload.projects[0]);
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'PROJECT_LOAD_FAILED'); }
+    finally { setLoading(false); }
+  }
+
+  async function loadRevisions(projectId: string) {
+    try {
+      const response = await authFetch(`/api/studio/projects/${projectId}`);
+      const payload = await response.json();
+      if (response.ok) setSelected(payload.project);
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      const revisionsResponse = await fetch(`/api/studio/projects/${projectId}/revisions`, { headers: { Authorization: `Bearer ${token}` } });
+      if (revisionsResponse.ok) {
+        const revisionsPayload = await revisionsResponse.json();
+        setRevisions(revisionsPayload.revisions ?? []);
+      }
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'PROJECT_LOAD_FAILED'); }
+  }
+
+  async function createProject() {
+    if (!name.trim() || !objective.trim()) return;
+    setBusy(true); setMessage('');
+    try {
+      const response = await authFetch('/api/studio/projects', { method: 'POST', body: JSON.stringify({ name, objective }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'PROJECT_CREATE_FAILED');
+      setName(''); setObjective(''); setSelected(payload.project);
+      await loadProjects();
+      setSelected(payload.project);
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'PROJECT_CREATE_FAILED'); }
+    finally { setBusy(false); }
+  }
+
+  async function planRevision() {
+    if (!selected || !request.trim()) return;
+    setBusy(true); setMessage('');
+    try {
+      const response = await authFetch(`/api/studio/projects/${selected.id}/revisions`, { method: 'POST', body: JSON.stringify({ prompt: request }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'REVISION_PLAN_FAILED');
+      setRequest('');
+      setMessage(`Revision ${payload.revision.version} planejada: ${payload.revision.change_class}.`);
+      await loadRevisions(selected.id);
+      await loadProjects();
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'REVISION_PLAN_FAILED'); }
+    finally { setBusy(false); }
+  }
+
+  useEffect(() => { void loadProjects(); }, []);
+  useEffect(() => { if (selected) void loadRevisions(selected.id); }, [selected?.id]);
 
   return (
-    <div className="h-full flex flex-col bg-[#080808] relative font-sans">
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] mix-blend-overlay pointer-events-none"></div>
-      
-      {/* Header */}
-      <div className="h-20 border-b border-[#1C1C1C] shrink-0 flex items-center justify-between px-6 sm:px-10 relative z-20">
-         <div className="flex items-center gap-3">
-            <Target className="w-5 h-5 text-[#D4AF37]" />
-            <h1 className="text-xl font-extrabold tracking-[0.2em] text-[#FAFAFA] uppercase">
-              Studio Hórus™
-            </h1>
-         </div>
-         <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-[#FAFAFA]/50 hover:text-[#FAFAFA] transition-colors text-xs font-bold uppercase tracking-widest">
-            <ArrowLeft className="w-4 h-4" /> Voltar
-         </button>
-      </div>
+    <div className="h-full overflow-y-auto bg-[#080808] text-[#FAFAFA]">
+      <div className="max-w-[1500px] mx-auto p-6 lg:p-10 space-y-8">
+        <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+          <div>
+            <div className="flex items-center gap-2 text-[#D4AF37] text-[10px] font-bold tracking-[0.3em] uppercase mb-3"><BrainCircuit className="w-4 h-4" /> Nexus Project Execution</div>
+            <h1 className="text-4xl md:text-6xl font-light tracking-tight">Studio Hórus™</h1>
+            <p className="text-sm text-white/40 max-w-3xl mt-4 leading-relaxed">Um workspace universal. Você declara a intenção; o Nexus contextualiza, classifica a mudança, compõe capabilities e prepara a execução sem expor providers ou complexidade interna.</p>
+          </div>
+          <button onClick={() => void loadProjects()} className="px-4 py-2.5 rounded-xl border border-white/10 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:border-[#D4AF37]/30 flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Atualizar</button>
+        </header>
 
-      {/* Main Content */}
-      <div className="flex-1 p-6 sm:p-10 overflow-y-auto custom-scrollbar relative z-10">
-         <div className="max-w-7xl mx-auto">
-            <div className="mb-12">
-               <h2 className="text-sm font-bold text-[#D4AF37] mb-2 uppercase tracking-[0.3em]">Arquitetura de Criação</h2>
-               <h3 className="text-3xl md:text-5xl font-light text-[#FAFAFA] mb-4">Arquitetar com Nexus™</h3>
-               <p className="text-sm md:text-base text-[#FAFAFA]/40 font-light max-w-2xl leading-relaxed">
-                  Não utilize o Studio Hórus como um gerador de conteúdo genérico. Informe sua intenção. O Nexus conduzirá a descoberta inteligente, arquitetará a solução e estimará a operação.
-               </p>
+        <section className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-6">
+          <aside className="rounded-3xl border border-white/10 bg-white/[0.02] p-5">
+            <div className="flex items-center justify-between mb-4"><span className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">Projetos</span><span className="text-[10px] text-[#D4AF37]">{projects.length}</span></div>
+            <div className="space-y-2 max-h-[520px] overflow-y-auto">
+              {loading && <div className="text-xs text-white/30 p-4">Carregando workspace…</div>}
+              {!loading && projects.length === 0 && <div className="text-xs text-white/30 p-4">Nenhum projeto ainda.</div>}
+              {projects.map((project) => <button key={project.id} onClick={() => setSelected(project)} className={`w-full text-left p-4 rounded-2xl border transition-all ${selected?.id === project.id ? 'border-[#D4AF37]/30 bg-[#D4AF37]/[0.06]' : 'border-white/5 bg-white/[0.015] hover:border-white/10'}`}><div className="text-sm font-semibold truncate">{project.name}</div><div className="text-[11px] text-white/35 mt-1 line-clamp-2">{project.objective}</div><div className="flex gap-2 mt-3 text-[9px] uppercase tracking-widest text-white/30"><span>{project.status}</span><span>·</span><span>{project.environment}</span></div></button>)}
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-               {modules.map((mod, i) => {
-                  const Icon = mod.icon;
-                  return (
-                     <Link href={mod.link} key={i} className="bg-[#141414]/50 p-8 rounded-3xl border border-[#1C1C1C] hover:border-[#D4AF37]/30 transition-all block group relative overflow-hidden">
-                        <div className="w-12 h-12 rounded-xl bg-[#101010] flex items-center justify-center mb-6 border border-[#1C1C1C] group-hover:border-[#D4AF37]/30 group-hover:bg-[#D4AF37]/10 transition-colors shadow-[0_0_15px_rgba(212,175,55,0.0)] group-hover:shadow-[0_0_15px_rgba(212,175,55,0.1)]">
-                           <Icon className="w-5 h-5 text-[#FAFAFA]/50 group-hover:text-[#D4AF37] transition-colors" />
-                        </div>
-                        <h3 className="text-sm font-bold text-[#FAFAFA] mb-2 uppercase tracking-wide group-hover:text-[#D4AF37] transition-colors">{mod.name}</h3>
-                        <p className="text-xs text-[#FAFAFA]/40 leading-relaxed font-light">{mod.desc}</p>
-                     </Link>
-                  )
-               })}
+            <div className="border-t border-white/10 mt-5 pt-5 space-y-3">
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do projeto" className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-[#D4AF37]/40" />
+              <textarea value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="O que você quer construir?" rows={3} className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-[#D4AF37]/40 resize-none" />
+              <button disabled={busy} onClick={() => void createProject()} className="w-full rounded-xl bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-widest py-3 disabled:opacity-40 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Novo projeto</button>
             </div>
-         </div>
+          </aside>
+
+          <main className="space-y-6">
+            {!selected ? <div className="min-h-[520px] rounded-3xl border border-white/10 flex items-center justify-center text-white/30 text-sm">Crie ou selecione um projeto para iniciar.</div> : <>
+              <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.035] to-transparent p-6 lg:p-8">
+                <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
+                  <div><div className="text-[9px] uppercase tracking-[0.3em] text-[#D4AF37] mb-2">Projeto ativo</div><h2 className="text-2xl md:text-3xl font-light">{selected.name}</h2><p className="text-sm text-white/40 mt-3 max-w-3xl">{selected.objective}</p></div>
+                  <div className="flex gap-2 text-[9px] uppercase tracking-widest"><span className="px-3 py-2 rounded-full border border-white/10 text-white/40">{selected.status}</span><span className="px-3 py-2 rounded-full border border-[#D4AF37]/20 text-[#D4AF37]">{selected.environment}</span></div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8"><Metric icon={Layers3} label="Capabilities" value={String(selected.capabilities?.length ?? 0)} /><Metric icon={GitBranch} label="Revisions" value={String(revisions.length)} /><Metric icon={ShieldCheck} label="Economic gate" value="Required" /><Metric icon={Sparkles} label="Nexus" value="Active" /></div>
+              </section>
+
+              <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-6">
+                <div className="flex items-center gap-2 mb-3"><Sparkles className="w-4 h-4 text-[#D4AF37]" /><span className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/50">Nexus Intake</span></div>
+                <textarea value={request} onChange={(e) => setRequest(e.target.value)} placeholder="Ex.: Adicione autenticação e uma página de preços, preservando a arquitetura atual." rows={4} className="w-full rounded-2xl bg-black/30 border border-white/10 p-4 text-sm outline-none focus:border-[#D4AF37]/40 resize-none" />
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-4"><p className="text-[11px] text-white/30">O Nexus classifica MICRO → REBUILD e gera uma especificação contextual antes da execução.</p><button disabled={busy || !request.trim()} onClick={() => void planRevision()} className="px-5 py-3 rounded-xl bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-widest disabled:opacity-40 flex items-center justify-center gap-2">Planejar revisão <ArrowRight className="w-4 h-4" /></button></div>
+              </section>
+
+              <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-6">
+                <div className="flex items-center justify-between mb-5"><span className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">Revision Engine</span><span className="text-[10px] text-white/25">PREVIEW → APPROVAL → STAGING → PRODUCTION</span></div>
+                <div className="space-y-3">{revisions.length === 0 ? <div className="text-xs text-white/30">Nenhuma revisão planejada.</div> : revisions.map((revision) => <div key={revision.id} className="p-4 rounded-2xl border border-white/5 bg-black/20 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div className="text-sm">Revision {revision.version} <span className="text-white/30">· {revision.change_class}</span></div><div className="text-[10px] text-white/30 mt-1">{new Date(revision.created_at).toLocaleString('pt-BR')} · {revision.approval_state}</div></div><span className="text-[9px] uppercase tracking-widest text-[#D4AF37]">spec pronta</span></div>)}</div>
+              </section>
+            </>}
+          </main>
+        </section>
+        {message && <div className="fixed bottom-6 right-6 max-w-md rounded-2xl border border-white/10 bg-[#111]/95 backdrop-blur-xl px-5 py-4 text-xs text-white/70 shadow-2xl">{message}</div>}
       </div>
     </div>
   );
+}
+
+function Metric({ icon: Icon, label, value }: { icon: typeof Layers3; label: string; value: string }) {
+  return <div className="rounded-2xl border border-white/5 bg-black/20 p-4"><Icon className="w-4 h-4 text-[#D4AF37]/70" /><div className="text-[9px] uppercase tracking-widest text-white/25 mt-3">{label}</div><div className="text-sm font-semibold mt-1">{value}</div></div>;
 }
