@@ -3,308 +3,221 @@
 **Evidence date:** 2026-08-07
 **Branch:** `main`
 **Functional implementation SHA:** `fcff65e082d7e77bc7fdc80fe3e61193a3826953`
-**Documentation predecessor SHA:** `75a4f8e8c6726ea5a46de702669b7481c970c877`
-**Latest Vercel validation SHA:** `307f1bce1ef83c9ee294f399d33bd6a7ba586672`
-**Latest Vercel deployment proven READY:** `dpl_CMgDyRFZhvYszxYUncZ2wcEtYyri`
+**Validation SHA:** `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13`
+**Documentation predecessor SHA:** `0511679f7a4181f11f262f6a2323b37adecd8f01`
+**Latest validation deployment:** `dpl_2KubP6ijHMGFaFqvc2TGDYRkVNmT`
+**Validation deployment status:** `READY`
+**Current main deployment:** `dpl_8igbJ9HEt4Ux3WDiMbhmpNL7RUk5`
+**Current main deployment status at evidence capture:** `BUILDING`
 **Decision:** 🟡 PARTIAL
 
 ## Executive decision
 
-The Studio was not left at the previous audit state. The implementation was extended and corrected in-place to move it materially closer to the definitive architecture: universal project workspace, Nexus-centered execution specification, persistent revisions, capability composition, connector permission boundaries, approval gates and lifecycle promotion controls.
+The Studio implementation was corrected and integrated in-place. The known connector TypeScript failure is no longer present in the current `main` source: connector permissions are derived from the canonical `ConnectorPermission` registry and validated at runtime without `any`, `@ts-ignore`, lint suppression or relaxed compiler settings. The current repository also has a canonical CI workflow and the validation branch produced a Vercel deployment that reached `READY` from SHA `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13`.
 
-The final decision remains **PARTIAL** because the environment does not provide enough real external evidence to claim full operational closure. In particular, live connector execution, real provider execution through Economic Authorization → Provider Adapter → Usage → Reconciliation, dedicated preview/staging/production promotion, and final-SHA test/build/deployment validation were not all demonstrably executed.
+The decision remains **PARTIAL**, not because the implementation was left as scaffolding, but because the evidence boundary still prevents an honest COMPLETE claim. No authorized live connector credential was available for Studio-managed GitHub/Vercel/Supabase E2E; the Studio lifecycle routes are application gates rather than proof of real external preview/staging/production promotion; the complete live `Economic Authorization → Provider Adapter → Usage → Reconciliation → Delivery` chain was not executed from Studio; and the GitHub Actions integration returned no recoverable workflow run for the validation SHA.
 
-No block 10 work was started.
+No Block 10 work was started.
 
 ## Architecture implemented
 
 ### Nexus
 
-The Studio receives user intent through a project/revision contract and produces an `OptimizedExecutionSpec`. The specification now includes:
+The Studio receives user intent through the project/revision contract and produces an `OptimizedExecutionSpec` containing original user intent, objective, project context, requirements, current architecture/state, inferred and existing capabilities, connector context, change class, execution strategy, recomputation policy, economic authorization requirement, provider-invisibility policy, and preview-first/production-approval policies.
 
-- original intent;
-- optimized execution prompt;
-- objective;
-- project context;
-- requirements;
-- current architecture/state;
-- inferred and pre-existing capabilities;
-- connector context;
-- change class;
-- execution strategy;
-- economic authorization requirement;
-- provider-invisibility and preview-first policies.
-
-The optimization layer is deterministic at the contract level; it does not expose provider/model selection to the Studio user.
+The Studio does not expose provider/model selection to the user.
 
 ### Project Engine
 
-`studio_projects` is the persistent project source. The live database contains:
+`studio_projects` is the persistent project source and the live database contains identity/ownership, objective, context, requirements, architecture, capabilities, integrations, execution graph, environment state, delivery and intelligence snapshot.
 
-- identity/ownership;
-- objective;
-- context;
-- requirements;
-- architecture;
-- capabilities;
-- integrations/connectors;
-- execution graph;
-- environment state;
-- delivery state;
-- intelligence snapshot.
-
-RLS is owner-scoped for mutation and owner/organization-member scoped for reads.
+Live RLS inspection confirmed owner-scoped mutation and owner/organization-member-scoped reads where intended.
 
 ### Revision Engine
 
-`studio_project_revisions` provides:
+`studio_project_revisions` provides versioning, parent revision, diff/state, optimized specification, change class, approval, tests, preview, deployment and audit state. The database enforces unique `(project_id, version)`.
 
-- monotonic project version;
-- parent revision;
-- diff/state;
-- optimized execution specification;
-- change class;
-- approval state;
-- test/preview/deployment/audit state.
+Canonical classes: `MICRO → LOW → MEDIUM → MAJOR → REBUILD`.
 
-The database has a unique `(project_id, version)` constraint.
-
-Change classes:
-
-`MICRO → LOW → MEDIUM → MAJOR → REBUILD`
-
-The execution strategy now changes with class, including planning depth, recomputation scope and re-planning requirement.
+The execution strategy changes with class: MICRO deterministic/delta-only; LOW economic/affected-artifacts; MEDIUM deep/affected-artifacts/replan; MAJOR deep/project-wide/replan; REBUILD full-rebuild/project-wide/replan.
 
 ### Capability Engine
 
-The canonical registry remains the source for the existing Studio capabilities. No parallel registry was created. Existing project capabilities are preserved and combined with capabilities inferred from a new intent.
+The existing registry remains canonical. No second registry was introduced. Existing project capabilities are preserved and combined with capabilities inferred from the new intent.
 
 ### Connector Engine
 
-Supported connector providers remain:
+Supported connector identities remain GitHub, Vercel, Supabase and an explicit External API placeholder. Connector permissions are derived from the canonical registry.
 
-- GitHub;
-- Vercel;
-- Supabase;
-- External API placeholder requiring an explicit adapter.
-
-Connector permissions are typed from the canonical permission registry.
+The current execution route enforces credential state and permission before Vault access. It does not expose provider identity in the execution response.
 
 ### Credential Vault
 
-Connector secrets are stored through the existing service-role-only Vault functions. The connector execution path now verifies connector status, revocation and expiry before secret access, verifies the required permission before reading the secret, and does not return provider identity in the execution response.
+Live database inspection confirms `studio_store_connector_secret` and `studio_read_connector_secret` are `SECURITY DEFINER` functions executable only by `service_role`; `public`, `anon` and `authenticated` execution is revoked. Connector rows store only `secret_ref`, not plaintext secrets.
 
 ### Approval / lifecycle
 
-New revision approval boundary:
+Revision approval and lifecycle boundaries exist at:
 
 `POST /api/studio/projects/[projectId]/revisions/[revisionId]/approval`
 
-New lifecycle boundary:
-
 `POST /api/studio/projects/[projectId]/revisions/[revisionId]/lifecycle`
 
-Lifecycle actions enforce:
+The lifecycle contract enforces `PREVIEW_READY → STAGING_READY → PRODUCTION_APPROVED → DELIVERED` with explicit validation gates and a target-version-validated `ROLLBACK_REQUESTED` state.
 
-`PREVIEW_READY → STAGING_READY → PRODUCTION_APPROVED → DELIVERED`
-
-and provide a controlled `ROLLBACK_REQUESTED` state transition. These routes record state and gates; they do **not** falsely claim to have deployed an external environment.
+These routes deliberately do not claim an external deployment occurred when they only changed application state.
 
 ### Production boundary
 
-The generic project PATCH path continues to reject direct `PRODUCTION` environment mutation. Production requires the explicit approval/lifecycle boundary.
+The generic project PATCH route rejects direct `PRODUCTION` environment mutation and requires the explicit approval/lifecycle flow.
 
 ## Database / migrations
 
-No new migration was required during this execution.
+No new database migration was required during this execution.
 
-The existing Studio runtime migration remains applied:
+The live Supabase project is `ljqmiuxztqseyglhvgmi`.
 
-`20260807230403_horus_studio_runtime_closure`
+Applied Studio migrations:
 
-Supabase project:
+- `horus_studio_project_engine`;
+- `horus_studio_capability_registry`;
+- `20260807230403_horus_studio_runtime_closure`.
 
-`ljqmiuxztqseyglhvgmi`
-
-The live migration list confirms the Studio migrations:
-
-- `horus_studio_project_engine`
-- `horus_studio_capability_registry`
-- `horus_studio_runtime_closure`
+The runtime closure migration provides Studio execution metadata, lifecycle constraints, unique revision/idempotency constraints, Vault functions and Studio RLS policies.
 
 ## RLS
 
-Live inspection confirmed RLS on:
+Live policy inspection confirmed RLS on `studio_projects`, `studio_project_revisions`, `studio_connectors` and `studio_executions`.
 
-- `studio_projects`;
-- `studio_project_revisions`;
-- `studio_connectors`;
-- `studio_executions`.
-
-The current policies enforce owner mutation and scoped organization reads where intended. No Studio migration was added in this execution.
+Mutation policies are owner-bound. Organization membership is used for scoped reads where intended. Revision writes additionally require project ownership.
 
 ## Security Advisor
 
-Live Security Advisor result:
+Live Security Advisor reports no CRITICAL Studio-related finding. INFO findings remain for systemic tables with RLS enabled but no policies, and the pre-existing WARN for `reserve_horus_credits` remains in the economic domain.
 
-- no CRITICAL finding;
-- INFO findings remain on systemic tables with RLS enabled but no policies;
-- the known WARN for `reserve_horus_credits` remains and was not reclassified or altered by Studio.
-
-No security finding was suppressed to manufacture a green result.
+No unrelated security domain was modified to manufacture a green result.
 
 ## Tests
 
-The canonical Studio contract suite was extended from its previous coverage to include:
+The canonical Studio contract suite is `npm test → node --test tests/studio-contracts.test.mjs` and covers canonical change classes, Project Engine/RLS, optimized execution specification, provider invisibility, approval, lifecycle promotion gates, connector permission-before-secret, credential expiry/revocation, provider identity non-disclosure and Nexus-centered UI.
 
-- canonical change classes;
-- project/RLS boundary;
-- revision optimized-spec contract;
-- contextual/provider-invisible execution specification;
-- revision approval boundary;
-- lifecycle promotion gates;
-- connector permission-before-secret boundary;
-- credential expiry/revocation boundary;
-- provider identity non-disclosure;
-- Nexus-centered Studio UI contract.
+The current tool environment does not expose a local repository checkout/terminal, so `npm ci`, `npm test`, `npm run typecheck` and `npm run lint` could not be executed directly in this session.
 
-The final repository test script remains:
+The canonical CI workflow exists at `.github/workflows/horus-ci.yml` and specifies `npm ci → npm test → npm run typecheck → npm run lint → npm run build`. A validation PR was created and merged specifically to trigger the canonical validation path. The GitHub connector returned no recoverable Actions workflow run for its head SHA, so CI PASS is **not** inferred.
 
-`npm test → node --test tests/studio-contracts.test.mjs`
+## TypeScript / build
 
-**Important evidence limitation:** the current execution environment has no local repository checkout, so `npm ci`, `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` could not be executed locally. These are therefore **NOT PROVEN on the final SHA**.
+The known failure in `app/api/studio/connectors/route.ts` is corrected in the current source. `permissions` is explicitly typed as `ConnectorPermission[]`, and runtime validation uses a type predicate derived from `CONNECTOR_PERMISSIONS`.
+
+A Vercel validation deployment from SHA `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13` reached `READY`. Its build logs contain `Build Completed in /vercel/output` and no build errors were returned.
+
+This proves the deployment/build path for the validation SHA; it does not prove the local npm test or GitHub Actions gates.
 
 ## Vercel
 
-The connected Vercel project is:
+The connected Vercel project is verified as `velor-api`, project ID `prj_xQDty1690tXrnIWH4IIHOOXWF7CG`, framework Next.js, repository `gusborba9-star/gusborba9-star-Horus-`, production branch `main`.
 
-- project: `velor-api`;
-- project ID: `prj_xQDty1690tXrnIWH4IIHOOXWF7CG`;
-- framework: Next.js;
-- repository: `gusborba9-star/gusborba9-star-Horus-`;
-- branch: `main`.
+Validation deployment: `dpl_2KubP6ijHMGFaFqvc2TGDYRkVNmT` corresponding to validation SHA `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13`, status `READY`.
 
-A previous deployment for SHA `307f1bce1ef83c9ee294f399d33bd6a7ba586672` was observed as **READY** and its build logs reported `Build Completed in /vercel/output`.
-
-The later final-SHA deployment for `fcff65e082d7e77bc7fdc80fe3e61193a3826953` was observed in `BUILDING` state at the last available query. It was not promoted to READY evidence before this closure was written.
+After merging the validation documentation change, Vercel created the current production deployment `dpl_8igbJ9HEt4Ux3WDiMbhmpNL7RUk5` for main SHA `b433d3af981a4d64027dd39154cf6ccf8c9d39a9`. At the last evidence capture this deployment remained `BUILDING`; logs showed cloning of the exact SHA, dependency installation, `npm run build`, Next.js compilation start, and no reported build error. It is therefore not marked READY.
 
 ## Runtime
 
-For the previously READY deployment, runtime error aggregation returned:
+The deployed Studio route was previously rendered successfully at `/dashboard/studio`, including the Nexus Project Execution workspace and revision UI.
 
-`No runtime errors found in the selected time range.`
+Current Vercel project-wide runtime error aggregation returned no runtime errors in the selected period. Because this is project-wide rather than deployment-specific evidence, it is not promoted to a final-SHA runtime PASS.
 
-This is runtime evidence for that deployment, not evidence for the unverified final SHA.
+## GitHub
 
-The Studio route rendered successfully from the deployed application at `/dashboard/studio` and the returned HTML contained the Nexus Project Execution workspace and revision interface.
+Repository: `gusborba9-star/gusborba9-star-Horus-`.
 
-## GitHub CI
-
-The canonical workflow remains:
-
-`.github/workflows/horus-ci.yml`
-
-with:
-
-`npm ci → npm test → npm run typecheck → npm run lint → npm run build`
-
-The GitHub integration returned no recoverable workflow run for the final SHA. Therefore:
-
-**CI formal run: NOT RECOVERABLE / NOT PROVEN.**
-
-No CI PASS was inferred from Vercel.
+Validation PR `#3` was merged by squash into `main` as `b433d3af981a4d64027dd39154cf6ccf8c9d39a9`. The merge was documentation-only and did not reopen 03–08 production architecture.
 
 ## External connector E2E
 
-Not executed.
+**LIVE VERIFIED:** not available.
 
-No test credential was assumed or exposed. The code path is implemented for authorized read operations, but a live credential-backed GitHub/Vercel/Supabase connector execution was not performed.
+No test credential was assumed, exposed or fabricated. The application-side connector path is implemented for authorized operations and the Vault boundary is verified structurally in the live database, but no credential-backed Studio E2E was executed for GitHub, Vercel or Supabase.
 
-## Economic/Core integration
+## Economic / Core integration
 
-The Studio persists economic requirements and execution metadata and does not introduce a billing engine or provider bypass.
+The Studio persists economic authorization requirements and execution metadata and references canonical economic structures through `budget_id` / `attempt_id` fields. No parallel billing or provider router was created.
 
-The current code does **not** provide sufficient evidence to claim the complete live chain:
-
-`Economic Authorization → Provider Adapter → Usage → Actual Cost → Reconciliation → Delivery`
-
-as executed from Studio.
-
-This remains an explicit operational blocker for COMPLETE.
+This session did not execute a Studio-originated provider operation all the way through `Economic Authorization → Provider Adapter → Usage → Actual Cost → Reconciliation → Delivery`. The chain is therefore **IMPLEMENTED/REFERENCED**, not LIVE VERIFIED.
 
 ## Preview / staging / production
 
-The lifecycle gates are implemented as application contracts and database-backed revision state.
+Application-level lifecycle gates are implemented and validated structurally:
 
-They are not equivalent to a live external deployment pipeline.
+`Revision → Preview Ready + Verified → Staging Ready + Verified → Production Approval → Delivery`
 
-Not proven:
-
-- dedicated preview deployment generated by Studio;
-- staging deployment/promotion;
-- production deployment through Studio;
-- production approval followed by a real deployment;
-- real deployment-to-revision correlation;
-- real deployment rollback.
+Unverified external side effects remain: dedicated preview deployment generated by Studio; real staging deployment/promotion; real production deployment initiated through Studio; deployment-to-revision correlation from an actual connector execution; and external rollback execution.
 
 ## Rollback
 
-Revision-level rollback request state is implemented with target-version validation. Real external deployment rollback remains unverified because no authorized external deployment workflow was executed through Studio.
+Revision-level rollback target validation is implemented. A real deployment rollback through an authorized Vercel/GitHub connector was not executed, so rollback is **IMPLEMENTED / STRUCTURALLY VERIFIED**, not LIVE VERIFIED.
 
-## Files changed in this execution
+## Files changed in the implementation sequence
 
-- `app/api/studio/connectors/route.ts`
-- `app/api/studio/connectors/[connectorId]/execute/route.ts`
-- `lib/studio/types.ts`
-- `lib/studio/engine.ts`
-- `app/api/studio/projects/[projectId]/revisions/[revisionId]/approval/route.ts`
-- `app/api/studio/projects/[projectId]/revisions/[revisionId]/lifecycle/route.ts`
-- `tests/studio-contracts.test.mjs`
-- `ROADMAP.md`
-- `docs/blueprint/09-STUDIO-CLOSURE.md`
+Functional Studio changes:
 
-No production code from blocks 03–08 was reopened arbitrarily.
+- `app/api/studio/connectors/route.ts`;
+- `app/api/studio/connectors/[connectorId]/execute/route.ts`;
+- `lib/studio/types.ts`;
+- `lib/studio/engine.ts`;
+- `app/api/studio/projects/[projectId]/revisions/[revisionId]/approval/route.ts`;
+- `app/api/studio/projects/[projectId]/revisions/[revisionId]/lifecycle/route.ts`;
+- `tests/studio-contracts.test.mjs`.
 
-## SHA classification
+Documentation/validation changes:
 
-**Functional SHA:** `fcff65e082d7e77bc7fdc80fe3e61193a3826953`
+- `ROADMAP.md`;
+- `docs/blueprint/09-STUDIO-CLOSURE.md`.
 
-Contains the final functional Studio corrections and tests.
+`.github/workflows/horus-ci.yml` was audited and retained without architectural changes. No Studio migration was required in the final validation sequence.
 
-**Validation SHA:** `307f1bce1ef83c9ee294f399d33bd6a7ba586672`
-
-Last SHA with direct Vercel READY evidence in this execution sequence.
-
-**Documentation predecessor SHA:** `75a4f8e8c6726ea5a46de702669b7481c970c877`
-
-The current closure commit is the Git commit that contains this document; its exact SHA is reported externally as the documentation SHA for this closure.
-
-## Definition of Done assessment
+## Evidence classification
 
 | Area | State |
 |---|---|
-| Studio workspace | 🟢 IMPLEMENTED / runtime-rendered |
-| Nexus optimized execution spec | 🟢 IMPLEMENTED |
-| Project Engine | 🟢 IMPLEMENTED / Supabase verified |
-| Revision Engine | 🟢 IMPLEMENTED / Supabase verified |
+| Studio workspace | 🟢 VERIFIED structurally + prior runtime render |
+| Nexus OptimizedExecutionSpec | 🟢 IMPLEMENTED |
+| Project Engine | 🟢 IMPLEMENTED + Supabase/RLS VERIFIED |
+| Revision Engine | 🟢 IMPLEMENTED + Supabase VERIFIED |
 | Change classification | 🟢 IMPLEMENTED |
 | Capability Engine | 🟢 IMPLEMENTED |
 | Connector Engine | 🟢 IMPLEMENTED structurally |
-| Credential Vault | 🟢 IMPLEMENTED structurally |
-| Connector permission boundary | 🟢 IMPLEMENTED |
-| Approval boundary | 🟢 IMPLEMENTED |
-| Preview/staging/production gates | 🟢 IMPLEMENTED as application boundaries |
-| Real preview deployment | 🔍 NOT DETERMINED |
-| Real staging promotion | 🔍 NOT DETERMINED |
-| Real production deployment | 🔍 NOT DETERMINED |
-| Real provider execution | 🔍 NOT DETERMINED |
-| Economic Authorization live execution | 🔍 NOT DETERMINED |
-| Usage/reconciliation live execution | 🔍 NOT DETERMINED |
-| Final-SHA local tests/typecheck/lint/build | 🔍 NOT DETERMINED |
-| Final-SHA CI | 🔍 NOT DETERMINED |
-| Previous deployment runtime | 🟢 VERIFIED |
-| Final-SHA deployment/runtime | 🔍 NOT DETERMINED |
+| Permission Boundary | 🟢 VERIFIED structurally |
+| Vault Boundary | 🟢 VERIFIED in live Supabase privileges |
+| Economic Authorization contract | 🟢 IMPLEMENTED / not live Studio-executed |
+| Core integration | 🟢 REFERENCED / not live Studio-executed |
+| Execution Log linkage | 🟢 IMPLEMENTED structurally |
+| Preview boundary | 🟢 IMPLEMENTED structurally |
+| Staging boundary | 🟢 IMPLEMENTED structurally |
+| Production boundary | 🟢 IMPLEMENTED structurally |
+| Rollback boundary | 🟢 IMPLEMENTED structurally |
+| Validation SHA Vercel build | 🟢 VERIFIED READY |
+| Main SHA Vercel deployment | 🔍 BUILDING at evidence capture |
+| Local npm test | 🔍 NOT DETERMINED |
+| Local TypeScript | 🔍 NOT DETERMINED |
+| Local ESLint | 🔍 NOT DETERMINED |
+| GitHub Actions CI | 🔍 NOT DETERMINED / no recoverable run |
+| Live connector E2E | 🔍 NOT DETERMINED |
+| Live provider execution | 🔍 NOT DETERMINED |
+| Live usage/reconciliation | 🔍 NOT DETERMINED |
+| Live preview/staging/production promotion | 🔍 NOT DETERMINED |
+| Live deployment rollback | 🔍 NOT DETERMINED |
 | Security Advisor | 🟢 VERIFIED — no CRITICAL |
+
+## SHA classification
+
+**Functional SHA:** `fcff65e082d7e77bc7fdc80fe3e61193a3826953` — functional Studio corrections and tests.
+
+**Validation SHA:** `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13` — descendant of the functional SHA and proven READY by Vercel; its change was documentation-only, so it validates the functional tree.
+
+**Current main SHA:** `b433d3af981a4d64027dd39154cf6ccf8c9d39a9` — merged validation/documentation state. Its Vercel production deployment was still BUILDING at evidence capture.
+
+**Documentation SHA:** the commit produced by this closure update; returned by the GitHub write operation after this file replacement.
 
 ## Block boundary
 
@@ -312,10 +225,12 @@ The current closure commit is the Git commit that contains this document; its ex
 
 10 — AGENTS remains **🔒 NOT STARTED**.
 
-12 — OBSERVABILITY remains **🔍 NOT DETERMINED** and independent. Execution Log usage by Studio does not imply completion of the observability domain.
+12 — OBSERVABILITY remains independent and is **not closed by this work**.
 
 ## Final decision
 
 # 🟡 09 — STUDIO — PARTIAL
 
-The implementation was materially advanced and corrected during this execution. The remaining gaps are primarily real external execution/evidence boundaries, not unimplemented UI scaffolding. They must not be represented as PASS without live evidence.
+The maximum code-side completion available in this environment was executed. The remaining blockers are evidence/authorization boundaries: live connector credentials, real external promotion/rollback, live provider execution through the canonical economic chain, and unavailable GitHub Actions run evidence. These are not relabeled as PASS.
+
+The 09 block is not being advanced to 10.
