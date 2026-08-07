@@ -26,16 +26,7 @@ export async function POST(req: Request) {
     const environment = environments.includes(body.environment) ? body.environment as StudioEnvironment : 'PREVIEW';
     if (!name || !objective) return NextResponse.json({ success: false, error: 'NAME_AND_OBJECTIVE_REQUIRED' }, { status: 400 });
     const plan = buildPlan(objective, environment);
-    const project = await createProject({
-      owner_user_id: user.id,
-      organization_id: user.organizationId,
-      name,
-      objective,
-      environment,
-      capabilities: plan.capabilities,
-      integrations: plan.integrations,
-      architecture: plan,
-    });
+    const project = await createProject({ owner_user_id: user.id, organization_id: user.organizationId, name, objective, environment, capabilities: plan.capabilities, integrations: plan.integrations, architecture: { ...plan } });
     return NextResponse.json({ success: true, data: { project, plan } }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
