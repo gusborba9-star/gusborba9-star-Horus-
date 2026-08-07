@@ -26,11 +26,31 @@ test('revision API generates an optimized specification before persistence', () 
   assert.match(source, /approval_state/);
 });
 
-test('connector execution never exposes provider selection to the project UI', () => {
+test('optimized execution spec is contextual and provider-invisible', () => {
+  const source = read('lib/studio/engine.ts');
+  assert.match(source, /optimizedExecutionPrompt/);
+  assert.match(source, /executionStrategy/);
+  assert.match(source, /economicAuthorizationRequired: true/);
+  assert.match(source, /providerInvisible: true/);
+});
+
+test('revision approval has an explicit state transition boundary', () => {
+  const source = read('app/api/studio/projects/[projectId]/revisions/[revisionId]/approval/route.ts');
+  assert.match(source, /APPROVED/);
+  assert.match(source, /REJECTED/);
+  assert.match(source, /approved_by/);
+  assert.match(source, /approved_at/);
+});
+
+test('connector execution checks permission before secret retrieval and hides provider identity', () => {
   const source = read('app/api/studio/connectors/[connectorId]/execute/route.ts');
-  assert.match(source, /hasPermission/);
-  assert.match(source, /studio_read_connector_secret/);
-  assert.match(source, /CONNECTOR_PERMISSION_DENIED/);
+  const permissionIndex = source.indexOf('CONNECTOR_PERMISSION_DENIED');
+  const secretIndex = source.indexOf('getSecret(connector.secret_ref)');
+  assert.ok(permissionIndex >= 0);
+  assert.ok(secretIndex >= 0);
+  assert.ok(permissionIndex < secretIndex);
+  assert.doesNotMatch(source, /provider: connector\.provider/);
+  assert.match(source, /CONNECTOR_CREDENTIAL_EXPIRED_OR_REVOKED/);
 });
 
 test('studio UI is a project workspace rather than a module launcher', () => {
