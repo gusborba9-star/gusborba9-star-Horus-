@@ -3,7 +3,7 @@
 **Evidence date:** 2026-08-07
 **Branch:** `main`
 **Functional implementation SHA:** `fcff65e082d7e77bc7fdc80fe3e61193a3826953`
-**Documentation SHA:** `75a4f8e8c6726ea5a46de702669b7481c970c877`
+**Documentation predecessor SHA:** `75a4f8e8c6726ea5a46de702669b7481c970c877`
 **Latest Vercel validation SHA:** `307f1bce1ef83c9ee294f399d33bd6a7ba586672`
 **Latest Vercel deployment proven READY:** `dpl_CMgDyRFZhvYszxYUncZ2wcEtYyri`
 **Decision:** 🟡 PARTIAL
@@ -196,11 +196,7 @@ For the previously READY deployment, runtime error aggregation returned:
 
 This is runtime evidence for that deployment, not evidence for the unverified final SHA.
 
-The Studio route rendered successfully from the deployed application at:
-
-`/dashboard/studio`
-
-and the returned HTML contained the Nexus Project Execution workspace and revision interface.
+The Studio route rendered successfully from the deployed application at `/dashboard/studio` and the returned HTML contained the Nexus Project Execution workspace and revision interface.
 
 ## GitHub CI
 
@@ -279,9 +275,9 @@ Contains the final functional Studio corrections and tests.
 
 Last SHA with direct Vercel READY evidence in this execution sequence.
 
-**Documentation SHA:** `75a4f8e8c6726ea5a46de702669b7481c970c877`
+**Documentation predecessor SHA:** `75a4f8e8c6726ea5a46de702669b7481c970c877`
 
-Contains the roadmap and this closure documentation state.
+The current closure commit is the Git commit that contains this document; its exact SHA is reported externally as the documentation SHA for this closure.
 
 ## Definition of Done assessment
 
