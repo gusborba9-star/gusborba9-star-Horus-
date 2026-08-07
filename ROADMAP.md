@@ -38,46 +38,48 @@ Objetivo: Garantir que o Memory Graph do Hórus possa escalar infinitamente sem 
 
 ## 09 — STUDIO
 
-**Estado:** 🟡 PARTIAL — fechamento definitivo do estado atualmente comprovável.
+**Estado:** 🟡 PARTIAL — implementação ampliada e integrada; fechamento operacional ainda depende de evidência externa que não está disponível neste ambiente.
 
-### Comprovado / implementado
+### Implementado / validado estruturalmente
 
-- Project Engine persistente sobre `studio_projects`.
-- Project state com identity, objective, context, requirements, architecture, capabilities, connectors, execution graph, environment, delivery e intelligence snapshot.
-- Revision Engine persistente sobre `studio_project_revisions`.
-- Change classification: MICRO / LOW / MEDIUM / MAJOR / REBUILD.
-- Nexus optimized execution specification.
-- Capability inference usando a registry canônica existente.
-- Connector Engine com permissões granulares.
-- Vault-backed connector credential boundary.
-- Authorized read adapters para GitHub, Vercel e Supabase.
+- Project Engine persistente sobre `studio_projects`, com identity, objective, context, requirements, architecture, capabilities, connectors, execution graph, environment state, delivery e intelligence snapshot.
+- Revision Engine persistente sobre `studio_project_revisions`, com parent revision, versionamento e classificação MICRO / LOW / MEDIUM / MAJOR / REBUILD.
+- Nexus OptimizedExecutionSpec contextual, incluindo prompt otimizado, estado do projeto, capabilities, estratégia de recomputação e exigência de Economic Authorization.
+- Capability inference reutilizando a registry canônica existente; composição preserva capabilities já associadas ao projeto.
+- Connector Engine com permissões granulares e credenciais armazenadas via Vault.
+- Boundary de connector endurecido: permissão é verificada antes do acesso ao secret, credenciais expiradas/revogadas são bloqueadas e provider não é devolvido como parte do contrato de execução.
+- Approval boundary explícito para revisions.
+- Lifecycle gates para PREVIEW → STAGING → PRODUCTION APPROVAL → DELIVERY e solicitação de rollback, sem permitir promoção sem validação dos gates anteriores.
 - Production mutation bloqueada no PATCH genérico.
 - Studio UI centrado em Nexus + Project + Revision, não em ferramentas independentes.
-- Contract tests e workflow CI adicionados.
+- Testes contratuais ampliados para execution spec, approval, lifecycle e connector security boundary.
 - Migration `horus_studio_runtime_closure` aplicada no Supabase.
 
-### Ainda não comprovado / bloqueadores objetivos
+### Não comprovado / blockers objetivos
 
-- [ ] preview deployment real e dedicado;
-- [ ] staging deployment/promotion real;
-- [ ] production deployment + approval + rollback correlation;
+- [ ] execução real de provider através de Economic Authorization → Provider Adapter → Usage → Reconciliation → Delivery;
 - [ ] live connector E2E com credencial autorizada;
-- [ ] execução real completa através de Economic Authorization → Provider Adapter → Usage → Reconciliation → Delivery;
-- [ ] `npm test`, TypeScript, ESLint e production build executados no SHA final;
-- [ ] deployment e runtime Vercel do repositório Hórus comprovados.
+- [ ] preview deployment real e dedicado criado pelo Studio;
+- [ ] staging deployment/promotion real;
+- [ ] production deployment + approval + rollback correlation executados em ambiente real;
+- [ ] execução local de `npm test`, TypeScript, ESLint e production build neste ambiente (o ambiente de execução local não possui checkout do repositório);
+- [ ] CI formal associado ao SHA final: a integração GitHub não retornou workflow run recuperável;
+- [ ] deployment do SHA final `fcff65e082d7e77bc7fdc80fe3e61193a3826953` ainda estava em BUILDING na última consulta. O SHA anterior `307f1bce1ef83c9ee294f399d33bd6a7ba586672` possui deployment Vercel READY comprovado.
+
+### Vercel
+
+O projeto Vercel conectado é `velor-api`, e sua metadata identifica explicitamente o repositório `gusborba9-star/gusborba9-star-Horus-`, branch `main` e os SHAs correspondentes. Portanto, `velor-api` é o projeto Vercel efetivamente conectado ao repositório, não um deployment atribuído por inferência.
+
+### Supabase
+
+Projeto `ljqmiuxztqseyglhvgmi` está `ACTIVE_HEALTHY`. A migration `horus_studio_runtime_closure` está aplicada. As tabelas Studio e suas relações existem no banco real. Security Advisor não apresenta CRITICAL; permanecem INFOs de RLS sem policy em superfícies sistêmicas e o WARN conhecido de `reserve_horus_credits`, já estabelecido no domínio econômico.
+
+### Boundary de bloco
+
+03–08 não foram reabertos arquiteturalmente.
+
+10 — AGENTS permanece **🔒 NÃO INICIADO**.
+
+12 — OBSERVABILITY permanece **🔍 NÃO DETERMINADO — bloco independente**. O uso de Execution Log, eventos e estado operacional pelo Studio não fecha observabilidade end-to-end, tracing, métricas, dashboards ou alerting.
 
 **Closure:** `docs/blueprint/09-STUDIO-CLOSURE.md`
-
-## 10 — AGENTS
-
-**Estado:** 🔒 NÃO INICIADO — não iniciar como parte do fechamento do 09.
-
-## 11 — PERSONAL
-
-**Estado:** 🔍 NÃO DETERMINADO / FUTURO.
-
-## 12 — OBSERVABILITY
-
-**Estado:** 🔍 NÃO DETERMINADO — bloco independente.
-
-O fechamento de 09 não representa conclusão de Observability. Execution Log, eventos e estado operacional usados pelo Studio não equivalem a observabilidade end-to-end, tracing, métricas, dashboards, alerting ou reconstrução operacional completa.
