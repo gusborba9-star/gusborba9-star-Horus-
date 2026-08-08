@@ -5,7 +5,7 @@ import { ArrowRight, BrainCircuit, GitBranch, Layers3, Plus, RefreshCw, ShieldCh
 import { supabase } from '@/lib/supabase';
 
 interface Project { id: string; name: string; objective: string; status: string; environment: string; capabilities: string[]; updated_at: string; }
-interface Revision { id: string; version: number; change_class: string; approval_state: string; optimized_spec: Record<string, unknown>; created_at: string; }
+interface Revision { id: string; version: number; change_class: string; approval_state: string; optimized_spec: Record<string, unknown>; preview?: { status?: string; url?: string | null; verified?: boolean }; deployment?: Record<string, unknown>; created_at: string; }
 
 export default function StudioHome() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -16,6 +16,7 @@ export default function StudioHome() {
   const [request, setRequest] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [executingRevisionId, setExecutingRevisionId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const selectedIdRef = useRef<string | null>(null);
 
@@ -100,6 +101,23 @@ export default function StudioHome() {
     }
   }
 
+  async function executePreview(revision: Revision) {
+    if (!selected) return;
+    setExecutingRevisionId(revision.id); setMessage('');
+    try {
+      const response = await authFetch(`/api/studio/projects/${selected.id}/revisions/${revision.id}/execute`, { method: 'POST', body: JSON.stringify({ environment: 'PREVIEW' }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? 'PREVIEW_EXECUTION_FAILED');
+      setMessage(`Preview criada: ${payload.preview?.deploymentId ?? 'deployment confirmado'}.`);
+      await loadRevisions(selected.id);
+      await loadProjects();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'PREVIEW_EXECUTION_FAILED');
+    } finally {
+      setExecutingRevisionId(null);
+    }
+  }
+
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadProjects(); }, 0);
     return () => window.clearTimeout(timer);
@@ -157,7 +175,18 @@ export default function StudioHome() {
 
               <section className="rounded-3xl border border-white/10 bg-white/[0.02] p-6">
                 <div className="flex items-center justify-between mb-5"><span className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">Revision Engine</span><span className="text-[10px] text-white/25">PREVIEW → APPROVAL → STAGING → PRODUCTION</span></div>
-                <div className="space-y-3">{revisions.length === 0 ? <div className="text-xs text-white/30">Nenhuma revisão planejada.</div> : revisions.map((revision) => <div key={revision.id} className="p-4 rounded-2xl border border-white/5 bg-black/20 flex flex-col md:flex-row md:items-center md:justify-between gap-3"><div><div className="text-sm">Revision {revision.version} <span className="text-white/30">· {revision.change_class}</span></div><div className="text-[10px] text-white/30 mt-1">{new Date(revision.created_at).toLocaleString('pt-BR')} · {revision.approval_state}</div></div><span className="text-[9px] uppercase tracking-widest text-[#D4AF37]">spec pronta</span></div>)}</div>
+                <div className="space-y-3">
+                  {revisions.length === 0 ? <div className="text-xs text-white/30">Nenhuma revisão planejada.</div> : revisions.map((revision) => {
+                    const previewReady = revision.preview?.status === 'READY';
+                    return <div key={revision.id} className="p-4 rounded-2xl border border-white/5 bg-black/20 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div><div className="text-sm">Revision {revision.version} <span className="text-white/30">· {revision.change_class}</span></div><div className="text-[10px] text-white/30 mt-1">{new Date(revision.created_at).toLocaleString('pt-BR')} · {revision.approval_state}</div><div className="text-[9px] uppercase tracking-widest text-white/25 mt-2">Preview · {revision.preview?.status ?? 'NOT_CREATED'}</div></div>
+                      <div className="flex items-center gap-2">
+                        {previewReady && revision.preview?.url ? <a href={`https://${revision.preview.url.replace(/^https?:\/\//, '')}`} target="_blank" rel="noreferrer" className="px-4 py-2.5 rounded-xl border border-white/10 text-[9px] uppercase tracking-widest text-white/60 hover:text-white">Abrir Preview</a> : null}
+                        {!previewReady ? <button disabled={executingRevisionId === revision.id} onClick={() => void executePreview(revision)} className="px-4 py-2.5 rounded-xl bg-[#D4AF37] text-black font-bold text-[9px] uppercase tracking-widest disabled:opacity-40">{executingRevisionId === revision.id ? 'Executando…' : 'Criar Preview'}</button> : <span className="text-[9px] uppercase tracking-widest text-[#D4AF37]">Preview READY</span>}
+                      </div>
+                    </div>;
+                  })}
+                </div>
               </section>
             </>}
           </main>

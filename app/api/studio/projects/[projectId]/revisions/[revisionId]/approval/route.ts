@@ -20,7 +20,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
     const { data: revision, error: revisionError } = await client
       .from('studio_project_revisions')
-      .select('id,project_id,version,change_class,approval_state')
+      .select('id,project_id,version,change_class,approval_state,preview')
       .eq('id', revisionId)
       .eq('project_id', projectId)
       .single();
@@ -31,6 +31,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       if (error || !data) throw new Error('REVISION_APPROVAL_FAILED');
       return NextResponse.json({ success: true, revision: data });
     }
+
+    const preview = revision.preview as { status?: string; verified?: boolean } | null;
+    if (preview?.status !== 'READY' || preview.verified !== true) throw new Error('PREVIEW_VALIDATION_REQUIRED');
 
     const { data, error } = await client
       .from('studio_project_revisions')
