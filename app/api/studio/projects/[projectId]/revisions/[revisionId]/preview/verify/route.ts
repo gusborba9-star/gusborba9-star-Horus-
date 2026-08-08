@@ -43,16 +43,14 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
     const verifiedPreview = { ...preview, status: 'READY', verified: true, url: deployment.url ?? preview.url };
     const deploymentState = { ...((revision.deployment ?? {}) as Record<string, unknown>), preview: { deploymentId: preview.deploymentId, url: verifiedPreview.url, status: 'READY', verified: true } };
-    const audit = { verifiedBy: user.id, verifiedAt: new Date().toISOString(), deploymentId: preview.deploymentId };
+    const audit = { ...((revision as { audit?: Record<string, unknown> }).audit ?? {}), verifiedBy: user.id, verifiedAt: new Date().toISOString(), deploymentId: preview.deploymentId };
     const { error: updateError } = await client.from('studio_project_revisions').update({ preview: verifiedPreview, deployment: deploymentState, audit }).eq('id', revisionId);
     if (updateError) throw new Error('PREVIEW_VERIFICATION_UPDATE_FAILED');
 
-    const executionId = typeof (revision.deployment as Record<string, unknown> | null)?.executionId === 'string' ? (revision.deployment as Record<string, unknown>).executionId : null;
-    if (executionId) {
-      await service.from('studio_executions').update({ preview: { ...verifiedPreview } }).eq('id', executionId);
-    }
+    const { data: execution } = await service.from('studio_executions').select('id,preview').eq('revision_id', revisionId).eq('environment', 'PREVIEW').order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (execution) await service.from('studio_executions').update({ preview: { ...(execution.preview ?? {}), ...verifiedPreview } }).eq('id', execution.id);
 
-    return NextResponse.json({ success: true, preview: verifiedPreview, deployment: deploymentState });
+    return NextResponse.json({ success: true, preview: verifiedPreview, deployment: deploymentState, executionId: execution?.id ?? null });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'PREVIEW_VERIFICATION_FAILED';
     return NextResponse.json({ success: false, error: message }, { status: message === 'AUTHENTICATION_REQUIRED' ? 401 : 400 });
