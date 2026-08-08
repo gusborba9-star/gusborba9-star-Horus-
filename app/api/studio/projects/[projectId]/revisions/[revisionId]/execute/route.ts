@@ -88,14 +88,14 @@ async function createAttempt(service: ReturnType<typeof getServiceSupabase>, bud
   const { data, error } = await service.rpc('authorize_horus_execution_attempt', {
     p_budget_id: budgetId,
     p_attempt_number: 1,
-    p_provider_id: 'openrouter',
-    p_model_id: 'google/gemini-2.5-flash-lite',
-    p_capability: 'TEXT_GENERATION',
+    p_provider_id: 'vercel',
+    p_model_id: 'vercel/deployment',
+    p_capability: 'DEV',
     p_maximum_cost_brl: 0,
     p_input_tokens: 0,
     p_output_tokens: 0,
     p_reasoning_tokens: 0,
-    p_endpoint_id: null,
+    p_endpoint_id: 'vercel.deployments',
     p_fallback_from_attempt_id: null,
   });
   if (error || !data) throw new Error(`ECONOMIC_AUTHORIZATION_FAILED:${error?.message ?? 'UNKNOWN'}`);
@@ -137,14 +137,12 @@ async function waitForVercelReady(secret: string, deploymentId: string) {
 export async function POST(request: Request, context: { params: Promise<{ projectId: string; revisionId: string }> }) {
   let executionId = '';
   let attemptId = '';
-  let budgetId = '';
   const service = getServiceSupabase();
   try {
     const { client, user } = await requireStudioUser(request);
     const { projectId, revisionId } = await context.params;
     const body = await request.json().catch(() => ({}));
-    const requestedEnvironment = body.environment === undefined ? 'PREVIEW' : body.environment;
-    if (requestedEnvironment !== 'PREVIEW') throw new Error('ONLY_PREVIEW_EXECUTION_SUPPORTED');
+    if ((body.environment ?? 'PREVIEW') !== 'PREVIEW') throw new Error('ONLY_PREVIEW_EXECUTION_SUPPORTED');
 
     const { data: project, error: projectError } = await client.from('studio_projects').select('id,owner_user_id,name,environment').eq('id', projectId).single();
     if (projectError || !project || project.owner_user_id !== user.id) throw new Error('PROJECT_NOT_FOUND');
@@ -157,6 +155,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const { data: existing } = await service.from('studio_executions').select('*').eq('project_id', projectId).eq('idempotency_key', idempotencyKey).maybeSingle();
     if (existing?.status === 'SUCCEEDED') return NextResponse.json({ success: true, execution: existing, idempotent: true });
     if (existing?.status === 'RUNNING') throw new Error('EXECUTION_ALREADY_RUNNING');
+
     if (existing?.id) {
       executionId = existing.id;
     } else {
@@ -195,7 +194,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     if (!connector.secret_ref) throw new Error('CONNECTOR_SECRET_UNAVAILABLE');
     if (connector.revoked_at || (connector.expires_at && new Date(connector.expires_at).getTime() <= Date.now())) throw new Error('CONNECTOR_CREDENTIAL_EXPIRED_OR_REVOKED');
 
-    budgetId = await createBudget(service, user.id, executionId);
+    const budgetId = await createBudget(service, user.id, executionId);
     const attempt = await createAttempt(service, budgetId);
     attemptId = attempt.id;
     const { error: executionAuthorizationError } = await service.from('studio_executions').update({ budget_id: budgetId, attempt_id: attemptId, connector_id: connector.id, economic_authorized: true }).eq('id', executionId);
@@ -236,7 +235,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     if (reconciliationError) throw new Error(`ECONOMIC_RECONCILIATION_FAILED:${reconciliationError.message}`);
 
     const result = { deploymentId, url: ready.url ?? deployment.url ?? null, readyState: ready.readyState };
-    const { data: updatedExecution, error: updateExecutionError } = await service.from('studio_executions').update({ status: 'SUCCEEDED', actual_cost_brl: actualCost, provider_id: 'openrouter', model_id: 'google/gemini-2.5-flash-lite', result, preview: { status: 'READY', deploymentId, url: result.url, verified: false } }).eq('id', executionId).select('*').single();
+    const { data: updatedExecution, error: updateExecutionError } = await service.from('studio_executions').update({ status: 'SUCCEEDED', actual_cost_brl: actualCost, provider_id: 'vercel', model_id: 'vercel/deployment', result, preview: { status: 'READY', deploymentId, url: result.url, verified: false } }).eq('id', executionId).select('*').single();
     if (updateExecutionError || !updatedExecution) throw new Error('EXECUTION_FINALIZE_FAILED');
 
     const { data: currentRevision, error: currentRevisionError } = await client.from('studio_project_revisions').select('preview,deployment,audit').eq('id', revisionId).single();
@@ -250,27 +249,23 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     return NextResponse.json({ success: true, execution: updatedExecution, revisionId, preview: result });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'STUDIO_EXECUTION_FAILED';
-    if (executionId) {
-      await service.from('studio_executions').update({ status: 'FAILED', result: { error: message } }).eq('id', executionId).neq('status', 'SUCCEEDED');
-    }
-    if (attemptId) {
-      await service.rpc('reconcile_horus_execution_attempt', {
-        p_attempt_id: attemptId,
-        p_actual_cost_brl: 0,
-        p_status: 'FAILED',
-        p_input_tokens: 0,
-        p_output_tokens: 0,
-        p_reasoning_tokens: 0,
-        p_cached_input_tokens: 0,
-        p_request_units: 0,
-        p_image_units: 0,
-        p_provider_request_id: null,
-        p_actual_provider: null,
-        p_actual_model: null,
-        p_latency_ms: null,
-        p_raw_usage: { error: message },
-      });
-    }
+    if (executionId) await service.from('studio_executions').update({ status: 'FAILED', result: { error: message } }).eq('id', executionId).neq('status', 'SUCCEEDED');
+    if (attemptId) await service.rpc('reconcile_horus_execution_attempt', {
+      p_attempt_id: attemptId,
+      p_actual_cost_brl: 0,
+      p_status: 'FAILED',
+      p_input_tokens: 0,
+      p_output_tokens: 0,
+      p_reasoning_tokens: 0,
+      p_cached_input_tokens: 0,
+      p_request_units: 0,
+      p_image_units: 0,
+      p_provider_request_id: null,
+      p_actual_provider: null,
+      p_actual_model: null,
+      p_latency_ms: null,
+      p_raw_usage: { error: message },
+    });
     return errorResponse(error);
   }
 }
