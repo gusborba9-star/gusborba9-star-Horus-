@@ -40,6 +40,15 @@ async function createExecutionLog(service: ReturnType<typeof getServiceSupabase>
   return data.id as string;
 }
 
+async function updateExecutionLog(service: ReturnType<typeof getServiceSupabase>, logId: string, status: 'COMPLETED' | 'ERROR', errorMessage?: string) {
+  const { error } = await service.from('horus_execution_logs').update({
+    status,
+    error_message: errorMessage ?? null,
+    completed_at: new Date().toISOString(),
+  }).eq('id', logId);
+  if (error) throw new Error('EXECUTION_LOG_UPDATE_FAILED');
+}
+
 async function createBudget(service: ReturnType<typeof getServiceSupabase>, userId: string, operationId: string) {
   const { data: policy, error: policyError } = await service.from('economic_policy').select('version,minimum_gross_margin_rate').eq('id', true).single();
   if (policyError || !policy) throw new Error('ECONOMIC_POLICY_UNAVAILABLE');
@@ -136,6 +145,7 @@ async function waitForVercelReady(secret: string, deploymentId: string) {
 
 export async function POST(request: Request, context: { params: Promise<{ projectId: string; revisionId: string }> }) {
   let executionId = '';
+  let executionLogId = '';
   let attemptId = '';
   const service = getServiceSupabase();
   try {
@@ -158,8 +168,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
     if (existing?.id) {
       executionId = existing.id;
+      executionLogId = existing.execution_log_id ?? '';
     } else {
-      const executionLogId = await createExecutionLog(service, crypto.randomUUID(), 'RUNNING');
+      executionLogId = await createExecutionLog(service, crypto.randomUUID(), 'RUNNING');
       const { data: execution, error: executionError } = await service.from('studio_executions').insert({
         project_id: projectId,
         revision_id: revisionId,
@@ -246,6 +257,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const { error: revisionUpdateError } = await client.from('studio_project_revisions').update({ preview, deployment: deploymentState, audit }).eq('id', revisionId);
     if (revisionUpdateError) throw new Error('REVISION_PREVIEW_UPDATE_FAILED');
 
+    if (executionLogId) await updateExecutionLog(service, executionLogId, 'COMPLETED');
     return NextResponse.json({ success: true, execution: updatedExecution, revisionId, preview: result });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'STUDIO_EXECUTION_FAILED';
@@ -266,6 +278,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       p_latency_ms: null,
       p_raw_usage: { error: message },
     });
+    if (executionLogId) await updateExecutionLog(service, executionLogId, 'ERROR', message);
     return errorResponse(error);
   }
 }
