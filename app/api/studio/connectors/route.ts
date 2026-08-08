@@ -12,6 +12,18 @@ function isConnectorPermission(value: unknown): value is ConnectorPermission {
   return typeof value === 'string' && (CONNECTOR_PERMISSIONS as readonly string[]).includes(value);
 }
 
+function safeMetadata(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const input = value as Record<string, unknown>;
+  const metadata: Record<string, string | number> = {};
+  for (const key of ['vercelProjectId', 'repoId', 'ref', 'label']) {
+    const current = input[key];
+    if (typeof current === 'string' && current.trim()) metadata[key] = current.trim().slice(0, 200);
+    if (typeof current === 'number' && Number.isInteger(current)) metadata[key] = current;
+  }
+  return metadata;
+}
+
 export async function GET(request: Request) {
   try {
     const { client } = await requireStudioUser(request);
@@ -53,6 +65,9 @@ export async function POST(request: Request) {
     const { data: secretRef, error: secretError } = await service.rpc('studio_store_connector_secret', { p_secret: secret, p_name: secretName });
     if (secretError || !secretRef) throw new Error('CONNECTOR_SECRET_STORAGE_FAILED');
 
+    const metadata = safeMetadata(body.metadata);
+    metadata.label = typeof body.label === 'string' && body.label.trim() ? body.label.trim().slice(0, 120) : provider;
+
     const { data, error } = await client.from('studio_connectors').insert({
       owner_user_id: user.id,
       organization_id: typeof body.organization_id === 'string' ? body.organization_id : null,
@@ -61,7 +76,7 @@ export async function POST(request: Request) {
       permissions,
       status: 'CONNECTED',
       secret_ref: secretRef,
-      metadata: { label: typeof body.label === 'string' ? body.label.slice(0, 120) : provider },
+      metadata,
     }).select('id,owner_user_id,organization_id,project_id,provider,permissions,status,metadata,expires_at,revoked_at,last_used_at,created_at,updated_at').single();
     if (error) throw new Error(error.message);
     return NextResponse.json({ success: true, connector: data }, { status: 201 });
