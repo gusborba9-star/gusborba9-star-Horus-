@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, BrainCircuit, GitBranch, Layers3, Plus, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -17,31 +17,41 @@ export default function StudioHome() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const selectedIdRef = useRef<string | null>(null);
 
-  async function authFetch(path: string, init?: RequestInit) {
+  const selectProject = useCallback((project: Project | null) => {
+    selectedIdRef.current = project?.id ?? null;
+    setSelected(project);
+  }, []);
+
+  const authFetch = useCallback(async (path: string, init?: RequestInit) => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) throw new Error('AUTHENTICATION_REQUIRED');
     return fetch(path, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}), Authorization: `Bearer ${token}` } });
-  }
+  }, []);
 
-  async function loadProjects() {
+  const loadProjects = useCallback(async () => {
     setLoading(true);
     try {
       const response = await authFetch('/api/studio/projects');
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? 'PROJECT_LOAD_FAILED');
-      setProjects(payload.projects ?? []);
-      if (!selected && payload.projects?.[0]) setSelected(payload.projects[0]);
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'PROJECT_LOAD_FAILED'); }
-    finally { setLoading(false); }
-  }
+      const nextProjects = payload.projects ?? [];
+      setProjects(nextProjects);
+      if (!selectedIdRef.current && nextProjects[0]) selectProject(nextProjects[0]);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'PROJECT_LOAD_FAILED');
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch, selectProject]);
 
-  async function loadRevisions(projectId: string) {
+  const loadRevisions = useCallback(async (projectId: string) => {
     try {
       const response = await authFetch(`/api/studio/projects/${projectId}`);
       const payload = await response.json();
-      if (response.ok) setSelected(payload.project);
+      if (response.ok) selectProject(payload.project);
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) return;
@@ -50,8 +60,10 @@ export default function StudioHome() {
         const revisionsPayload = await revisionsResponse.json();
         setRevisions(revisionsPayload.revisions ?? []);
       }
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'PROJECT_LOAD_FAILED'); }
-  }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'PROJECT_LOAD_FAILED');
+    }
+  }, [authFetch, selectProject]);
 
   async function createProject() {
     if (!name.trim() || !objective.trim()) return;
@@ -60,11 +72,14 @@ export default function StudioHome() {
       const response = await authFetch('/api/studio/projects', { method: 'POST', body: JSON.stringify({ name, objective }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? 'PROJECT_CREATE_FAILED');
-      setName(''); setObjective(''); setSelected(payload.project);
+      setName(''); setObjective(''); selectProject(payload.project);
       await loadProjects();
-      setSelected(payload.project);
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'PROJECT_CREATE_FAILED'); }
-    finally { setBusy(false); }
+      selectProject(payload.project);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'PROJECT_CREATE_FAILED');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function planRevision() {
@@ -78,12 +93,24 @@ export default function StudioHome() {
       setMessage(`Revision ${payload.revision.version} planejada: ${payload.revision.change_class}.`);
       await loadRevisions(selected.id);
       await loadProjects();
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'REVISION_PLAN_FAILED'); }
-    finally { setBusy(false); }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'REVISION_PLAN_FAILED');
+    } finally {
+      setBusy(false);
+    }
   }
 
-  useEffect(() => { void loadProjects(); }, []);
-  useEffect(() => { if (selected) void loadRevisions(selected.id); }, [selected?.id]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadProjects(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadProjects]);
+
+  useEffect(() => {
+    if (!selected?.id) return;
+    const projectId = selected.id;
+    const timer = window.setTimeout(() => { void loadRevisions(projectId); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [selected?.id, loadRevisions]);
 
   return (
     <div className="h-full overflow-y-auto bg-[#080808] text-[#FAFAFA]">
@@ -103,12 +130,12 @@ export default function StudioHome() {
             <div className="space-y-2 max-h-[520px] overflow-y-auto">
               {loading && <div className="text-xs text-white/30 p-4">Carregando workspace…</div>}
               {!loading && projects.length === 0 && <div className="text-xs text-white/30 p-4">Nenhum projeto ainda.</div>}
-              {projects.map((project) => <button key={project.id} onClick={() => setSelected(project)} className={`w-full text-left p-4 rounded-2xl border transition-all ${selected?.id === project.id ? 'border-[#D4AF37]/30 bg-[#D4AF37]/[0.06]' : 'border-white/5 bg-white/[0.015] hover:border-white/10'}`}><div className="text-sm font-semibold truncate">{project.name}</div><div className="text-[11px] text-white/35 mt-1 line-clamp-2">{project.objective}</div><div className="flex gap-2 mt-3 text-[9px] uppercase tracking-widest text-white/30"><span>{project.status}</span><span>·</span><span>{project.environment}</span></div></button>)}
+              {projects.map((project) => <button key={project.id} onClick={() => selectProject(project)} className={`w-full text-left p-4 rounded-2xl border transition-all ${selected?.id === project.id ? 'border-[#D4AF37]/30 bg-[#D4AF37]/[0.06]' : 'border-white/5 bg-white/[0.015] hover:border-white/10'}`}><div className="text-sm font-semibold truncate">{project.name}</div><div className="text-[11px] text-white/35 mt-1 line-clamp-2">{project.objective}</div><div className="flex gap-2 mt-3 text-[9px] uppercase tracking-widest text-white/30"><span>{project.status}</span><span>·</span><span>{project.environment}</span></div></button>)}
             </div>
             <div className="border-t border-white/10 mt-5 pt-5 space-y-3">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do projeto" className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-[#D4AF37]/40" />
               <textarea value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="O que você quer construir?" rows={3} className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-[#D4AF37]/40 resize-none" />
-              <button disabled={busy} onClick={() => void createProject()} className="w-full rounded-xl bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-widest py-3 disabled:opacity-40 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Novo projeto</button>
+              <button disabled={busy || !name.trim() || !objective.trim()} onClick={() => void createProject()} className="w-full rounded-xl bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-widest py-3 disabled:opacity-40 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Novo projeto</button>
             </div>
           </aside>
 
