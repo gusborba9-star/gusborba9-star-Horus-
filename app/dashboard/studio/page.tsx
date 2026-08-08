@@ -135,7 +135,7 @@ export default function StudioHome() {
             <div className="border-t border-white/10 mt-5 pt-5 space-y-3">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do projeto" className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-[#D4AF37]/40" />
               <textarea value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="O que você quer construir?" rows={3} className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-[#D4AF37]/40 resize-none" />
-              <button disabled={busy} onClick={() => void createProject()} className="w-full rounded-xl bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-widest py-3 disabled:opacity-40 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Novo projeto</button>
+              <button disabled={busy || !name.trim() || !objective.trim()} onClick={() => void createProject()} className="w-full rounded-xl bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-widest py-3 disabled:opacity-40 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Novo projeto</button>
             </div>
           </aside>
 
