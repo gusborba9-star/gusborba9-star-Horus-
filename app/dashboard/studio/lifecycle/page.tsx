@@ -42,10 +42,17 @@ export default function StudioLifecyclePage() {
       const revisionsPayload = await revisionsResponse.json();
       if (!revisionsResponse.ok) throw new Error(revisionsPayload.error ?? 'REVISION_LOAD_FAILED');
       setRevisions(revisionsPayload.revisions ?? []);
+    } else {
+      setRevisions([]);
     }
   }
 
-  useEffect(() => { void load().catch((error) => setMessage(error instanceof Error ? error.message : 'LOAD_FAILED')); }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void load().catch((error) => setMessage(error instanceof Error ? error.message : 'LOAD_FAILED'));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   async function callRevision(revision: Revision, action: 'verify' | 'approve') {
     setBusy(`${action}:${revision.id}`);
