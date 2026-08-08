@@ -40,6 +40,7 @@ test('revision approval has an explicit state transition boundary', () => {
   assert.match(source, /REJECTED/);
   assert.match(source, /approved_by/);
   assert.match(source, /approved_at/);
+  assert.match(source, /PREVIEW_VALIDATION_REQUIRED/);
 });
 
 test('revision lifecycle prevents promotion without preview, staging and approval gates', () => {
@@ -53,6 +54,26 @@ test('revision lifecycle prevents promotion without preview, staging and approva
   assert.match(source, /ROLLBACK_REQUESTED/);
 });
 
+test('preview execution boundary is authenticated, economic-gated, connector-authorized and idempotent', () => {
+  const source = read('app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts');
+  assert.match(source, /requireStudioUser/);
+  assert.match(source, /studio_executions/);
+  assert.match(source, /idempotency_key/);
+  assert.match(source, /authorize_horus_execution_attempt/);
+  assert.match(source, /studio_read_connector_secret/);
+  assert.match(source, /DEPLOY_PREVIEW/);
+  assert.match(source, /api.vercel.com\/v13\/deployments/);
+  assert.match(source, /reconcile_horus_execution_attempt/);
+  assert.match(source, /PREVIEW_ALREADY_READY/);
+});
+
+test('vercel deployment is represented in the economic provider registry', () => {
+  const source = read('supabase/migrations/20260808_add_vercel_execution_provider.sql');
+  assert.match(source, /'vercel'/);
+  assert.match(source, /'vercel\/deployment'/);
+  assert.match(source, /'DEV'/);
+});
+
 test('connector execution has a permission boundary before secret access and hides provider identity', () => {
   const source = read('app/api/studio/connectors/[connectorId]/execute/route.ts');
   assert.match(source, /CONNECTOR_PERMISSION_DENIED/);
@@ -62,10 +83,12 @@ test('connector execution has a permission boundary before secret access and hid
   assert.match(source, /CONNECTOR_CREDENTIAL_EXPIRED_OR_REVOKED/);
 });
 
-test('studio UI is a project workspace rather than a module launcher', () => {
+test('studio UI exposes the canonical preview execution action', () => {
   const source = read('app/dashboard/studio/page.tsx');
   assert.match(source, /Nexus Project Execution/);
   assert.match(source, /Novo projeto/);
   assert.match(source, /Revision Engine/);
+  assert.match(source, /Criar Preview/);
+  assert.match(source, /\/execute/);
   assert.doesNotMatch(source, /Studio Música/);
 });
