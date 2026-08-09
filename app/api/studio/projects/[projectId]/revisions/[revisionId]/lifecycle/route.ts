@@ -21,10 +21,10 @@ function errorResponse(error: unknown) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
-async function executeEnvironment(request: Request, projectId: string, revisionId: string, environment: 'STAGING' | 'PRODUCTION') {
+async function executeEnvironment(request: Request, projectId: string, revisionId: string, environment: 'STAGING' | 'PRODUCTION', operation: 'DEPLOY' | 'ROLLBACK' = 'DEPLOY') {
   const headers = new Headers(request.headers);
   headers.delete('content-length');
-  const internalRequest = new Request(request.url, { method: 'POST', headers, body: JSON.stringify({ environment }) });
+  const internalRequest = new Request(request.url, { method: 'POST', headers, body: JSON.stringify({ environment, operation }) });
   return executeRevision(internalRequest, { params: Promise.resolve({ projectId, revisionId }) });
 }
 
@@ -85,7 +85,13 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       return executeEnvironment(request, projectId, revisionId, 'PRODUCTION');
     }
 
-    if (canonicalAction === 'ROLLBACK_REQUESTED') throw new Error('ROLLBACK_EXECUTION_REQUIRES_PROVIDER_BOUNDARY');
+    if (canonicalAction === 'ROLLBACK_REQUESTED') {
+      if (revision.approval_state !== 'APPROVED') throw new Error('REVISION_APPROVAL_REQUIRED');
+      const production = (deployment.production as Record<string, unknown> | undefined) ?? {};
+      if (production.status !== 'READY' && production.status !== 'ROLLED_BACK') throw new Error('PRODUCTION_NOT_READY');
+      return executeEnvironment(request, projectId, revisionId, 'PRODUCTION', 'ROLLBACK');
+    }
+
     throw new Error('INVALID_LIFECYCLE_ACTION');
   } catch (error) {
     return errorResponse(error);
