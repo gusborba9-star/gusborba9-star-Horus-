@@ -88,13 +88,11 @@ async function resolveRollbackTarget(secret: string, projectId: string, currentD
   const projectPayload = await projectResponse.json() as { targets?: { production?: { id?: string } } };
   const currentId = currentDeploymentId ?? projectPayload.targets?.production?.id;
   if (!currentId) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
-
   const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&limit=20`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
   if (!deploymentsResponse.ok) throw new Error(`VERCEL_DEPLOYMENTS_READ_FAILED:${deploymentsResponse.status}`);
   const deploymentsPayload = await deploymentsResponse.json() as { deployments?: Array<{ uid?: string; id?: string; created?: number; readyState?: string }> };
   const candidates = (deploymentsPayload.deployments ?? []).filter((deployment) => (deployment.uid ?? deployment.id) && (deployment.uid ?? deployment.id) !== currentId).sort((a, b) => Number(b.created ?? 0) - Number(a.created ?? 0));
   if (!candidates.length) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
-
   for (const candidate of candidates) {
     const deploymentId = candidate.uid ?? candidate.id;
     if (!deploymentId) continue;
@@ -139,13 +137,11 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     if (!ENVIRONMENTS.includes(requestedEnvironment as Environment)) throw new Error('INVALID_EXECUTION_ENVIRONMENT');
     environment = requestedEnvironment as Environment;
     if (operation === 'ROLLBACK' && environment !== 'PRODUCTION') throw new Error('INVALID_ROLLBACK_ENVIRONMENT');
-
     const { data: project, error: projectError } = await client.from('studio_projects').select('id,owner_user_id,name,environment').eq('id', projectId).single();
     if (projectError || !project || project.owner_user_id !== user.id) throw new Error('PROJECT_NOT_FOUND');
     const { data: revision, error: revisionError } = await client.from('studio_project_revisions').select('id,project_id,version,change_class,approval_state,optimized_spec,preview,deployment').eq('id', revisionId).eq('project_id', projectId).single();
     if (revisionError || !revision) throw new Error('REVISION_NOT_FOUND');
     if (!revision.optimized_spec || typeof revision.optimized_spec !== 'object') throw new Error('OPTIMIZED_SPEC_REQUIRED');
-
     const previewState = (revision.preview as Record<string, unknown> | null) ?? {};
     const deploymentState = (revision.deployment as Record<string, unknown> | null) ?? {};
     const stagingState = (deploymentState.staging as Record<string, unknown> | undefined) ?? {};
@@ -157,7 +153,6 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     } else if (revision.approval_state !== 'APPROVED') {
       throw new Error('ROLLBACK_APPROVAL_REQUIRED');
     }
-
     let connector: Awaited<ReturnType<typeof resolveConnector>>['connector'];
     let permission = operation === 'ROLLBACK' ? ROLLBACK_PERMISSION : PERMISSIONS[environment];
     let secret: string;
@@ -165,7 +160,6 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     let repoId: number | null = null;
     let ref = 'main';
     let rollbackTarget: { currentDeploymentId: string; targetDeploymentId: string } | null = null;
-
     const { connector: resolvedConnector, permission: resolvedPermission } = await resolveConnector(client, projectId, user.id, environment);
     connector = resolvedConnector;
     if (operation === 'DEPLOY') permission = resolvedPermission;
@@ -175,14 +169,12 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const { data: secretData, error: secretError } = await service.rpc('studio_read_connector_secret', { p_secret_ref: connector.secret_ref });
     if (secretError || typeof secretData !== 'string') throw new Error('CONNECTOR_SECRET_UNAVAILABLE');
     secret = secretData;
-
     const metadata = connector.metadata ?? {};
     vercelProject = metadataString(metadata, 'vercelProjectId');
     repoId = metadataNumber(metadata, 'repoId');
     ref = metadataString(metadata, 'ref') || 'main';
     if (!vercelProject || repoId === null) throw new Error('VERCEL_CONNECTOR_METADATA_REQUIRED');
     if (operation === 'ROLLBACK') rollbackTarget = await resolveRollbackTarget(secret, vercelProject, (deploymentState.production as Record<string, unknown> | undefined)?.deploymentId as string | undefined);
-
     const idempotencyKey = operation === 'ROLLBACK' && rollbackTarget ? `studio-rollback:${revisionId}:${rollbackTarget.targetDeploymentId}` : `studio-${environment.toLowerCase()}:${revisionId}`;
     const { data: existing } = await service.from('studio_executions').select('*').eq('project_id', projectId).eq('revision_id', revisionId).eq('environment', environment).eq('idempotency_key', idempotencyKey).maybeSingle();
     if (existing?.status === 'SUCCEEDED') return NextResponse.json({ success: true, execution: existing, idempotent: true });
@@ -195,40 +187,39 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       if (executionError || !execution) throw new Error(`EXECUTION_CREATE_FAILED:${executionError?.message ?? 'UNKNOWN'}`);
       executionId = execution.id;
     }
-
     const budgetId = await createBudget(service, user.id, executionId);
     const attempt = await createAttempt(service, budgetId, environment, operation);
     attemptId = attempt.id;
     const { error: executionAuthorizationError } = await service.from('studio_executions').update({ budget_id: budgetId, attempt_id: attemptId, connector_id: connector.id, economic_authorized: true }).eq('id', executionId);
     if (executionAuthorizationError) throw new Error('EXECUTION_AUTHORIZATION_UPDATE_FAILED');
-
     const startedAt = Date.now();
     let providerResult: Record<string, unknown>;
-    let result: { deploymentId: string; url: string | null; readyState: string; environment: Environment; rollbackFrom?: string };
+    let result: { deploymentId: string; url: string; readyState: string; environment: Environment; rollbackFrom?: string };
     if (operation === 'ROLLBACK' && rollbackTarget) {
       await rollbackVercel(secret, vercelProject, rollbackTarget.targetDeploymentId);
       await waitForVercelRollback(secret, vercelProject, rollbackTarget.targetDeploymentId);
       providerResult = { targetDeploymentId: rollbackTarget.targetDeploymentId, previousDeploymentId: rollbackTarget.currentDeploymentId };
       const deploymentResponse = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(rollbackTarget.targetDeploymentId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
       const deploymentPayload = deploymentResponse.ok ? await deploymentResponse.json().catch(() => ({})) as { url?: string; readyState?: string } : {};
-      result = { deploymentId: rollbackTarget.targetDeploymentId, url: deploymentPayload.url ?? null, readyState: deploymentPayload.readyState ?? 'READY', environment, rollbackFrom: rollbackTarget.currentDeploymentId };
+      const deploymentUrl = deploymentPayload.url;
+      if (!deploymentUrl) throw new Error('VERCEL_DEPLOYMENT_URL_MISSING');
+      result = { deploymentId: rollbackTarget.targetDeploymentId, url: deploymentUrl, readyState: deploymentPayload.readyState ?? 'READY', environment, rollbackFrom: rollbackTarget.currentDeploymentId };
     } else {
       const deployment = await deployVercel(secret, vercelProject, repoId, ref, environment);
       const deploymentId = deployment.id ?? deployment.uid;
       if (!deploymentId) throw new Error('VERCEL_DEPLOYMENT_ID_MISSING');
       const ready = await waitForVercelReady(secret, deploymentId);
+      const deploymentUrl = ready.url ?? deployment.url;
+      if (!deploymentUrl) throw new Error('VERCEL_DEPLOYMENT_URL_MISSING');
       providerResult = { deploymentId, readyState: ready.readyState, environment };
-      result = { deploymentId, url: ready.url ?? deployment.url ?? null, readyState: ready.readyState, environment };
+      result = { deploymentId, url: deploymentUrl, readyState: ready.readyState ?? 'READY', environment };
     }
-
     const actualCost = 0;
     const { error: reconciliationError } = await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: actualCost, p_status: 'SUCCEEDED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_image_units: 0, p_provider_request_id: result.deploymentId, p_actual_provider: 'vercel', p_actual_model: operation === 'ROLLBACK' ? 'production-rollback' : `${environment.toLowerCase()}-deployment`, p_latency_ms: Date.now() - startedAt, p_raw_usage: providerResult });
     if (reconciliationError) throw new Error(`ECONOMIC_RECONCILIATION_FAILED:${reconciliationError.message}`);
-
     const executionPatch = operation === 'ROLLBACK' ? { production: { status: 'ROLLED_BACK', deploymentId: result.deploymentId, url: result.url, verified: false, rolledBackFrom: result.rollbackFrom }, delivery: { status: 'ROLLED_BACK', deploymentId: result.deploymentId, url: result.url } } : environment === 'PREVIEW' ? { preview: { status: 'READY', deploymentId: result.deploymentId, url: result.url, verified: false } } : environment === 'STAGING' ? { staging: { status: 'READY', deploymentId: result.deploymentId, url: result.url, verified: false } } : { production: { status: 'READY', deploymentId: result.deploymentId, url: result.url, verified: false }, delivery: { status: 'READY', deploymentId: result.deploymentId, url: result.url } };
     const { data: updatedExecution, error: updateExecutionError } = await service.from('studio_executions').update({ status: 'SUCCEEDED', actual_cost_brl: actualCost, provider_id: 'vercel', model_id: operation === 'ROLLBACK' ? 'vercel/production-rollback' : `vercel/${environment.toLowerCase()}-deployment`, result, ...(operation === 'ROLLBACK' ? { production: executionPatch.production, delivery: executionPatch.delivery } : executionPatch) }).eq('id', executionId).select('*').single();
     if (updateExecutionError || !updatedExecution) throw new Error('EXECUTION_FINALIZE_FAILED');
-
     const { data: currentRevision, error: currentRevisionError } = await client.from('studio_project_revisions').select('preview,deployment,audit').eq('id', revisionId).single();
     if (currentRevisionError || !currentRevision) throw new Error('REVISION_NOT_FOUND');
     const currentPreview = (currentRevision.preview as Record<string, unknown> | null) ?? {};
