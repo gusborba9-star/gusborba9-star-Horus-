@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
 import { requireStudioUser } from '@/lib/studio/auth';
 import { POST as executeRevision } from '../execute/route';
-import { getServiceSupabase } from '@/lib/supabase';
 
-const ACTIONS = ['VERIFY_PREVIEW', 'EXECUTE_STAGING', 'APPROVE_PRODUCTION', 'EXECUTE_PRODUCTION'] as const;
+const ACTIONS = [
+  'PREVIEW_READY',
+  'STAGING_READY',
+  'PRODUCTION_APPROVED',
+  'DELIVERED',
+  'ROLLBACK_REQUESTED',
+  'VERIFY_PREVIEW',
+  'EXECUTE_STAGING',
+  'APPROVE_PRODUCTION',
+  'EXECUTE_PRODUCTION',
+] as const;
 type LifecycleAction = (typeof ACTIONS)[number];
 
 function errorResponse(error: unknown) {
@@ -27,6 +36,12 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const action = body.action as LifecycleAction;
     if (!ACTIONS.includes(action)) throw new Error('INVALID_LIFECYCLE_ACTION');
 
+    const canonicalAction = action === 'PREVIEW_READY' ? 'VERIFY_PREVIEW'
+      : action === 'STAGING_READY' ? 'EXECUTE_STAGING'
+      : action === 'PRODUCTION_APPROVED' ? 'APPROVE_PRODUCTION'
+      : action === 'DELIVERED' ? 'EXECUTE_PRODUCTION'
+      : action;
+
     const { data: revision, error: revisionError } = await client.from('studio_project_revisions')
       .select('id,project_id,version,change_class,approval_state,preview,deployment,audit')
       .eq('id', revisionId).eq('project_id', projectId).single();
@@ -34,9 +49,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
     const preview = (revision.preview as Record<string, unknown> | null) ?? {};
     const deployment = (revision.deployment as Record<string, unknown> | null) ?? {};
-    const audit = { ...(revision.audit ?? {}), lastLifecycleAction: action, lastLifecycleActor: user.id, lastLifecycleAt: new Date().toISOString() };
+    const audit = { ...(revision.audit ?? {}), lastLifecycleAction: action, lastLifecycleCanonicalAction: canonicalAction, lastLifecycleActor: user.id, lastLifecycleAt: new Date().toISOString() };
 
-    if (action === 'VERIFY_PREVIEW') {
+    if (canonicalAction === 'VERIFY_PREVIEW') {
       if (preview.status !== 'READY' || typeof preview.url !== 'string' || !preview.url) throw new Error('PREVIEW_NOT_READY');
       const response = await fetch(preview.url, { method: 'GET', redirect: 'manual', cache: 'no-store' });
       if (![200, 301, 302, 307, 308].includes(response.status)) throw new Error(`PREVIEW_VERIFICATION_FAILED:${response.status}`);
@@ -46,13 +61,13 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       return NextResponse.json({ success: true, action, revision: data });
     }
 
-    if (action === 'EXECUTE_STAGING') {
+    if (canonicalAction === 'EXECUTE_STAGING') {
       if (revision.approval_state !== 'APPROVED') throw new Error('REVISION_APPROVAL_REQUIRED');
       if (preview.status !== 'READY' || preview.verified !== true) throw new Error('PREVIEW_VALIDATION_REQUIRED');
       return executeEnvironment(request, projectId, revisionId, 'STAGING');
     }
 
-    if (action === 'APPROVE_PRODUCTION') {
+    if (canonicalAction === 'APPROVE_PRODUCTION') {
       if (revision.approval_state !== 'APPROVED') throw new Error('REVISION_APPROVAL_REQUIRED');
       const staging = (deployment.staging as Record<string, unknown> | undefined) ?? {};
       if (staging.status !== 'READY' || staging.verified !== true) throw new Error('STAGING_VALIDATION_REQUIRED');
@@ -62,11 +77,16 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       return NextResponse.json({ success: true, action, revision: data });
     }
 
-    if (revision.approval_state !== 'APPROVED') throw new Error('REVISION_APPROVAL_REQUIRED');
-    if ((deployment.productionApproval as Record<string, unknown> | undefined)?.status !== 'APPROVED') throw new Error('PRODUCTION_APPROVAL_REQUIRED');
-    const staging = (deployment.staging as Record<string, unknown> | undefined) ?? {};
-    if (staging.status !== 'READY' || staging.verified !== true) throw new Error('STAGING_VALIDATION_REQUIRED');
-    return executeEnvironment(request, projectId, revisionId, 'PRODUCTION');
+    if (canonicalAction === 'EXECUTE_PRODUCTION') {
+      if (revision.approval_state !== 'APPROVED') throw new Error('REVISION_APPROVAL_REQUIRED');
+      if ((deployment.productionApproval as Record<string, unknown> | undefined)?.status !== 'APPROVED') throw new Error('PRODUCTION_APPROVAL_REQUIRED');
+      const staging = (deployment.staging as Record<string, unknown> | undefined) ?? {};
+      if (staging.status !== 'READY' || staging.verified !== true) throw new Error('STAGING_VALIDATION_REQUIRED');
+      return executeEnvironment(request, projectId, revisionId, 'PRODUCTION');
+    }
+
+    if (canonicalAction === 'ROLLBACK_REQUESTED') throw new Error('ROLLBACK_EXECUTION_REQUIRES_PROVIDER_BOUNDARY');
+    throw new Error('INVALID_LIFECYCLE_ACTION');
   } catch (error) {
     return errorResponse(error);
   }
