@@ -52,7 +52,7 @@ test('revision lifecycle prevents promotion without preview, staging and approva
   assert.match(source, /STAGING_VALIDATION_REQUIRED/);
   assert.match(source, /PRODUCTION_APPROVAL_REQUIRED/);
   assert.match(source, /ROLLBACK_REQUESTED/);
-  assert.match(source, /operation, 'ROLLBACK'/);
+  assert.match(source, /'PRODUCTION', 'ROLLBACK'/);
 });
 
 test('preview execution boundary is authenticated, economic-gated, connector-authorized and idempotent', () => {
