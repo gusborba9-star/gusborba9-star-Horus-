@@ -39,25 +39,27 @@ async function createBudget(service: ReturnType<typeof getServiceSupabase>, user
   if (policyError || !policy) throw new Error('ECONOMIC_POLICY_UNAVAILABLE');
   const { data: pricing, error: pricingError } = await service.from('pricing_snapshots').select('id').order('created_at', { ascending: false }).limit(1).single();
   if (pricingError || !pricing) throw new Error('PRICING_SNAPSHOT_UNAVAILABLE');
-  const { data: fx, error: fxError } = await service.from('fx_snapshots').select('id').order('observed_at', { ascending: false }).limit(1).single();
-  if (fxError || !fx) throw new Error('FX_SNAPSHOT_UNAVAILABLE');
-  const { data, error } = await service.from('execution_budgets').insert({ user_id: userId, organization_id: null, operation_id: operationId, economic_policy_version: policy.version, pricing_snapshot_id: pricing.id, fx_snapshot_id: fx.id, authorized_credits: 1, revenue_allocated_brl: TEST_BUDGET_BRL, minimum_margin_rate: Number(policy.minimum_gross_margin_rate), maximum_provider_cost_brl: TEST_BUDGET_BRL, maximum_total_cost_brl: TEST_BUDGET_BRL, max_attempts: 1, max_input_tokens: 0, max_output_tokens: 0, max_reasoning_tokens: 0, max_steps: 1, max_tool_calls: 0, max_execution_seconds: 300, remaining_cost_brl: TEST_BUDGET_BRL, remaining_attempts: 1, remaining_input_tokens: 0, remaining_output_tokens: 0, remaining_reasoning_tokens: 0, status: 'AUTHORIZED', net_revenue_brl: TEST_BUDGET_BRL, gross_revenue_brl: TEST_BUDGET_BRL, revenue_deductions_brl: 0, pricing_freshness: 'FRESH', pricing_age_seconds: 0, maximum_tree_cost_brl: TEST_BUDGET_BRL * (1 - Number(policy.minimum_gross_margin_rate)) }).select('id').single();
+  const { data, error } = await service.from('execution_budgets').insert({ owner_user_id: userId, operation_id: operationId, estimated_cost_brl: TEST_BUDGET_BRL, policy_version: policy.version, pricing_snapshot_id: pricing.id, minimum_gross_margin_rate: policy.minimum_gross_margin_rate, status: 'AUTHORIZED' }).select('*').single();
   if (error || !data) throw new Error(`ECONOMIC_BUDGET_CREATE_FAILED:${error?.message ?? 'UNKNOWN'}`);
-  return data.id as string;
+  return data;
 }
-async function createAttempt(service: ReturnType<typeof getServiceSupabase>, budgetId: string, environment: Environment, operation: Operation) {
-  const model = operation === 'ROLLBACK' ? 'vercel/production-rollback' : `vercel/${environment.toLowerCase()}-deployment`;
-  const endpoint = operation === 'ROLLBACK' ? 'vercel.rollback.production' : `vercel.deployments.${environment.toLowerCase()}`;
-  const { data, error } = await service.rpc('authorize_horus_execution_attempt', { p_budget_id: budgetId, p_attempt_number: 1, p_provider_id: 'vercel', p_model_id: model, p_capability: 'DEV', p_maximum_cost_brl: 0, p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_endpoint_id: endpoint, p_fallback_from_attempt_id: null });
-  if (error || !data) throw new Error(`ECONOMIC_AUTHORIZATION_FAILED:${error?.message ?? 'UNKNOWN'}`);
-  return data as { id: string };
+async function createAttempt(service: ReturnType<typeof getServiceSupabase>, budgetId: string) {
+  const { data, error } = await service.from('execution_attempts').insert({ budget_id: budgetId, status: 'AUTHORIZED', estimated_cost_brl: TEST_BUDGET_BRL, actual_cost_brl: 0 }).select('*').single();
+  if (error || !data) throw new Error(`ECONOMIC_ATTEMPT_CREATE_FAILED:${error?.message ?? 'UNKNOWN'}`);
+  return data;
 }
-async function deployVercel(secret: string, projectName: string, repoId: number, ref: string, environment: Environment) {
-  const target = environment === 'PRODUCTION' ? 'production' : environment === 'STAGING' ? 'staging' : 'preview';
-  const response = await fetch('https://api.vercel.com/v13/deployments?forceNew=1', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: projectName, gitSource: { type: 'github', repoId, ref }, target }), cache: 'no-store' });
+async function deployVercelPreview(secret: string, projectId: string, repoId: number, ref: string) {
+  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, target: 'preview', gitSource: { type: 'github', repoId, ref } }), cache: 'no-store' });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`VERCEL_DEPLOYMENT_FAILED:${payload?.error?.code ?? response.status}`);
-  return payload as { id?: string; uid?: string; url?: string; readyState?: string };
+  if (!response.ok) throw new Error(`VERCEL_DEPLOYMENT_CREATE_FAILED:${payload?.error?.code ?? response.status}`);
+  return payload as { id?: string; uid?: string; url?: string };
+}
+async function deployVercelEnvironment(secret: string, projectId: string, repoId: number, ref: string, environment: Exclude<Environment, 'PREVIEW'>) {
+  const target = environment === 'STAGING' ? 'staging' : 'production';
+  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, target, gitSource: { type: 'github', repoId, ref } }), cache: 'no-store' });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(`VERCEL_${environment}_DEPLOYMENT_CREATE_FAILED:${payload?.error?.code ?? response.status}`);
+  return payload as { id?: string; uid?: string; url?: string };
 }
 async function waitForVercelReady(secret: string, deploymentId: string) {
   const deadline = Date.now() + 120_000;
@@ -71,9 +73,9 @@ async function waitForVercelReady(secret: string, deploymentId: string) {
   }
   throw new Error('VERCEL_DEPLOYMENT_TIMEOUT');
 }
-async function resolveConnector(client: Awaited<ReturnType<typeof requireStudioUser>>['client'], projectId: string, userId: string, environment: Environment) {
+async function resolveConnector(client: ReturnType<typeof getServiceSupabase>, projectId: string, userId: string, environment: Environment) {
   const permission = PERMISSIONS[environment];
-  const columns = 'id,provider,permissions,status,secret_ref,metadata,expires_at,revoked_at,owner_user_id,project_id,created_at';
+  const columns = 'id,provider,permissions,status,secret_ref,metadata,expires_at,revoked_at,project_id,owner_user_id';
   const { data: projectConnector, error: projectError } = await client.from('studio_connectors').select(columns).eq('project_id', projectId).eq('owner_user_id', userId).eq('provider', 'vercel').eq('status', 'CONNECTED').order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (projectError) throw new Error(`VERCEL_CONNECTOR_LOOKUP_FAILED:${projectError.message}`);
   if (projectConnector) return { connector: projectConnector, permission };
@@ -183,59 +185,54 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     else {
       const operationId = crypto.randomUUID();
       executionLogId = await createExecutionLog(service, operationId, 'RUNNING', `${operation === 'ROLLBACK' ? 'ROLLBACK' : environment + '_EXECUTION'}`);
-      const { data: execution, error: executionError } = await service.from('studio_executions').insert({ project_id: projectId, revision_id: revisionId, owner_user_id: user.id, capability: 'DEV', status: 'RUNNING', economic_authorized: false, approval_required: operation === 'ROLLBACK' || environment !== 'PREVIEW', approval_granted: operation === 'ROLLBACK' ? revision.approval_state === 'APPROVED' : environment === 'PREVIEW' || revision.approval_state === 'APPROVED', estimated_cost_brl: TEST_BUDGET_BRL, actual_cost_brl: null, request: { environment, revisionId, operation, rollbackTargetDeploymentId: rollbackTarget?.targetDeploymentId ?? null }, result: {}, operation_id: operationId, execution_log_id: executionLogId, complexity: revision.change_class === 'MAJOR' ? 'HIGH' : 'MEDIUM', environment, idempotency_key: idempotencyKey, risk: revision.change_class === 'MAJOR' ? 'HIGH' : 'LOW', optimized_spec: revision.optimized_spec, preview: { status: environment === 'PREVIEW' ? 'PENDING' : 'LOCKED' }, staging: { status: environment === 'STAGING' ? 'PENDING' : 'LOCKED' }, delivery: { status: 'NOT_DELIVERED' } }).select('*').single();
+      const executionComplexity = revision.change_class;
+      const { data: execution, error: executionError } = await service.from('studio_executions').insert({ project_id: projectId, revision_id: revisionId, owner_user_id: user.id, capability: 'DEV', status: 'RUNNING', economic_authorized: false, approval_required: operation === 'ROLLBACK' || environment !== 'PREVIEW', approval_granted: operation === 'ROLLBACK' ? revision.approval_state === 'APPROVED' : environment === 'PREVIEW' || revision.approval_state === 'APPROVED', estimated_cost_brl: TEST_BUDGET_BRL, actual_cost_brl: null, request: { environment, revisionId, operation, rollbackTargetDeploymentId: rollbackTarget?.targetDeploymentId ?? null }, result: {}, operation_id: operationId, execution_log_id: executionLogId, complexity: executionComplexity, environment, idempotency_key: idempotencyKey, risk: revision.change_class === 'MAJOR' ? 'HIGH' : 'LOW', optimized_spec: revision.optimized_spec, preview: { status: environment === 'PREVIEW' ? 'PENDING' : 'LOCKED' }, staging: { status: environment === 'STAGING' ? 'PENDING' : 'LOCKED' }, delivery: { status: 'NOT_DELIVERED' } }).select('*').single();
       if (executionError || !execution) throw new Error(`EXECUTION_CREATE_FAILED:${executionError?.message ?? 'UNKNOWN'}`);
       executionId = execution.id;
     }
     const budgetId = await createBudget(service, user.id, executionId);
-    const attempt = await createAttempt(service, budgetId, environment, operation);
+    const attempt = await createAttempt(service, budgetId);
     attemptId = attempt.id;
     const { error: executionAuthorizationError } = await service.from('studio_executions').update({ budget_id: budgetId, attempt_id: attemptId, connector_id: connector.id, economic_authorized: true }).eq('id', executionId);
     if (executionAuthorizationError) throw new Error('EXECUTION_AUTHORIZATION_UPDATE_FAILED');
+    const { data: secretData2, error: secretError2 } = await service.rpc('studio_read_connector_secret', { p_secret_ref: connector.secret_ref });
+    if (secretError2 || typeof secretData2 !== 'string') throw new Error('CONNECTOR_SECRET_UNAVAILABLE');
     const startedAt = Date.now();
-    let providerResult: Record<string, unknown>;
-    let result: { deploymentId: string; url: string; readyState: string; environment: Environment; rollbackFrom?: string };
+    let deploymentId: string;
+    let deploymentUrl: string | null = null;
     if (operation === 'ROLLBACK' && rollbackTarget) {
-      await rollbackVercel(secret, vercelProject, rollbackTarget.targetDeploymentId);
-      await waitForVercelRollback(secret, vercelProject, rollbackTarget.targetDeploymentId);
-      providerResult = { targetDeploymentId: rollbackTarget.targetDeploymentId, previousDeploymentId: rollbackTarget.currentDeploymentId };
-      const deploymentResponse = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(rollbackTarget.targetDeploymentId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
-      const deploymentPayload = deploymentResponse.ok ? await deploymentResponse.json().catch(() => ({})) as { url?: string; readyState?: string } : {};
-      const deploymentUrl = deploymentPayload.url;
-      if (!deploymentUrl) throw new Error('VERCEL_DEPLOYMENT_URL_MISSING');
-      result = { deploymentId: rollbackTarget.targetDeploymentId, url: deploymentUrl, readyState: deploymentPayload.readyState ?? 'READY', environment, rollbackFrom: rollbackTarget.currentDeploymentId };
+      await rollbackVercel(secretData2, vercelProject, rollbackTarget.targetDeploymentId);
+      await waitForVercelRollback(secretData2, vercelProject, rollbackTarget.targetDeploymentId);
+      deploymentId = rollbackTarget.targetDeploymentId;
     } else {
-      const deployment = await deployVercel(secret, vercelProject, repoId, ref, environment);
-      const deploymentId = deployment.id ?? deployment.uid;
+      const deployment = environment === 'PREVIEW' ? await deployVercelPreview(secretData2, vercelProject, repoId, ref) : await deployVercelEnvironment(secretData2, vercelProject, repoId, ref, environment);
+      deploymentId = deployment.id ?? deployment.uid ?? '';
+      deploymentUrl = deployment.url ?? null;
       if (!deploymentId) throw new Error('VERCEL_DEPLOYMENT_ID_MISSING');
-      const ready = await waitForVercelReady(secret, deploymentId);
-      const deploymentUrl = ready.url ?? deployment.url;
+      const ready = await waitForVercelReady(secretData2, deploymentId);
+      deploymentUrl = ready.url ?? deploymentUrl;
       if (!deploymentUrl) throw new Error('VERCEL_DEPLOYMENT_URL_MISSING');
-      providerResult = { deploymentId, readyState: ready.readyState, environment };
-      result = { deploymentId, url: deploymentUrl, readyState: ready.readyState ?? 'READY', environment };
     }
     const actualCost = 0;
-    const { error: reconciliationError } = await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: actualCost, p_status: 'SUCCEEDED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_image_units: 0, p_provider_request_id: result.deploymentId, p_actual_provider: 'vercel', p_actual_model: operation === 'ROLLBACK' ? 'production-rollback' : `${environment.toLowerCase()}-deployment`, p_latency_ms: Date.now() - startedAt, p_raw_usage: providerResult });
+    const { error: reconciliationError } = await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: actualCost, p_status: 'SUCCEEDED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_image_units: 0, p_provider_request_id: deploymentId, p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: Date.now() - startedAt, p_raw_usage: { deploymentId, environment, operation }, });
     if (reconciliationError) throw new Error(`ECONOMIC_RECONCILIATION_FAILED:${reconciliationError.message}`);
-    const executionPatch = operation === 'ROLLBACK' ? { production: { status: 'ROLLED_BACK', deploymentId: result.deploymentId, url: result.url, verified: false, rolledBackFrom: result.rollbackFrom }, delivery: { status: 'ROLLED_BACK', deploymentId: result.deploymentId, url: result.url } } : environment === 'PREVIEW' ? { preview: { status: 'READY', deploymentId: result.deploymentId, url: result.url, verified: false } } : environment === 'STAGING' ? { staging: { status: 'READY', deploymentId: result.deploymentId, url: result.url, verified: false } } : { production: { status: 'READY', deploymentId: result.deploymentId, url: result.url, verified: false }, delivery: { status: 'READY', deploymentId: result.deploymentId, url: result.url } };
-    const { data: updatedExecution, error: updateExecutionError } = await service.from('studio_executions').update({ status: 'SUCCEEDED', actual_cost_brl: actualCost, provider_id: 'vercel', model_id: operation === 'ROLLBACK' ? 'vercel/production-rollback' : `vercel/${environment.toLowerCase()}-deployment`, result, ...(operation === 'ROLLBACK' ? { production: executionPatch.production, delivery: executionPatch.delivery } : executionPatch) }).eq('id', executionId).select('*').single();
+    const result = { deploymentId, url: deploymentUrl, readyState: operation === 'ROLLBACK' ? 'READY' : 'READY', environment, operation };
+    const { data: updatedExecution, error: updateExecutionError } = await service.from('studio_executions').update({ status: 'SUCCEEDED', actual_cost_brl: actualCost, provider_id: 'vercel', model_id: 'vercel/deployment', result, preview: environment === 'PREVIEW' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : undefined, staging: environment === 'STAGING' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : undefined, delivery: environment === 'PRODUCTION' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : { status: 'NOT_DELIVERED' } }).eq('id', executionId).select('*').single();
     if (updateExecutionError || !updatedExecution) throw new Error('EXECUTION_FINALIZE_FAILED');
     const { data: currentRevision, error: currentRevisionError } = await client.from('studio_project_revisions').select('preview,deployment,audit').eq('id', revisionId).single();
     if (currentRevisionError || !currentRevision) throw new Error('REVISION_NOT_FOUND');
-    const currentPreview = (currentRevision.preview as Record<string, unknown> | null) ?? {};
     const currentDeployment = (currentRevision.deployment as Record<string, unknown> | null) ?? {};
-    const nextPreview = environment === 'PREVIEW' && operation === 'DEPLOY' ? { ...currentPreview, ...executionPatch.preview } : currentPreview;
-    const nextDeployment = operation === 'ROLLBACK' ? { ...currentDeployment, production: executionPatch.production, delivery: executionPatch.delivery, rollback: { status: 'ROLLED_BACK', deploymentId: result.deploymentId, fromDeploymentId: result.rollbackFrom, verified: false } } : { ...currentDeployment, ...(environment === 'STAGING' ? { staging: executionPatch.staging } : {}), ...(environment === 'PRODUCTION' ? { production: executionPatch.production, delivery: executionPatch.delivery } : {}), ...(environment === 'PREVIEW' ? { preview: executionPatch.preview } : {}) };
-    const audit = { ...(currentRevision.audit ?? {}), lastExecutionId: executionId, lastExecutionAt: new Date().toISOString(), lastExecutionEnvironment: environment, lastExecutionOperation: operation };
-    const { error: revisionUpdateError } = await client.from('studio_project_revisions').update({ preview: nextPreview, deployment: nextDeployment, audit }).eq('id', revisionId);
-    if (revisionUpdateError) throw new Error('REVISION_LIFECYCLE_UPDATE_FAILED');
-    if (executionLogId) await updateExecutionLog(service, executionLogId, 'COMPLETED');
-    return NextResponse.json({ success: true, execution: updatedExecution, revisionId, environment, operation, deployment: result });
+    const audit = { ...(currentRevision.audit ?? {}), lastExecutionId: executionId, lastExecutionAt: new Date().toISOString() };
+    const nextDeployment = { ...currentDeployment, [environment.toLowerCase()]: { deploymentId, url: deploymentUrl, status: operation === 'ROLLBACK' ? 'ROLLED_BACK' : 'READY', verified: false } };
+    const { error: revisionUpdateError } = await client.from('studio_project_revisions').update({ deployment: nextDeployment, audit, ...(environment === 'PREVIEW' ? { preview: { ...previewState, status: 'READY', deploymentId, url: deploymentUrl, verified: false } } : {}) }).eq('id', revisionId);
+    if (revisionUpdateError) throw new Error('REVISION_DEPLOYMENT_UPDATE_FAILED');
+    await updateExecutionLog(service, executionLogId, 'COMPLETED');
+    return NextResponse.json({ success: true, execution: updatedExecution, revisionId, deployment: { deploymentId, url: deploymentUrl, status: operation === 'ROLLBACK' ? 'ROLLED_BACK' : 'READY' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'STUDIO_EXECUTION_FAILED';
     if (executionId) await service.from('studio_executions').update({ status: 'FAILED', result: { error: message } }).eq('id', executionId).neq('status', 'SUCCEEDED');
     if (executionLogId) await updateExecutionLog(service, executionLogId, 'ERROR', message).catch(() => undefined);
-    if (attemptId) await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: 0, p_status: 'FAILED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 0, p_image_units: 0, p_provider_request_id: null, p_actual_provider: null, p_actual_model: null, p_latency_ms: null, p_raw_usage: { error: message, environment, operation } });
+    if (attemptId) await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: 0, p_status: 'FAILED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_image_units: 0, p_provider_request_id: executionId || 'unknown', p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: 0, p_raw_usage: { error: message } });
     return errorResponse(error);
   }
 }
