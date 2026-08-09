@@ -8,7 +8,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('studio engine exposes the canonical change classes', () => {
   const source = read('lib/studio/types.ts');
-  for (const value of ['MICRO', 'LOW', 'MEDIUM', 'MAJOR', 'REBUILD']) assert.match(source, new RegExp(`['"]${value}['"]`));
+  for (const value of ['MICRO', 'LOW', 'MEDIUM', 'MAJOR', 'REBUILD']) assert.match(source, new RegExp(`[\'\"]${value}[\'\"]`));
 });
 
 test('studio project API is RLS-backed and user scoped', () => {
@@ -52,6 +52,7 @@ test('revision lifecycle prevents promotion without preview, staging and approva
   assert.match(source, /STAGING_VALIDATION_REQUIRED/);
   assert.match(source, /PRODUCTION_APPROVAL_REQUIRED/);
   assert.match(source, /ROLLBACK_REQUESTED/);
+  assert.match(source, /operation, 'ROLLBACK'/);
 });
 
 test('preview execution boundary is authenticated, economic-gated, connector-authorized and idempotent', () => {
@@ -65,6 +66,10 @@ test('preview execution boundary is authenticated, economic-gated, connector-aut
   assert.match(source, /api.vercel.com\/v13\/deployments/);
   assert.match(source, /reconcile_horus_execution_attempt/);
   assert.match(source, /PREVIEW_ALREADY_READY/);
+  assert.match(source, /ROLLBACK_PRODUCTION/);
+  assert.match(source, /api.vercel.com\/v1\/projects/);
+  assert.match(source, /VERCEL_ROLLBACK_FAILED/);
+  assert.match(source, /studio-rollback:/);
 });
 
 test('vercel deployment is represented in the economic provider registry', () => {
