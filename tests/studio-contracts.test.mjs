@@ -8,7 +8,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('studio engine exposes the canonical change classes', () => {
   const source = read('lib/studio/types.ts');
-  for (const value of ['MICRO', 'LOW', 'MEDIUM', 'MAJOR', 'REBUILD']) assert.match(source, new RegExp(`[\'\"]${value}[\'\"]`));
+  for (const value of ['MICRO', 'LOW', 'MEDIUM', 'MAJOR', 'REBUILD']) assert.match(source, new RegExp(`[\\'\\"]${value}[\\'\\"]`));
 });
 
 test('studio project API is RLS-backed and user scoped', () => {
@@ -70,6 +70,18 @@ test('preview execution boundary is authenticated, economic-gated, connector-aut
   assert.match(source, /api.vercel.com\/v1\/projects/);
   assert.match(source, /VERCEL_ROLLBACK_FAILED/);
   assert.match(source, /studio-rollback:/);
+});
+
+test('preview verification resolves project connector or owned global connector', () => {
+  const source = read('app/api/studio/projects/[projectId]/revisions/[revisionId]/preview/verify/route.ts');
+  assert.match(source, /requireStudioUser/);
+  assert.match(source, /\.eq\('project_id', projectId\)/);
+  assert.match(source, /\.is\('project_id', null\)/);
+  assert.match(source, /\.eq\('owner_user_id', userId\)/);
+  assert.match(source, /studio_read_connector_secret/);
+  assert.match(source, /DEPLOY_PREVIEW/);
+  assert.match(source, /VERCEL_DEPLOYMENT_READ_FAILED/);
+  assert.match(source, /verified: true/);
 });
 
 test('vercel deployment is represented in the economic provider registry', () => {

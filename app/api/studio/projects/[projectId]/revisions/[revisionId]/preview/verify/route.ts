@@ -18,6 +18,36 @@ async function verifyDeployment(secret: string, deploymentId: string) {
   return payload as { id?: string; readyState?: string; url?: string };
 }
 
+async function resolveVercelConnector(client: ReturnType<typeof getServiceSupabase>, projectId: string, userId: string) {
+  const columns = 'id,permissions,status,secret_ref,metadata,project_id,owner_user_id,created_at';
+  const { data: projectConnector, error: projectError } = await client
+    .from('studio_connectors')
+    .select(columns)
+    .eq('project_id', projectId)
+    .eq('owner_user_id', userId)
+    .eq('provider', 'vercel')
+    .eq('status', 'CONNECTED')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (projectError) throw new Error(`VERCEL_CONNECTOR_LOOKUP_FAILED:${projectError.message}`);
+  if (projectConnector) return projectConnector;
+
+  const { data: globalConnector, error: globalError } = await client
+    .from('studio_connectors')
+    .select(columns)
+    .is('project_id', null)
+    .eq('owner_user_id', userId)
+    .eq('provider', 'vercel')
+    .eq('status', 'CONNECTED')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (globalError) throw new Error(`VERCEL_CONNECTOR_LOOKUP_FAILED:${globalError.message}`);
+  if (!globalConnector) throw new Error('VERCEL_CONNECTOR_REQUIRED');
+  return globalConnector;
+}
+
 export async function POST(request: Request, context: { params: Promise<{ projectId: string; revisionId: string }> }) {
   const service = getServiceSupabase();
   try {
@@ -25,13 +55,12 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const { projectId, revisionId } = await context.params;
     const { data: project } = await client.from('studio_projects').select('id,owner_user_id').eq('id', projectId).single();
     if (!project || project.owner_user_id !== user.id) throw new Error('PROJECT_NOT_FOUND');
-    const { data: revision } = await client.from('studio_project_revisions').select('id,project_id,preview,deployment').eq('id', revisionId).eq('project_id', projectId).single();
+    const { data: revision } = await client.from('studio_project_revisions').select('id,project_id,preview,deployment,audit').eq('id', revisionId).eq('project_id', projectId).single();
     if (!revision) throw new Error('REVISION_NOT_FOUND');
     const preview = (revision.preview ?? {}) as { status?: string; deploymentId?: string; url?: string | null; verified?: boolean };
     if (!preview.deploymentId || preview.status !== 'READY') throw new Error('PREVIEW_NOT_READY');
 
-    const { data: connector, error: connectorError } = await client.from('studio_connectors').select('id,permissions,status,secret_ref,metadata').eq('project_id', projectId).eq('provider', 'vercel').eq('status', 'CONNECTED').order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (connectorError || !connector) throw new Error('VERCEL_CONNECTOR_REQUIRED');
+    const connector = await resolveVercelConnector(client, projectId, user.id);
     if (!Array.isArray(connector.permissions) || !connector.permissions.includes('DEPLOY_PREVIEW')) throw new Error('VERCEL_DEPLOY_PREVIEW_PERMISSION_REQUIRED');
     if (!connector.secret_ref) throw new Error('CONNECTOR_SECRET_UNAVAILABLE');
     if (metadataString(connector.metadata, 'vercelProjectId') === '') throw new Error('VERCEL_CONNECTOR_METADATA_REQUIRED');
@@ -41,9 +70,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const deployment = await verifyDeployment(secret, preview.deploymentId);
     if (deployment.readyState !== 'READY') throw new Error(`PREVIEW_NOT_READY:${deployment.readyState ?? 'UNKNOWN'}`);
 
-    const verifiedPreview = { ...preview, status: 'READY', verified: true, url: deployment.url ?? preview.url };
+    const verifiedPreview = { ...preview, status: 'READY', verified: true, verifiedAt: new Date().toISOString(), verificationStatus: 'VERIFIED', url: deployment.url ?? preview.url };
     const deploymentState = { ...((revision.deployment ?? {}) as Record<string, unknown>), preview: { deploymentId: preview.deploymentId, url: verifiedPreview.url, status: 'READY', verified: true } };
-    const audit = { ...((revision as { audit?: Record<string, unknown> }).audit ?? {}), verifiedBy: user.id, verifiedAt: new Date().toISOString(), deploymentId: preview.deploymentId };
+    const audit = { ...((revision.audit ?? {}) as Record<string, unknown>), verifiedBy: user.id, verifiedAt: verifiedPreview.verifiedAt, deploymentId: preview.deploymentId };
     const { error: updateError } = await client.from('studio_project_revisions').update({ preview: verifiedPreview, deployment: deploymentState, audit }).eq('id', revisionId);
     if (updateError) throw new Error('PREVIEW_VERIFICATION_UPDATE_FAILED');
 
