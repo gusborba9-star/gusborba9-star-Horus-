@@ -100,7 +100,7 @@ function vercelDeploymentError(prefix: string, status: number, payload: unknown)
   return new Error(`${prefix}:${code}${message ? `:${message}` : ''}`);
 }
 async function deployVercelPreview(secret: string, projectId: string, repoId: number, ref: string) {
-  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, target: 'preview', gitSource: { type: 'github-limited', repoId, ref } }), cache: 'no-store' });
+  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, gitSource: { type: 'github-limited', repoId, ref } }), cache: 'no-store' });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw vercelDeploymentError('VERCEL_DEPLOYMENT_CREATE_FAILED', response.status, payload);
   return payload as { id?: string; uid?: string; url?: string };
