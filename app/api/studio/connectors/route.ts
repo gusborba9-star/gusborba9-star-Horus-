@@ -43,13 +43,26 @@ export async function POST(request: Request) {
     const provider = String(body.provider) as ConnectorProvider;
     if (!CONNECTOR_PROVIDERS.includes(provider)) throw new Error('UNSUPPORTED_CONNECTOR');
 
-    const permissions: ConnectorPermission[] = Array.isArray(body.permissions)
-      ? body.permissions.filter(isConnectorPermission)
-      : [];
-    const submittedPermissions = Array.isArray(body.permissions) ? body.permissions : [];
-    if (permissions.length !== submittedPermissions.length) throw new Error('INVALID_CONNECTOR_PERMISSION');
-    if (!permissions.length) throw new Error('CONNECTOR_PERMISSION_REQUIRED');
-    if (provider === 'github' && !permissions.some((p) => p === 'READ_REPOSITORY' || p === 'READ_FILES')) throw new Error('GITHUB_READ_PERMISSION_REQUIRED');
+    const submittedPermissions: unknown[] = Array.isArray(body.permissions) ? body.permissions : [];
+    const requestedPermissions: ConnectorPermission[] = submittedPermissions.filter(isConnectorPermission);
+    if (requestedPermissions.length !== submittedPermissions.length) throw new Error('INVALID_CONNECTOR_PERMISSION');
+    if (!requestedPermissions.length) throw new Error('CONNECTOR_PERMISSION_REQUIRED');
+    if (provider === 'github' && !requestedPermissions.some((p) => p === 'READ_REPOSITORY' || p === 'READ_FILES')) throw new Error('GITHUB_READ_PERMISSION_REQUIRED');
+
+    // A Vercel connector registered for Studio execution is the provider boundary for
+    // the complete deployment lifecycle. The lifecycle executor already enforces each
+    // capability independently; provisioning the connector with the complete set here
+    // prevents a connector created during Preview setup from becoming unusable at
+    // STAGING/PRODUCTION/ROLLBACK. This does not bypass the executor permission guard.
+    const permissions: ConnectorPermission[] = provider === 'vercel'
+      ? Array.from(new Set([
+          ...requestedPermissions,
+          'DEPLOY_PREVIEW',
+          'DEPLOY_STAGING',
+          'DEPLOY_PRODUCTION',
+          'ROLLBACK_PRODUCTION',
+        ]))
+      : requestedPermissions;
 
     const projectId = typeof body.project_id === 'string' ? body.project_id : null;
     if (projectId) {
