@@ -137,26 +137,29 @@ async function resolveConnector(client: ReturnType<typeof getServiceSupabase>, p
   if (!globalConnector) throw new Error('VERCEL_CONNECTOR_REQUIRED');
   return { connector: globalConnector, permission };
 }
-async function resolveRollbackTarget(secret: string, projectId: string, currentDeploymentId?: string) {
+async function resolveRollbackTarget(secret: string, projectId: string, persistedDeploymentId?: string) {
   const projectResponse = await fetch(`https://api.vercel.com/v9/projects/${encodeURIComponent(projectId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
   if (!projectResponse.ok) throw new Error(`VERCEL_PROJECT_READ_FAILED:${projectResponse.status}`);
   const projectPayload = await projectResponse.json() as { targets?: { production?: { id?: string } } };
-  const currentId = currentDeploymentId ?? projectPayload.targets?.production?.id;
+  const currentId = projectPayload.targets?.production?.id;
   if (!currentId) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
+  if (persistedDeploymentId && persistedDeploymentId !== currentId) throw new Error('VERCEL_PRODUCTION_RECONCILIATION_REQUIRED');
   const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&limit=20`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
   if (!deploymentsResponse.ok) throw new Error(`VERCEL_DEPLOYMENTS_READ_FAILED:${deploymentsResponse.status}`);
-  const deploymentsPayload = await deploymentsResponse.json() as { deployments?: Array<{ uid?: string; id?: string; created?: number; readyState?: string }> };
-  const candidates = (deploymentsPayload.deployments ?? []).filter((deployment) => (deployment.uid ?? deployment.id) && (deployment.uid ?? deployment.id) !== currentId).sort((a, b) => Number(b.created ?? 0) - Number(a.created ?? 0));
+  const deploymentsPayload = await deploymentsResponse.json() as { deployments?: Array<{ uid?: string; id?: string; created?: number; readyState?: string; target?: string | null; state?: string }> };
+  const deployments = deploymentsPayload.deployments ?? [];
+  const current = deployments.find((deployment) => (deployment.uid ?? deployment.id) === currentId);
+  const currentCreated = Number(current?.created ?? 0);
+  const candidates = deployments
+    .filter((deployment) => {
+      const deploymentId = deployment.uid ?? deployment.id;
+      return Boolean(deploymentId) && deploymentId !== currentId && deployment.target === 'production' && (deployment.readyState === 'READY' || deployment.state === 'READY') && Number(deployment.created ?? 0) < currentCreated;
+    })
+    .sort((a, b) => Number(b.created ?? 0) - Number(a.created ?? 0));
   if (!candidates.length) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
-  for (const candidate of candidates) {
-    const deploymentId = candidate.uid ?? candidate.id;
-    if (!deploymentId) continue;
-    const aliasesResponse = await fetch(`https://api.vercel.com/v2/deployments/${encodeURIComponent(deploymentId)}/aliases`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
-    if (!aliasesResponse.ok) continue;
-    const aliasesPayload = await aliasesResponse.json().catch(() => ({})) as { aliases?: unknown[] };
-    if (Array.isArray(aliasesPayload.aliases) && aliasesPayload.aliases.length > 0) return { currentDeploymentId: currentId, targetDeploymentId: deploymentId };
-  }
-  throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
+  const targetDeploymentId = candidates[0].uid ?? candidates[0].id;
+  if (!targetDeploymentId) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
+  return { currentDeploymentId: currentId, targetDeploymentId };
 }
 async function rollbackVercel(secret: string, projectId: string, targetDeploymentId: string) {
   const response = await fetch(`https://api.vercel.com/v1/projects/${encodeURIComponent(projectId)}/rollback/${encodeURIComponent(targetDeploymentId)}`, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, cache: 'no-store' });
