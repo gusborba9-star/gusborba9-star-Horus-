@@ -63,6 +63,8 @@ test('preview execution boundary is authenticated, economic-gated, connector-aut
   assert.match(source, /authorize_horus_execution_attempt/);
   assert.match(source, /studio_read_connector_secret/);
   assert.match(source, /DEPLOY_PREVIEW/);
+  assert.match(source, /DEPLOY_STAGING/);
+  assert.match(source, /DEPLOY_PRODUCTION/);
   assert.match(source, /api.vercel.com\/v13\/deployments/);
   assert.match(source, /reconcile_horus_execution_attempt/);
   assert.match(source, /PREVIEW_ALREADY_READY/);
@@ -84,6 +86,29 @@ test('preview verification resolves project connector or owned global connector'
   assert.match(source, /verified: true/);
 });
 
+test('staging and production verification are real provider reads behind authenticated gates', () => {
+  const staging = read('app/api/studio/projects/[projectId]/revisions/[revisionId]/staging/verify/route.ts');
+  const production = read('app/api/studio/projects/[projectId]/revisions/[revisionId]/production/verify/route.ts');
+  assert.match(staging, /requireStudioUser/);
+  assert.match(staging, /DEPLOY_STAGING/);
+  assert.match(staging, /api.vercel.com\/v13\/deployments/);
+  assert.match(staging, /verified: true/);
+  assert.match(production, /requireStudioUser/);
+  assert.match(production, /DEPLOY_PRODUCTION/);
+  assert.match(production, /api.vercel.com\/v13\/deployments/);
+  assert.match(production, /verified: true/);
+});
+
+test('production approval and delivery require prior verified gates', () => {
+  const approval = read('app/api/studio/projects/[projectId]/revisions/[revisionId]/production/approval/route.ts');
+  const delivery = read('app/api/studio/projects/[projectId]/revisions/[revisionId]/delivery/route.ts');
+  assert.match(approval, /STAGING_VALIDATION_REQUIRED/);
+  assert.match(approval, /productionApproval/);
+  assert.match(delivery, /PRODUCTION_VERIFICATION_REQUIRED/);
+  assert.match(delivery, /DELIVERED/);
+  assert.match(delivery, /api.vercel.com\/v13\/deployments/);
+});
+
 test('vercel deployment is represented in the economic provider registry', () => {
   const source = read('supabase/migrations/20260808_add_vercel_execution_provider.sql');
   assert.match(source, /'vercel'/);
@@ -100,12 +125,19 @@ test('connector execution has a permission boundary before secret access and hid
   assert.match(source, /CONNECTOR_CREDENTIAL_EXPIRED_OR_REVOKED/);
 });
 
-test('studio UI exposes the canonical preview execution action', () => {
+test('studio UI exposes the complete lifecycle actions through the canonical execution boundary', () => {
   const source = read('app/dashboard/studio/page.tsx');
   assert.match(source, /Nexus Project Execution/);
   assert.match(source, /Novo projeto/);
   assert.match(source, /Revision Engine/);
   assert.match(source, /Criar Preview/);
   assert.match(source, /\/execute/);
+  assert.match(source, /Criar Staging/);
+  assert.match(source, /Verificar Staging/);
+  assert.match(source, /Aprovar Production/);
+  assert.match(source, /Criar Production/);
+  assert.match(source, /Verificar Production/);
+  assert.match(source, /Executar Delivery/);
+  assert.match(source, /Executar Rollback/);
   assert.doesNotMatch(source, /Studio Música/);
 });
