@@ -7,6 +7,8 @@ const ENVIRONMENTS = ['PREVIEW', 'STAGING', 'PRODUCTION'] as const;
 type Environment = (typeof ENVIRONMENTS)[number];
 const PERMISSIONS: Record<Environment, string> = { PREVIEW: 'DEPLOY_PREVIEW', STAGING: 'DEPLOY_STAGING', PRODUCTION: 'DEPLOY_PRODUCTION' };
 const ROLLBACK_PERMISSION = 'ROLLBACK_PRODUCTION';
+const VERCEL_GIT_ORG = 'gusborba9-star';
+const VERCEL_GIT_REPO = 'gusborba9-star-Horus-';
 type Operation = 'DEPLOY' | 'ROLLBACK';
 
 function errorResponse(error: unknown) {
@@ -100,14 +102,14 @@ function vercelDeploymentError(prefix: string, status: number, payload: unknown)
   return new Error(`${prefix}:${code}${message ? `:${message}` : ''}`);
 }
 async function deployVercelPreview(secret: string, projectId: string, repoId: number, ref: string) {
-  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, gitSource: { type: 'github-limited', repoId, ref } }), cache: 'no-store' });
+  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, gitSource: { type: 'github', org: VERCEL_GIT_ORG, repo: VERCEL_GIT_REPO, ref } }), cache: 'no-store' });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw vercelDeploymentError('VERCEL_DEPLOYMENT_CREATE_FAILED', response.status, payload);
   return payload as { id?: string; uid?: string; url?: string };
 }
 async function deployVercelEnvironment(secret: string, projectId: string, repoId: number, ref: string, environment: Exclude<Environment, 'PREVIEW'>) {
   const target = environment === 'STAGING' ? 'staging' : 'production';
-  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, target, gitSource: { type: 'github-limited', repoId, ref } }), cache: 'no-store' });
+  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, target, gitSource: { type: 'github', org: VERCEL_GIT_ORG, repo: VERCEL_GIT_REPO, ref } }), cache: 'no-store' });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw vercelDeploymentError(`VERCEL_${environment}_DEPLOYMENT_CREATE_FAILED`, response.status, payload);
   return payload as { id?: string; uid?: string; url?: string };
