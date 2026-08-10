@@ -15,14 +15,13 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const production = (deployment.production ?? {}) as Record<string, unknown>;
     const deploymentId = typeof production.deploymentId === 'string' ? production.deploymentId : '';
     if (production.status !== 'READY' || production.verified !== true || !deploymentId) throw new Error('PRODUCTION_VERIFICATION_REQUIRED');
-    const { data: connector } = await client.from('studio_connectors').select('secret_ref,status,permissions').eq('owner_user_id', user.id).eq('provider','vercel').eq('status','CONNECTED').is('project_id',null).order('created_at',{ascending:false}).limit(1).maybeSingle();
+    const { data: connector } = await client.from('studio_connectors').select('id,secret_ref,status,permissions,metadata').eq('owner_user_id', user.id).eq('provider','vercel').eq('status','CONNECTED').is('project_id',null).order('created_at',{ascending:false}).limit(1).maybeSingle();
     if (!connector) throw new Error('VERCEL_CONNECTOR_REQUIRED');
     if (!Array.isArray(connector.permissions) || !connector.permissions.includes('DEPLOY_PRODUCTION')) throw new Error('VERCEL_DEPLOY_PRODUCTION_PERMISSION_REQUIRED');
     if (!connector.secret_ref) throw new Error('CONNECTOR_SECRET_UNAVAILABLE');
     const { data: secret, error: secretError } = await service.rpc('studio_read_connector_secret', { p_secret_ref: connector.secret_ref });
     if (secretError || typeof secret !== 'string') throw new Error('CONNECTOR_SECRET_UNAVAILABLE');
-    const projectMetadata = await client.from('studio_connectors').select('metadata').eq('id', connector.id).single();
-    const vercelProject = typeof projectMetadata.data?.metadata?.vercelProjectId === 'string' ? projectMetadata.data.metadata.vercelProjectId : '';
+    const vercelProject = typeof connector.metadata?.vercelProjectId === 'string' ? connector.metadata.vercelProjectId : '';
     if (!vercelProject) throw new Error('VERCEL_CONNECTOR_METADATA_REQUIRED');
     const response = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(deploymentId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
     const payload = await response.json().catch(() => ({}));
