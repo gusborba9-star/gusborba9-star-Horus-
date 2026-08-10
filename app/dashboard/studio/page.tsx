@@ -53,6 +53,7 @@ export default function StudioHome() {
     finally { setAction(null); }
   }
 
+  // Canonical execution boundary: /api/studio/projects/[projectId]/revisions/[revisionId]/execute
   async function execute(revision: Revision, environment: 'PREVIEW' | 'STAGING' | 'PRODUCTION', key: ActionKey, operation: 'DEPLOY' | 'ROLLBACK' = 'DEPLOY') { return runAction(revision, key, 'execute', { environment, operation }); }
 
   useEffect(() => { const timer = window.setTimeout(() => { void loadProjects(); }, 0); return () => window.clearTimeout(timer); }, [loadProjects]);
