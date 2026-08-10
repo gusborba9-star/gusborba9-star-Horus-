@@ -228,10 +228,15 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     ref = metadataString(metadata, 'ref') || 'main';
     if (!vercelProject || repoId === null) throw new Error('VERCEL_CONNECTOR_METADATA_REQUIRED');
     if (operation === 'ROLLBACK') rollbackTarget = await resolveRollbackTarget(secret, vercelProject, (deploymentState.production as Record<string, unknown> | undefined)?.deploymentId as string | undefined);
-    const idempotencyKey = operation === 'ROLLBACK' && rollbackTarget ? `studio-rollback:${revisionId}:${rollbackTarget.targetDeploymentId}` : `studio-${environment.toLowerCase()}:${revisionId}`;
-    const { data: existing } = await service.from('studio_executions').select('*').eq('project_id', projectId).eq('revision_id', revisionId).eq('environment', environment).eq('idempotency_key', idempotencyKey).maybeSingle();
+    const baseIdempotencyKey = operation === 'ROLLBACK' && rollbackTarget ? `studio-rollback:${revisionId}:${rollbackTarget.targetDeploymentId}` : `studio-${environment.toLowerCase()}:${revisionId}`;
+    let idempotencyKey = baseIdempotencyKey;
+    let { data: existing } = await service.from('studio_executions').select('*').eq('project_id', projectId).eq('revision_id', revisionId).eq('environment', environment).eq('idempotency_key', idempotencyKey).maybeSingle();
     if (existing?.status === 'SUCCEEDED') return NextResponse.json({ success: true, execution: existing, idempotent: true });
     if (existing?.status === 'RUNNING') throw new Error('EXECUTION_ALREADY_RUNNING');
+    if (existing?.status === 'FAILED') {
+      idempotencyKey = `${baseIdempotencyKey}:retry:${crypto.randomUUID()}`;
+      existing = null;
+    }
     if (existing?.id) { executionId = existing.id; executionLogId = existing.execution_log_id ?? ''; }
     else {
       const operationId = crypto.randomUUID();
