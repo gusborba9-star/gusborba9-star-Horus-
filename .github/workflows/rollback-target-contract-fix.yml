@@ -1,0 +1,79 @@
+name: Apply rollback target contract correction
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.event.pull_request.head.ref == 'fix/studio-rollback-target-contract'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Correct rollback target resolution
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts')
+          s = p.read_text()
+          old = '''  const persisted = persistedDeploymentId ? deployments.find((deployment) => (deployment.uid ?? deployment.id) === persistedDeploymentId) : undefined;
+  if (persistedDeploymentId && !persisted) throw new Error('VERCEL_PERSISTED_PRODUCTION_DEPLOYMENT_NOT_FOUND');
+  if (persisted) {
+    const persistedId = persisted.uid ?? persisted.id;
+    const persistedCreated = Number(persisted.created ?? 0);
+    const persistedReady = persisted.readyState === 'READY' || persisted.state === 'READY';
+    const persistedProduction = persisted.target === 'production';
+    if (!persistedId) throw new Error('VERCEL_PERSISTED_ROLLBACK_TARGET_INVALID');
+    if (!persistedReady || !persistedProduction || persistedCreated >= currentCreated) throw new Error('VERCEL_PERSISTED_ROLLBACK_TARGET_INVALID');
+    return { currentDeploymentId: currentId, targetDeploymentId: persistedId };
+  }
+  const candidates = deployments.filter((deployment) => { const deploymentId = deployment.uid ?? deployment.id; return Boolean(deploymentId) && deploymentId !== currentId && deployment.target === 'production' && (deployment.readyState === 'READY' || deployment.state === 'READY') && Number(deployment.created ?? 0) < currentCreated; }).sort((a, b) => Number(b.created ?? 0) - Number(a.created ?? 0));
+  if (!candidates.length) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
+  const targetDeploymentId = candidates[0].uid ?? candidates[0].id;
+  if (!targetDeploymentId) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
+  return { currentDeploymentId: currentId, targetDeploymentId };
+'''
+          new = '''  const persisted = persistedDeploymentId ? deployments.find((deployment) => (deployment.uid ?? deployment.id) === persistedDeploymentId) : undefined;
+  if (persistedDeploymentId && !persisted) throw new Error('VERCEL_PERSISTED_PRODUCTION_DEPLOYMENT_NOT_FOUND');
+  if (persisted) {
+    const persistedId = persisted.uid ?? persisted.id;
+    const persistedCreated = Number(persisted.created ?? 0);
+    const persistedReady = persisted.readyState === 'READY' || persisted.state === 'READY';
+    const persistedProduction = persisted.target === 'production';
+    if (!persistedId) throw new Error('VERCEL_PERSISTED_ROLLBACK_TARGET_INVALID');
+    if (!persistedReady || !persistedProduction || persistedCreated >= currentCreated) throw new Error('VERCEL_PERSISTED_ROLLBACK_TARGET_INVALID');
+  }
+  const candidates = deployments
+    .filter((deployment) => {
+      const deploymentId = deployment.uid ?? deployment.id;
+      return Boolean(deploymentId)
+        && deploymentId !== currentId
+        && deployment.target === 'production'
+        && (deployment.readyState === 'READY' || deployment.state === 'READY')
+        && Number(deployment.created ?? 0) < currentCreated;
+    })
+    .sort((a, b) => Number(b.created ?? 0) - Number(a.created ?? 0));
+  if (!candidates.length) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
+  const targetDeploymentId = candidates[0].uid ?? candidates[0].id;
+  if (!targetDeploymentId) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
+  return {
+    currentDeploymentId: currentId,
+    targetDeploymentId,
+    deliveryAnchorDeploymentId: persistedDeploymentId ?? null,
+    targetCreatedAt: Number(candidates[0].created ?? 0),
+    resolutionPolicy: 'PREVIOUS_READY_PRODUCTION',
+  };
+'''
+          if old not in s:
+            raise SystemExit('rollback resolver contract block not found')
+          p.write_text(s.replace(old, new, 1))
+      - name: Remove temporary workflow and commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f .github/workflows/rollback-target-contract-fix.yml
+          git add app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts .github/workflows/rollback-target-contract-fix.yml
+          git commit -m 'fix(studio): resolve rollback target independently from delivery anchor'
+          git push
