@@ -270,7 +270,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const message = error instanceof Error ? error.message : 'STUDIO_EXECUTION_FAILED';
     const providerFailure = error instanceof VercelRollbackError ? error.providerFailure : null;
     if (executionId) await service.from('studio_executions').update({ status: 'FAILED', result: { error: message, providerError: providerFailure } }).eq('id', executionId).neq('status', 'SUCCEEDED');
-    if (executionLogId) await service.from('horus_execution_logs').update({ status: 'ERROR', error_message: message, completed_at: new Date().toISOString(), metadata: { executionId, action: 'ROLLBACK', providerError: providerFailure } }).eq('id', executionLogId).catch(() => undefined);
+    if (executionLogId) { try { await service.from('horus_execution_logs').update({ status: 'ERROR', error_message: message, completed_at: new Date().toISOString(), metadata: { executionId, action: 'ROLLBACK', providerError: providerFailure } }).eq('id', executionLogId); } catch { /* preserve original execution failure */ } }
     if (attemptId) await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: 0, p_status: 'FAILED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_request_units: 1, p_provider_request_id: executionId || 'unknown', p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: 0, p_raw_usage: { error: message, providerError: providerFailure } });
     return errorResponse(error);
   }
