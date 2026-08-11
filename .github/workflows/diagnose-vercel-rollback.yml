@@ -14,7 +14,6 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           p = Path('app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts')
           s = p.read_text()
           start = s.index('async function resolveRollbackTarget(')
@@ -26,19 +25,26 @@ jobs:
             const currentId = projectPayload.targets?.production?.id;
             if (!currentId) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
 
-            const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&until=${Date.now()}&limit=100`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
+            const currentResponse = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(currentId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
+            if (!currentResponse.ok) throw new Error(`VERCEL_CURRENT_PRODUCTION_READ_FAILED:${currentResponse.status}`);
+            const currentPayload = await currentResponse.json() as { id?: string; projectId?: string; target?: string | null; readyState?: string; createdAt?: number };
+            if (currentPayload.projectId && currentPayload.projectId !== projectId) throw new Error('VERCEL_CURRENT_PRODUCTION_PROJECT_MISMATCH');
+            if (currentPayload.target !== 'production' || currentPayload.readyState !== 'READY' || !currentPayload.createdAt) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
+            const currentCreated = Number(currentPayload.createdAt);
+
+            if (deliveryAnchorId) {
+              const anchorResponse = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(deliveryAnchorId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
+              if (!anchorResponse.ok) throw new Error(`VERCEL_DELIVERY_ANCHOR_READ_FAILED:${anchorResponse.status}`);
+              const anchorPayload = await anchorResponse.json() as { id?: string; projectId?: string; target?: string | null; readyState?: string; createdAt?: number };
+              if (anchorPayload.projectId && anchorPayload.projectId !== projectId) throw new Error('VERCEL_DELIVERY_ANCHOR_PROJECT_MISMATCH');
+              if (anchorPayload.target !== 'production' || anchorPayload.readyState !== 'READY' || !anchorPayload.createdAt || Number(anchorPayload.createdAt) >= currentCreated) throw new Error('VERCEL_DELIVERY_ANCHOR_RECONCILIATION_REQUIRED');
+            }
+
+            const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&until=${currentCreated}&limit=100`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
             if (!deploymentsResponse.ok) throw new Error(`VERCEL_DEPLOYMENTS_READ_FAILED:${deploymentsResponse.status}`);
             const deploymentsPayload = await deploymentsResponse.json() as { deployments?: Array<{ uid?: string; id?: string; created?: number; readyState?: string; target?: string | null; state?: string }> };
             const deployments = deploymentsPayload.deployments ?? [];
             const idOf = (deployment: (typeof deployments)[number]) => deployment.uid ?? deployment.id;
-            const current = deployments.find((deployment) => idOf(deployment) === currentId);
-            const currentCreated = Number(current?.created ?? 0);
-            const currentReady = current?.readyState === 'READY' || current?.state === 'READY';
-            if (!current || !currentCreated || current.target !== 'production' || !currentReady) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
-
-            const anchor = deliveryAnchorId ? deployments.find((deployment) => idOf(deployment) === deliveryAnchorId) : undefined;
-            if (deliveryAnchorId && (!anchor || anchor.target !== 'production' || !(anchor.readyState === 'READY' || anchor.state === 'READY') || Number(anchor.created ?? 0) >= currentCreated)) throw new Error('VERCEL_DELIVERY_ANCHOR_RECONCILIATION_REQUIRED');
-
             const candidates = deployments
               .filter((deployment) => {
                 const deploymentId = idOf(deployment);
@@ -59,6 +65,14 @@ jobs:
           }
 '''
           s = s[:start] + new + s[end:]
+          old_request = "request: { environment, revisionId, operation, rollbackTargetDeploymentId: rollbackTarget?.targetDeploymentId ?? null }"
+          new_request = "request: { environment, revisionId, operation, rollbackTargetDeploymentId: rollbackTarget?.targetDeploymentId ?? null, rollbackResolution: rollbackTarget ? { currentProductionDeploymentId: rollbackTarget.currentDeploymentId, deliveryAnchorDeploymentId: rollbackTarget.deliveryAnchorDeploymentId, targetDeploymentId: rollbackTarget.targetDeploymentId, targetCreatedAt: rollbackTarget.targetCreatedAt, policy: rollbackTarget.resolutionPolicy } : null }"
+          if old_request not in s: raise SystemExit('execution request contract marker not found')
+          s = s.replace(old_request, new_request, 1)
+          old_result = "const result = { deploymentId, url: deploymentUrl, readyState: 'READY', environment, operation };"
+          new_result = "const result = { deploymentId, url: deploymentUrl, readyState: 'READY', environment, operation, ...(operation === 'ROLLBACK' && rollbackTarget ? { rollback: { currentProductionDeploymentId: rollbackTarget.currentDeploymentId, deliveryAnchorDeploymentId: rollbackTarget.deliveryAnchorDeploymentId, targetDeploymentId: rollbackTarget.targetDeploymentId, targetCreatedAt: rollbackTarget.targetCreatedAt, policy: rollbackTarget.resolutionPolicy } } : {}) };"
+          if old_result not in s: raise SystemExit('execution result contract marker not found')
+          s = s.replace(old_result, new_result, 1)
           p.write_text(s)
           PY
       - name: Commit patch
@@ -67,5 +81,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix(studio): resolve rollback target independently of stale delivery anchor'
+          git commit -m 'fix(studio): persist rollback resolution provenance'
           git push
