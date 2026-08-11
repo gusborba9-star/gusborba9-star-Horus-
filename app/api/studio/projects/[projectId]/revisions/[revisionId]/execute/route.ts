@@ -124,10 +124,34 @@ async function resolveRollbackTarget(secret: string, projectId: string, persiste
   if (!targetDeploymentId) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
   return { currentDeploymentId: currentId, targetDeploymentId };
 }
+type VercelRollbackFailure = { status: number; errorCode: string | null; message: string | null; details: unknown; requestId: string | null; vercelId: string | null; endpoint: string; method: string; projectId: string; targetDeploymentId: string };
+class VercelRollbackError extends Error {
+  readonly providerFailure: VercelRollbackFailure;
+  constructor(providerFailure: VercelRollbackFailure) {
+    super(`VERCEL_ROLLBACK_FAILED:${providerFailure.errorCode ?? providerFailure.status}`);
+    this.name = 'VercelRollbackError';
+    this.providerFailure = providerFailure;
+  }
+}
 async function rollbackVercel(secret: string, projectId: string, targetDeploymentId: string) {
-  const response = await fetch(`https://api.vercel.com/v1/projects/${encodeURIComponent(projectId)}/rollback/${encodeURIComponent(targetDeploymentId)}`, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, cache: 'no-store' });
+  const endpoint = `https://api.vercel.com/v1/projects/${encodeURIComponent(projectId)}/rollback/${encodeURIComponent(targetDeploymentId)}`;
+  const response = await fetch(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, cache: 'no-store' });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`VERCEL_ROLLBACK_FAILED:${payload?.error?.code ?? response.status}`);
+  if (!response.ok) {
+    const errorObject = payload && typeof payload === 'object' && !Array.isArray(payload) && payload.error && typeof payload.error === 'object' && !Array.isArray(payload.error) ? payload.error as Record<string, unknown> : {};
+    throw new VercelRollbackError({
+      status: response.status,
+      errorCode: typeof errorObject.code === 'string' ? errorObject.code : null,
+      message: typeof errorObject.message === 'string' ? errorObject.message : null,
+      details: errorObject.details ?? null,
+      requestId: response.headers.get('x-request-id'),
+      vercelId: response.headers.get('x-vercel-id'),
+      endpoint,
+      method: 'POST',
+      projectId,
+      targetDeploymentId,
+    });
+  }
   return payload as Record<string, unknown>;
 }
 async function waitForVercelRollback(secret: string, projectId: string, targetDeploymentId: string) {
@@ -244,9 +268,10 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     return NextResponse.json({ success: true, execution: updatedExecution, revisionId, deployment: { deploymentId, url: deploymentUrl, status: operation === 'ROLLBACK' ? 'ROLLED_BACK' : 'READY' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'STUDIO_EXECUTION_FAILED';
-    if (executionId) await service.from('studio_executions').update({ status: 'FAILED', result: { error: message } }).eq('id', executionId).neq('status', 'SUCCEEDED');
-    if (executionLogId) await updateExecutionLog(service, executionLogId, 'ERROR', message).catch(() => undefined);
-    if (attemptId) await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: 0, p_status: 'FAILED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_provider_request_id: executionId || 'unknown', p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: 0, p_raw_usage: { error: message } });
+    const providerFailure = error instanceof VercelRollbackError ? error.providerFailure : null;
+    if (executionId) await service.from('studio_executions').update({ status: 'FAILED', result: { error: message, providerError: providerFailure } }).eq('id', executionId).neq('status', 'SUCCEEDED');
+    if (executionLogId) await service.from('horus_execution_logs').update({ status: 'ERROR', error_message: message, completed_at: new Date().toISOString(), metadata: { executionId, action: 'ROLLBACK', providerError: providerFailure } }).eq('id', executionLogId).catch(() => undefined);
+    if (attemptId) await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: 0, p_status: 'FAILED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_request_units: 1, p_provider_request_id: executionId || 'unknown', p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: 0, p_raw_usage: { error: message, providerError: providerFailure } });
     return errorResponse(error);
   }
 }
