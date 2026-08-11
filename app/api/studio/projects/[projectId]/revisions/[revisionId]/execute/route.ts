@@ -59,7 +59,7 @@ function vercelDeploymentError(prefix: string, status: number, payload: unknown)
   return new Error(`${prefix}:${code}${message ? `:${message}` : ''}`);
 }
 async function deployVercelPreview(secret: string, projectId: string, repoId: number, ref: string) {
-  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, gitSource: { type: 'github', org: VERCEL_GIT_ORG, repo: VERCEL_GERCEL_GIT_REPO, ref } }), cache: 'no-store' });
+  const response = await fetch('https://api.vercel.com/v13/deployments', { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'velor-api', project: projectId, gitSource: { type: 'github', org: VERCEL_GIT_ORG, repo: VERCEL_GIT_REPO, ref } }), cache: 'no-store' });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw vercelDeploymentError('VERCEL_DEPLOYMENT_CREATE_FAILED', response.status, payload);
   return payload as { id?: string; uid?: string; url?: string };
@@ -228,7 +228,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       if (!deploymentUrl) throw new Error('VERCEL_DEPLOYMENT_URL_MISSING');
     }
     const actualCost = 0;
-    const { error: reconciliationError } = await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: actualCost, p_status: 'SUCCEEDED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_image_units: 0, p_actual_provider: 'vercel', p_actual_model: 'deployment', p_provider_request_id: deploymentId, p_latency_ms: Date.now() - startedAt, p_raw_usage: { deploymentId, environment, operation } });
+    const { error: reconciliationError } = await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: actualCost, p_status: 'SUCCEEDED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_image_units: 0, p_provider_request_id: deploymentId, p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: Date.now() - startedAt, p_raw_usage: { deploymentId, environment, operation } });
     if (reconciliationError) throw new Error(`ECONOMIC_RECONCILIATION_FAILED:${reconciliationError.message}`);
     const result = { deploymentId, url: deploymentUrl, readyState: 'READY', environment, operation };
     const { data: updatedExecution, error: updateExecutionError } = await service.from('studio_executions').update({ status: 'SUCCEEDED', actual_cost_brl: actualCost, provider_id: 'vercel', model_id: 'vercel/deployment', result, preview: environment === 'PREVIEW' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : undefined, staging: environment === 'STAGING' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : undefined, delivery: environment === 'PRODUCTION' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : { status: 'NOT_DELIVERED' } }).eq('id', executionId).select('*').single();
