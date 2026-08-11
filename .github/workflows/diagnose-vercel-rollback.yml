@@ -10,29 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch rollback adapter
-        env:
-          FILE: app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts
+      - name: Make rollback diagnostic logging type-safe
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts')
           s = p.read_text()
-          old = '''async function rollbackVercel(secret: string, projectId: string, targetDeploymentId: string) {\n  const response = await fetch(`https://api.vercel.com/v1/projects/${encodeURIComponent(projectId)}/rollback/${encodeURIComponent(targetDeploymentId)}`, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, cache: 'no-store' });\n  const payload = await response.json().catch(() => ({}));\n  if (!response.ok) throw new Error(`VERCEL_ROLLBACK_FAILED:${payload?.error?.code ?? response.status}`);\n  return payload as Record<string, unknown>;\n}'''
-          new = '''type VercelRollbackFailure = { status: number; errorCode: string | null; message: string | null; details: unknown; requestId: string | null; vercelId: string | null; endpoint: string; method: string; projectId: string; targetDeploymentId: string };\nclass VercelRollbackError extends Error {\n  readonly providerFailure: VercelRollbackFailure;\n  constructor(providerFailure: VercelRollbackFailure) {\n    super(`VERCEL_ROLLBACK_FAILED:${providerFailure.errorCode ?? providerFailure.status}`);\n    this.name = 'VercelRollbackError';\n    this.providerFailure = providerFailure;\n  }\n}\nasync function rollbackVercel(secret: string, projectId: string, targetDeploymentId: string) {\n  const endpoint = `https://api.vercel.com/v1/projects/${encodeURIComponent(projectId)}/rollback/${encodeURIComponent(targetDeploymentId)}`;\n  const response = await fetch(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' }, cache: 'no-store' });\n  const payload = await response.json().catch(() => ({}));\n  if (!response.ok) {\n    const errorObject = payload && typeof payload === 'object' && !Array.isArray(payload) && payload.error && typeof payload.error === 'object' && !Array.isArray(payload.error) ? payload.error as Record<string, unknown> : {};\n    throw new VercelRollbackError({\n      status: response.status,\n      errorCode: typeof errorObject.code === 'string' ? errorObject.code : null,\n      message: typeof errorObject.message === 'string' ? errorObject.message : null,\n      details: errorObject.details ?? null,\n      requestId: response.headers.get('x-request-id'),\n      vercelId: response.headers.get('x-vercel-id'),\n      endpoint,\n      method: 'POST',\n      projectId,\n      targetDeploymentId,\n    });\n  }\n  return payload as Record<string, unknown>;\n}'''
+          old = "    if (executionLogId) await service.from('horus_execution_logs').update({ status: 'ERROR', error_message: message, completed_at: new Date().toISOString(), metadata: { executionId, action: 'ROLLBACK', providerError: providerFailure } }).eq('id', executionLogId).catch(() => undefined);"
+          new = "    if (executionLogId) { try { await service.from('horus_execution_logs').update({ status: 'ERROR', error_message: message, completed_at: new Date().toISOString(), metadata: { executionId, action: 'ROLLBACK', providerError: providerFailure } }).eq('id', executionLogId); } catch { /* preserve original execution failure */ } }"
           if old not in s:
-              raise SystemExit('rollback adapter source pattern not found')
-          s = s.replace(old, new, 1)
-          old_catch = """  } catch (error) {\n    const message = error instanceof Error ? error.message : 'STUDIO_EXECUTION_FAILED';\n    if (executionId) await service.from('studio_executions').update({ status: 'FAILED', result: { error: message } }).eq('id', executionId).neq('status', 'SUCCEEDED');\n    if (executionLogId) await updateExecutionLog(service, executionLogId, 'ERROR', message).catch(() => undefined);\n    if (attemptId) await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: 0, p_status: 'FAILED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_provider_request_id: executionId || 'unknown', p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: 0, p_raw_usage: { error: message } });\n    return errorResponse(error);\n  }"""
-          new_catch = """  } catch (error) {\n    const message = error instanceof Error ? error.message : 'STUDIO_EXECUTION_FAILED';\n    const providerFailure = error instanceof VercelRollbackError ? error.providerFailure : null;\n    if (executionId) await service.from('studio_executions').update({ status: 'FAILED', result: { error: message, providerError: providerFailure } }).eq('id', executionId).neq('status', 'SUCCEEDED');\n    if (executionLogId) await service.from('horus_execution_logs').update({ status: 'ERROR', error_message: message, completed_at: new Date().toISOString(), metadata: { executionId, action: 'ROLLBACK', providerError: providerFailure } }).eq('id', executionLogId).catch(() => undefined);\n    if (attemptId) await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: 0, p_status: 'FAILED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_request_units: 1, p_provider_request_id: executionId || 'unknown', p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: 0, p_raw_usage: { error: message, providerError: providerFailure } });\n    return errorResponse(error);\n  }"""
-          if old_catch not in s:
-              raise SystemExit('catch source pattern not found')
-          p.write_text(s.replace(old_catch, new_catch, 1))
+              raise SystemExit('diagnostic catch pattern not found')
+          p.write_text(s.replace(old, new, 1))
           PY
       - name: Commit patch
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts
-          git commit -m 'fix(studio): preserve native Vercel rollback error details'
+          git commit -m 'fix(studio): make rollback diagnostics type-safe'
           git push
