@@ -94,36 +94,48 @@ async function resolveConnector(client: ReturnType<typeof getServiceSupabase>, p
   if (!globalConnector) throw new Error('VERCEL_CONNECTOR_REQUIRED');
   return { connector: globalConnector, permission };
 }
-async function resolveRollbackTarget(secret: string, projectId: string, persistedDeploymentId?: string) {
+
+type RollbackCandidate = { uid?: string; id?: string; created?: number; readyState?: string; target?: string | null; state?: string };
+type RollbackTarget = { currentDeploymentId: string; targetDeploymentId: string; deliveryAnchorDeploymentId: string | null; targetCreatedAt: number; resolutionPolicy: 'PREVIOUS_READY_PRODUCTION' };
+async function resolveRollbackTarget(secret: string, projectId: string, deliveryAnchorId?: string): Promise<RollbackTarget> {
   const projectResponse = await fetch(`https://api.vercel.com/v9/projects/${encodeURIComponent(projectId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
   if (!projectResponse.ok) throw new Error(`VERCEL_PROJECT_READ_FAILED:${projectResponse.status}`);
   const projectPayload = await projectResponse.json() as { targets?: { production?: { id?: string } } };
   const currentId = projectPayload.targets?.production?.id;
   if (!currentId) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
-  const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&limit=50`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
-  if (!deploymentsResponse.ok) throw new Error(`VERCEL_DEPLOYMENTS_READ_FAILED:${deploymentsResponse.status}`);
-  const deploymentsPayload = await deploymentsResponse.json() as { deployments?: Array<{ uid?: string; id?: string; created?: number; readyState?: string; target?: string | null; state?: string; meta?: Record<string, unknown> }> };
-  const deployments = deploymentsPayload.deployments ?? [];
-  const current = deployments.find((deployment) => (deployment.uid ?? deployment.id) === currentId);
-  const currentCreated = Number(current?.created ?? 0);
-  if (!current || !currentCreated) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
-  const persisted = persistedDeploymentId ? deployments.find((deployment) => (deployment.uid ?? deployment.id) === persistedDeploymentId) : undefined;
-  if (persistedDeploymentId && !persisted) throw new Error('VERCEL_PERSISTED_PRODUCTION_DEPLOYMENT_NOT_FOUND');
-  if (persisted) {
-    const persistedId = persisted.uid ?? persisted.id;
-    const persistedCreated = Number(persisted.created ?? 0);
-    const persistedReady = persisted.readyState === 'READY' || persisted.state === 'READY';
-    const persistedProduction = persisted.target === 'production';
-    if (!persistedId) throw new Error('VERCEL_PERSISTED_ROLLBACK_TARGET_INVALID');
-    if (!persistedReady || !persistedProduction || persistedCreated >= currentCreated) throw new Error('VERCEL_PERSISTED_ROLLBACK_TARGET_INVALID');
-    return { currentDeploymentId: currentId, targetDeploymentId: persistedId };
+
+  const currentResponse = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(currentId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
+  if (!currentResponse.ok) throw new Error(`VERCEL_CURRENT_PRODUCTION_READ_FAILED:${currentResponse.status}`);
+  const currentPayload = await currentResponse.json() as { id?: string; projectId?: string; target?: string | null; readyState?: string; createdAt?: number };
+  if (currentPayload.projectId && currentPayload.projectId !== projectId) throw new Error('VERCEL_CURRENT_PRODUCTION_PROJECT_MISMATCH');
+  if (currentPayload.target !== 'production' || currentPayload.readyState !== 'READY' || !currentPayload.createdAt) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
+  const currentCreated = Number(currentPayload.createdAt);
+
+  if (deliveryAnchorId) {
+    const anchorResponse = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(deliveryAnchorId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
+    if (!anchorResponse.ok) throw new Error(`VERCEL_DELIVERY_ANCHOR_READ_FAILED:${anchorResponse.status}`);
+    const anchorPayload = await anchorResponse.json() as { projectId?: string; target?: string | null; readyState?: string; createdAt?: number };
+    if (anchorPayload.projectId && anchorPayload.projectId !== projectId) throw new Error('VERCEL_DELIVERY_ANCHOR_PROJECT_MISMATCH');
+    if (anchorPayload.target !== 'production' || anchorPayload.readyState !== 'READY' || !anchorPayload.createdAt || Number(anchorPayload.createdAt) >= currentCreated) throw new Error('VERCEL_DELIVERY_ANCHOR_RECONCILIATION_REQUIRED');
   }
-  const candidates = deployments.filter((deployment) => { const deploymentId = deployment.uid ?? deployment.id; return Boolean(deploymentId) && deploymentId !== currentId && deployment.target === 'production' && (deployment.readyState === 'READY' || deployment.state === 'READY') && Number(deployment.created ?? 0) < currentCreated; }).sort((a, b) => Number(b.created ?? 0) - Number(a.created ?? 0));
+
+  const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&until=${currentCreated}&limit=100`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
+  if (!deploymentsResponse.ok) throw new Error(`VERCEL_DEPLOYMENTS_READ_FAILED:${deploymentsResponse.status}`);
+  const deploymentsPayload = await deploymentsResponse.json() as { deployments?: RollbackCandidate[] };
+  const deployments = deploymentsPayload.deployments ?? [];
+  const idOf = (deployment: RollbackCandidate) => deployment.uid ?? deployment.id;
+  const candidates = deployments
+    .filter((deployment) => {
+      const deploymentId = idOf(deployment);
+      return Boolean(deploymentId) && deploymentId !== currentId && deployment.target === 'production' && (deployment.readyState === 'READY' || deployment.state === 'READY') && Number(deployment.created ?? 0) < currentCreated;
+    })
+    .sort((a, b) => Number(b.created ?? 0) - Number(a.created ?? 0));
   if (!candidates.length) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
-  const targetDeploymentId = candidates[0].uid ?? candidates[0].id;
+  const targetDeploymentId = idOf(candidates[0]);
   if (!targetDeploymentId) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
-  return { currentDeploymentId: currentId, targetDeploymentId };
+  return { currentDeploymentId: currentId, targetDeploymentId, deliveryAnchorDeploymentId: deliveryAnchorId ?? null, targetCreatedAt: Number(candidates[0].created ?? 0), resolutionPolicy: 'PREVIOUS_READY_PRODUCTION' };
 }
+
 type VercelRollbackFailure = { status: number; errorCode: string | null; message: string | null; details: unknown; requestId: string | null; vercelId: string | null; endpoint: string; method: string; projectId: string; targetDeploymentId: string };
 class VercelRollbackError extends Error {
   readonly providerFailure: VercelRollbackFailure;
@@ -139,18 +151,7 @@ async function rollbackVercel(secret: string, projectId: string, targetDeploymen
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const errorObject = payload && typeof payload === 'object' && !Array.isArray(payload) && payload.error && typeof payload.error === 'object' && !Array.isArray(payload.error) ? payload.error as Record<string, unknown> : {};
-    throw new VercelRollbackError({
-      status: response.status,
-      errorCode: typeof errorObject.code === 'string' ? errorObject.code : null,
-      message: typeof errorObject.message === 'string' ? errorObject.message : null,
-      details: errorObject.details ?? null,
-      requestId: response.headers.get('x-request-id'),
-      vercelId: response.headers.get('x-vercel-id'),
-      endpoint,
-      method: 'POST',
-      projectId,
-      targetDeploymentId,
-    });
+    throw new VercelRollbackError({ status: response.status, errorCode: typeof errorObject.code === 'string' ? errorObject.code : null, message: typeof errorObject.message === 'string' ? errorObject.message : null, details: errorObject.details ?? null, requestId: response.headers.get('x-request-id'), vercelId: response.headers.get('x-vercel-id'), endpoint, method: 'POST', projectId, targetDeploymentId });
   }
   return payload as Record<string, unknown>;
 }
@@ -202,7 +203,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     let vercelProject: string;
     let repoId: number | null = null;
     let ref = 'main';
-    let rollbackTarget: { currentDeploymentId: string; targetDeploymentId: string } | null = null;
+    let rollbackTarget: RollbackTarget | null = null;
     const { connector: resolvedConnector, permission: resolvedPermission } = await resolveConnector(client, projectId, user.id, environment);
     connector = resolvedConnector;
     if (operation === 'DEPLOY') permission = resolvedPermission;
@@ -228,7 +229,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       const operationId = crypto.randomUUID();
       executionLogId = await createExecutionLog(service, operationId, 'RUNNING', `${operation === 'ROLLBACK' ? 'ROLLBACK' : environment + '_EXECUTION'}`);
       const executionComplexity = revision.change_class;
-      const { data: execution, error: executionError } = await service.from('studio_executions').insert({ project_id: projectId, revision_id: revisionId, owner_user_id: user.id, capability: 'DEV', status: 'RUNNING', economic_authorized: false, approval_required: operation === 'ROLLBACK' || environment !== 'PREVIEW', approval_granted: operation === 'ROLLBACK' ? revision.approval_state === 'APPROVED' : environment === 'PREVIEW' || revision.approval_state === 'APPROVED', estimated_cost_brl: TEST_BUDGET_BRL, actual_cost_brl: null, request: { environment, revisionId, operation, rollbackTargetDeploymentId: rollbackTarget?.targetDeploymentId ?? null }, result: {}, operation_id: operationId, execution_log_id: executionLogId, complexity: executionComplexity, environment, idempotency_key: idempotencyKey, risk: revision.change_class === 'MAJOR' ? 'HIGH' : 'LOW', optimized_spec: revision.optimized_spec, preview: { status: environment === 'PREVIEW' ? 'PENDING' : 'LOCKED' }, staging: { status: environment === 'STAGING' ? 'PENDING' : 'LOCKED' }, delivery: { status: 'NOT_DELIVERED' } }).select('*').single();
+      const { data: execution, error: executionError } = await service.from('studio_executions').insert({ project_id: projectId, revision_id: revisionId, owner_user_id: user.id, capability: 'DEV', status: 'RUNNING', economic_authorized: false, approval_required: operation === 'ROLLBACK' || environment !== 'PREVIEW', approval_granted: operation === 'ROLLBACK' ? revision.approval_state === 'APPROVED' : environment === 'PREVIEW' || revision.approval_state === 'APPROVED', estimated_cost_brl: TEST_BUDGET_BRL, actual_cost_brl: null, request: { environment, revisionId, operation, rollbackTargetDeploymentId: rollbackTarget?.targetDeploymentId ?? null, rollbackResolution: rollbackTarget ? { currentProductionDeploymentId: rollbackTarget.currentDeploymentId, deliveryAnchorDeploymentId: rollbackTarget.deliveryAnchorDeploymentId, targetDeploymentId: rollbackTarget.targetDeploymentId, targetCreatedAt: rollbackTarget.targetCreatedAt, policy: rollbackTarget.resolutionPolicy } : null }, result: {}, operation_id: operationId, execution_log_id: executionLogId, complexity: executionComplexity, environment, idempotency_key: idempotencyKey, risk: revision.change_class === 'MAJOR' ? 'HIGH' : 'LOW', optimized_spec: revision.optimized_spec, preview: { status: environment === 'PREVIEW' ? 'PENDING' : 'LOCKED' }, staging: { status: environment === 'STAGING' ? 'PENDING' : 'LOCKED' }, delivery: { status: 'NOT_DELIVERED' } }).select('*').single();
       if (executionError || !execution) throw new Error(`EXECUTION_CREATE_FAILED:${executionError?.message ?? 'UNKNOWN'}`);
       executionId = execution.id;
     }
@@ -254,7 +255,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const actualCost = 0;
     const { error: reconciliationError } = await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: actualCost, p_status: 'SUCCEEDED', p_input_tokens: 0, p_output_tokens: 0, p_reasoning_tokens: 0, p_cached_input_tokens: 0, p_request_units: 1, p_image_units: 0, p_provider_request_id: deploymentId, p_actual_provider: 'vercel', p_actual_model: 'deployment', p_latency_ms: Date.now() - startedAt, p_raw_usage: { deploymentId, environment, operation } });
     if (reconciliationError) throw new Error(`ECONOMIC_RECONCILIATION_FAILED:${reconciliationError.message}`);
-    const result = { deploymentId, url: deploymentUrl, readyState: 'READY', environment, operation };
+    const result = { deploymentId, url: deploymentUrl, readyState: 'READY', environment, operation, ...(operation === 'ROLLBACK' && rollbackTarget ? { rollback: { currentProductionDeploymentId: rollbackTarget.currentDeploymentId, deliveryAnchorDeploymentId: rollbackTarget.deliveryAnchorDeploymentId, targetDeploymentId: rollbackTarget.targetDeploymentId, targetCreatedAt: rollbackTarget.targetCreatedAt, policy: rollbackTarget.resolutionPolicy } } : {}) };
     const { data: updatedExecution, error: updateExecutionError } = await service.from('studio_executions').update({ status: 'SUCCEEDED', actual_cost_brl: actualCost, provider_id: 'vercel', model_id: 'vercel/deployment', result, preview: environment === 'PREVIEW' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : undefined, staging: environment === 'STAGING' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : undefined, delivery: environment === 'PRODUCTION' ? { status: 'READY', deploymentId, url: deploymentUrl, verified: false } : { status: 'NOT_DELIVERED' } }).eq('id', executionId).select('*').single();
     if (updateExecutionError || !updatedExecution) throw new Error('EXECUTION_FINALIZE_FAILED');
     const { data: currentRevision, error: currentRevisionError } = await client.from('studio_project_revisions').select('preview,deployment,audit').eq('id', revisionId).single();
