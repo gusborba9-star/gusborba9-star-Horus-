@@ -1,90 +1,137 @@
-# Hórus Cognitive OS: Roadmap de Desenvolvimento
+# Hórus Cognitive OS — Global Roadmap
 
-Este roadmap detalha as fases de desenvolvimento do Hórus Cognitive OS, com um checklist para acompanhar o progresso. Ele reflete a visão de construir uma Agência de Empregos Digitais Universal, com foco em Integração Profunda para Funcionários de Execução e Agentes de Comando para profissionais solo.
+**Canonical architecture:** `docs/blueprint/HORUS-MASTER-BLUEPRINT.md`  
+**Progress authority:** this file  
+**Integrity rules:** `docs/blueprint/ARCHITECTURE-LOCK.md`  
+**Last global reconciliation:** 2026-08-11
 
-## Princípios Arquiteturais Chave
-Para garantir robustez, escalabilidade e confiabilidade, o Hórus prioriza consistência de estado, auditoria, conectores genéricos e Human-in-the-loop para ações críticas.
+## 1. Product architecture
 
-## 2. Arquitetura de Memória Infinita
-- [x] Criação da estrutura de dados Base (`lib/memoryGraph.ts`)
-- [ ] Implementar Memória de Curto Prazo e Longo Prazo
-- [ ] Desenvolver `semanticPruning`
-- [ ] Implementar TTL dinâmico
+Hórus is not the Studio alone. The commercial architecture has four first-class surfaces sharing the transversal Nexus and Cognitive Core:
 
-## 3. Reforço de Aprendizado de Elite
-- [ ] Pesos proporcionais de feedback humano
-- [ ] Retroalimentação prioritária nas rotas de contexto
+1. **Colaboradores Digitais** — specialized digital employees for any niche/profession/company. **Monthly subscription.**
+2. **Hórus Personal** — personal collaborator for everyday and professional contexts, with text and voice as first-class modalities. **Monthly subscription.**
+3. **Hórus Operations** — coordinated cognitive team for operating a company/business operation. **Monthly subscription.**
+4. **Studio Hórus / Projects** — universal intent-to-project environment with one-time project payment.
 
-## 4. Camada de Resiliência Autonômica
-- [x] Circuit Breaker
-- [ ] `performStateIntegrityCheck`
-- [ ] Setup histórico adicional de `executions_log`
+The user declares intent. Nexus internally chooses the required context, agents, capabilities, models, connectors and execution strategy. Product surfaces do not require manual provider/model selection.
 
-## 5. Fase 0: Fundação e MVP
-- [x] Setup inicial
-- [x] Supabase, LangGraph e Stripe
-- [x] Hórus Core Engine base
-- [ ] Grafo LangGraph completo
-- [ ] Integração pg_vector adicional
-- [ ] MVP Maria
+## 2. Status taxonomy
 
----
+- 🔒 **NOT_STARTED** — no implementation work started.
+- 🔵 **PLANNED** — architecture/plan established, implementation not established.
+- 🟡 **IN_PROGRESS** — active implementation/validation.
+- 🟢 **IMPLEMENTED** — implementation exists.
+- 🟢 **VERIFIED** — implementation has direct validation evidence.
+- 🟢 **COMPLETE** — all defined closure gates are satisfied and evidence is recorded.
+- ⚠️ **BLOCKED** — progress is prevented by a proven external/unresolved dependency.
 
-## 09 — STUDIO
+A status is never promoted by inference.
 
-**Estado:** 🟡 PARTIAL — implementação e integração code-side concluídas até o limite verificável; COMPLETE ainda não é sustentado pela evidência disponível.
+## 3. Global module map
 
-### Implementado / verificado estruturalmente
+| Module | Status | Current evidence / boundary |
+|---|---|---|
+| 01 — Core / Foundation | 🟢 IMPLEMENTED | Supabase, LangGraph, Stripe and base Hórus Core foundations exist in repository history. Broader launch readiness remains governed by downstream modules. |
+| 02 — Cognitive Core / Memory | 🟡 IN_PROGRESS | Memory Graph foundation exists; broader short/long-term memory, pruning, TTL and full cognitive behavior remain to be independently verified. |
+| 03–08 — Prior closed blocks | 🟢 COMPLETE | Preserved as closed historical architecture; this reconciliation does not reopen them. Their closure evidence remains authoritative for their individual gates. |
+| 09 — Studio / Projects | 🟢 COMPLETE | Real provider rollback, successful execution/attempt, settled budget, completed log, reconciliation fix, CI success, Production READY, clean runtime and deterministic rollback-target policy verified. See `docs/blueprint/09-STUDIO-CLOSURE.md`. |
+| 10 — Agents / Collaborators | 🔒 NOT_STARTED | No functional work started by this reconciliation. Architecture is defined in Master Blueprint. |
+| 11 — Hórus Personal | 🔵 PLANNED | Commercial/product architecture defined; text/voice product implementation not started/verified. |
+| 12 — Observability | 🔵 PLANNED | Transversal architecture defined; independent module not closed by Studio evidence. |
+| 13 — Hórus Operations | 🔵 PLANNED | Commercial/team operating model defined; implementation not started/verified. |
+| 14 — Billing / Monetization | 🔵 PLANNED | Canonical commercial models defined; broader production billing flows require implementation/verification. |
+| 15 — Workspace / Multi-tenant | 🔵 PLANNED | Architectural boundary defined; full cross-product implementation not verified. |
+| 16 — Inference / Model Routing | 🔵 PLANNED | Provider/model-invisible routing architecture defined; full production router not independently closed. |
+| 17 — Connector / Plugin Fabric | 🟢 IMPLEMENTED | Studio connector architecture for GitHub/Vercel/Supabase is implemented and structurally verified; expansion to broader connector catalog remains planned. |
+| 18 — Execution / Economics | 🟢 IMPLEMENTED | Execution/attempt/budget/reconciliation contracts exist and were live-verified during E2E 09; broader cross-product execution coverage remains to be verified. |
+| 19 — Security / Vault / RLS | 🟢 VERIFIED | Studio RLS/Vault boundary and Security Advisor state were live verified; broader tenant/security coverage remains module-dependent. |
+| 20 — Deployment / Lifecycle | 🟢 VERIFIED | Studio Preview/Staging/Production/Delivery lifecycle and real rollback were verified during E2E 09. Generalized cross-product lifecycle remains future work. |
 
-- Project Engine persistente em `studio_projects`, com ownership, objective, context, requirements, architecture, capabilities, connectors/integrations, execution graph, environment state, delivery e intelligence snapshot.
-- Revision Engine em `studio_project_revisions`, com parent revision, versionamento, diff, optimized spec, approval e estados de teste/preview/deployment.
-- Classificação canônica `MICRO / LOW / MEDIUM / MAJOR / REBUILD`, com estratégia de execução e recomputação proporcional.
-- Nexus `OptimizedExecutionSpec` contextual e provider-invisible.
-- Capability inference usando a registry canônica, preservando capabilities existentes e permitindo composição.
-- Connector Engine com permissões granulares e Vault server-side.
-- Permission-before-secret boundary, expiração/revogação de credencial e não divulgação de provider no contrato de execução.
-- Approval boundary e lifecycle gates `PREVIEW → STAGING → PRODUCTION APPROVAL → DELIVERY`.
-- Production mutation bloqueada no PATCH genérico.
-- Rollback target validation no Revision Engine.
-- Studio UI centrado em Nexus + Project + Revision.
-- Suíte contratual do Studio ampliada para execution spec, lifecycle, approval e connector security.
-- Migration `20260807230403_horus_studio_runtime_closure` aplicada.
-- RLS live verificado nas quatro tabelas Studio principais.
-- Vault functions live verificadas como service-role-only.
-- Security Advisor live sem CRITICAL.
+## 4. Shared architecture dependencies
 
-### Evidência de build/deployment
+`Identity / Workspace`  
+→ `Cognitive Core / Memory / RAG`  
+→ `Nexus`  
+→ `Agents / Collaborators`  
+→ `Capabilities`  
+→ `Inference / Model Routing`  
+→ `Connector Fabric`  
+→ `Execution Engine`  
+→ `Economic Authorization`  
+→ `Provider Adapters`  
+→ `Preview / Staging / Production`  
+→ `Verification / Reconciliation`  
+→ `Observability / Audit`  
+→ `Billing / Usage`
 
-- Functional SHA: `fcff65e082d7e77bc7fdc80fe3e61193a3826953`
-- Validation SHA: `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13`
-- Validation Vercel deployment: `dpl_2KubP6ijHMGFaFqvc2TGDYRkVNmT` — `READY`
-- Current main SHA: `b433d3af981a4d64027dd39154cf6ccf8c9d39a9`
-- Current main Vercel deployment at evidence capture: `dpl_8igbJ9HEt4Ux3WDiMbhmpNL7RUk5` — `BUILDING`
-- Vercel build logs confirm cloning do SHA atual, instalação de dependências e execução de `npm run build`, sem erro reportado na captura.
+Commercial surfaces consume these shared services rather than creating parallel stacks.
 
-### Não comprovado / blockers objetivos
+## 5. 09 — STUDIO — COMPLETE
 
-- [ ] live connector E2E com credencial autorizada para GitHub/Vercel/Supabase;
-- [ ] execução real de provider pela cadeia `Economic Authorization → Provider Adapter → Usage → Reconciliation → Delivery` originada pelo Studio;
-- [ ] preview deployment dedicado criado pelo Studio;
-- [ ] staging deployment/promotion real;
-- [ ] production deployment/approval/rollback real através do Studio;
-- [ ] deployment-to-revision correlation produzida por uma execução externa real;
-- [ ] execução local de `npm test`, TypeScript e ESLint neste ambiente, pois não há checkout local acessível;
-- [ ] GitHub Actions CI formal: o workflow canônico existe, mas não houve run recuperável para a validação SHA;
+### Closure evidence
 
-### Vercel
+- Revision: `Revision 1 · MAJOR`
+- Approval: `APPROVED`
+- Preview: `READY · VERIFIED`
+- Staging: `READY · VERIFIED`
+- Delivery: `DELIVERED · VERIFIED`
+- Real Vercel rollback executed through the authenticated Studio flow.
+- Provider restored Production to `dpl_Hq1KzZzk9hMQqPGHhXEjrNVvY2bk`.
+- Restored deployment: `READY`, `production`, SHA `843170948682f23e5d23a43811bd9a12bb5d3eb8`.
+- Rollback policy: `PREVIOUS_READY_PRODUCTION`.
+- Delivery Anchor was preserved as provenance and was not used as rollback target.
+- Execution: `SUCCEEDED`.
+- Attempt: `SUCCEEDED`.
+- Budget: `SETTLED`.
+- Execution log: `COMPLETED`.
+- Reconciliation logic was corrected to persist terminal budget completion correctly.
+- CI for the corrected implementation: `SUCCESS`.
+- Production runtime: no `error/fatal` evidence after the corrected deployment.
+- Connector: `CONNECTED`.
+- `ROLLBACK_PRODUCTION`: available.
+- Vault `secret_ref`: resolvable.
 
-`velor-api` é comprovadamente o projeto Vercel conectado ao repositório `gusborba9-star/gusborba9-star-Horus-`, com branch `main` e correlação explícita de SHA/deployment.
+### Important historical evidence
 
-### Supabase
+The earlier failed rollback is preserved as evidence. The provider returned HTTP 402 with `error.code=unprocessable_entity` and the native message that the selected Delivery Anchor was farther back than the previous Production deployment allowed by the current Vercel plan. This proved the architectural distinction:
 
-Projeto `ljqmiuxztqseyglhvgmi` está ativo. As migrations Studio estão aplicadas e as políticas RLS foram inspecionadas diretamente.
+**Delivery Anchor ≠ Rollback Target.**
 
-### Boundary de bloco
+The resolver was corrected to use Current Production plus provider deployment history and select the immediate previous eligible READY Production deployment.
 
-03–08 permanecem fechados e não foram reabertos arquiteturalmente.
+The failed historical execution was not rewritten into success.
 
-10 — AGENTS não iniciado.
+## 6. Current launch-readiness boundary
 
-12 — OBSERVABILITY permanece independente e não é antecipado por este fechamento.
+The Hórus platform is **not globally launch-ready** merely because Studio 09 is complete. Launch readiness must be established per commercial surface and then at platform level.
+
+Before a surface is marked COMPLETE, its roadmap closure must demonstrate, as applicable:
+
+- intent/Nexus behavior;
+- agent/capability composition;
+- model routing;
+- connector security;
+- execution idempotency;
+- economic authorization;
+- billing;
+- provider side-effect verification;
+- runtime reliability;
+- observability/audit;
+- RLS/Vault/security;
+- recovery/rollback;
+- CI/deployment evidence.
+
+## 7. Next-module boundary
+
+**No next functional module was started during this reconciliation.**
+
+The next module must be selected from this global roadmap only after the current documentation source of truth is accepted and the dependency graph is respected.
+
+10 — AGENTS remains `🔒 NOT_STARTED`.
+
+## 8. Documentation integrity
+
+The Master Blueprint defines architecture. This Roadmap defines progress. Closure documents provide evidence. `ARCHITECTURE-LOCK.md` governs non-regression and reconciliation.
+
+Historical documentation remains preserved and is not deleted merely because its evidence boundary was later superseded. Current verified evidence takes precedence when determining current status.
