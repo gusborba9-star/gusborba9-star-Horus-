@@ -1,14 +1,17 @@
 name: Apply rollback target contract correction
 on:
-  push:
-    branches: [fix/studio-rollback-target-contract]
+  pull_request:
+    types: [opened, synchronize, reopened]
 permissions:
   contents: write
 jobs:
   patch:
+    if: github.event.pull_request.head.ref == 'fix/studio-rollback-target-contract'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
       - name: Correct rollback target resolution
         shell: python
         run: |
