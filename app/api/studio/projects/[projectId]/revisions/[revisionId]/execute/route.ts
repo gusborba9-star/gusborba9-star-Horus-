@@ -143,13 +143,22 @@ async function resolveRollbackTarget(secret: string, projectId: string, persiste
   const projectPayload = await projectResponse.json() as { targets?: { production?: { id?: string } } };
   const currentId = projectPayload.targets?.production?.id;
   if (!currentId) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
-  if (persistedDeploymentId && persistedDeploymentId !== currentId) throw new Error('VERCEL_PRODUCTION_RECONCILIATION_REQUIRED');
-  const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&limit=20`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
+  const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&limit=50`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
   if (!deploymentsResponse.ok) throw new Error(`VERCEL_DEPLOYMENTS_READ_FAILED:${deploymentsResponse.status}`);
-  const deploymentsPayload = await deploymentsResponse.json() as { deployments?: Array<{ uid?: string; id?: string; created?: number; readyState?: string; target?: string | null; state?: string }> };
+  const deploymentsPayload = await deploymentsResponse.json() as { deployments?: Array<{ uid?: string; id?: string; created?: number; readyState?: string; target?: string | null; state?: string; meta?: Record<string, unknown> }> };
   const deployments = deploymentsPayload.deployments ?? [];
   const current = deployments.find((deployment) => (deployment.uid ?? deployment.id) === currentId);
   const currentCreated = Number(current?.created ?? 0);
+  if (!current || !currentCreated) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
+  const persisted = persistedDeploymentId ? deployments.find((deployment) => (deployment.uid ?? deployment.id) === persistedDeploymentId) : undefined;
+  if (persistedDeploymentId && !persisted) throw new Error('VERCEL_PERSISTED_PRODUCTION_DEPLOYMENT_NOT_FOUND');
+  if (persisted) {
+    const persistedCreated = Number(persisted.created ?? 0);
+    const persistedReady = persisted.readyState === 'READY' || persisted.state === 'READY';
+    const persistedProduction = persisted.target === 'production';
+    if (!persistedReady || !persistedProduction || persistedCreated >= currentCreated) throw new Error('VERCEL_PERSISTED_ROLLBACK_TARGET_INVALID');
+    return { currentDeploymentId: currentId, targetDeploymentId: persistedDeploymentId };
+  }
   const candidates = deployments
     .filter((deployment) => {
       const deploymentId = deployment.uid ?? deployment.id;
