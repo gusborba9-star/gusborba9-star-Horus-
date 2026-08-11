@@ -6,67 +6,64 @@
 
 ## 1. Purpose and architectural authority
 
-The Hórus is a cognitive operating system for people, professionals and businesses. Its core abstraction is **intent → context → cognition → capabilities → execution → verification**, coordinated by the Nexus.
+Hórus is a cognitive operating system for people, professionals and businesses. Its core abstraction is **intent → context → cognition → capabilities → execution → verification**, coordinated by Nexus.
 
-This document is the canonical architecture. It defines the intended product surfaces, platform boundaries, shared cognitive infrastructure and economic/execution contracts. It does not imply that every component is already implemented. Implementation state is tracked separately in `ROADMAP.md` and supported by closure/evidence documents.
+This document defines what Hórus is. It does not imply that every component is implemented. `ROADMAP.md` defines current progress; closure/evidence documents prove individual gates.
 
 ### Evidence states
 
 - **PLANNED:** architecture explicitly defined but implementation not established.
 - **IMPLEMENTED:** code/schema/contracts exist.
-- **VERIFIED:** implementation was validated by tests, database inspection, CI or equivalent direct evidence.
-- **LIVE VERIFIED:** verified against the live provider/runtime/environment with real evidence.
+- **VERIFIED:** implementation was validated by direct evidence.
+- **LIVE VERIFIED:** validated against a live provider/runtime/environment.
 - **COMPLETE:** all defined gates for the module are satisfied and evidence is recorded.
-- **BLOCKED:** progress is prevented by an external or explicitly unresolved dependency.
+- **BLOCKED:** progress is prevented by a proven external/unresolved dependency.
 
 ## 2. Commercial product architecture
 
-Hórus is composed of four first-class commercial surfaces. They share the same cognitive/platform core but have different user jobs and monetization.
+Hórus has four first-class commercial surfaces sharing the same transversal platform.
 
 ### 2.1 Colaboradores Digitais
-
-Specialized digital employees/agents for any niche, profession, market or company. A collaborator is a persistent role with goals, context, capabilities, tools, memory and execution boundaries.
-
-**Commercial model:** monthly subscription.
+Specialized digital employees for any niche, profession, market, company or operational function. **Monthly subscription.**
 
 ### 2.2 Hórus Personal
-
-A personal cognitive collaborator usable across everyday contexts: personal assistance, professional support, organization, writing, practical guidance, cooking, construction/project support, conversation and other user-defined roles.
-
-Text and voice are first-class interaction modalities. The product must not be constrained to one profession or persona.
-
-**Commercial model:** monthly subscription.
+A personal cognitive collaborator for everyday and professional contexts, including assistance, writing, organization, practical guidance, cooking, construction/project support, professional support, conversation and user-defined roles. Text and voice are first-class modalities. **Monthly subscription.**
 
 ### 2.3 Hórus Operations
-
-A coordinated cognitive team for operating a company or business process. It composes multiple specialized collaborators under central orchestration, shared context, permissions, memory and operational controls.
-
-**Commercial model:** monthly subscription.
+A coordinated cognitive team for operating companies/business processes, combining specialized collaborators under Nexus, controlled shared memory/context, permissions, objectives, execution, verification and governance. **Monthly subscription.**
 
 ### 2.4 Studio Hórus / Projects
+The universal intent-to-project surface. The user declares an intention/objective; Nexus contextualizes, classifies, designs, composes capabilities and prepares or executes a project through controlled lifecycle gates. **One-time payment per project.** Studio is a major surface, not the definition of Hórus.
 
-The universal project surface. The user declares an intention/objective; Nexus contextualizes and classifies it, designs the required solution, composes capabilities/connectors and prepares or executes the project through controlled lifecycle gates.
+## 3. Nexus — transversal decision and orchestration layer
 
-Projects use a **one-time payment** commercial model. Studio is a major Hórus surface, not the definition of Hórus itself.
+Nexus is not merely an agent orchestrator. It is the central decision/orchestration layer shared across all Hórus surfaces.
 
-## 3. Nexus — transversal orchestration layer
+The user declares intent. Nexus dynamically determines the internal plan from intent, context, objective, constraints, authorization and available capabilities. The user must not need to manually choose model, agent, capability, provider, connector, pipeline, execution strategy or internal architecture.
 
-Nexus is the central decision/orchestration layer shared across Hórus surfaces.
+Conceptually valid plans include:
 
-The user should not need to manually select:
+`Intent → Nexus → model → capability → result`
 
-- model;
-- agent;
-- capability;
-- provider;
-- connector;
+`Intent → Nexus → agent → capability → connector → execution`
+
+`Intent → Nexus → cognitive team → subagents → parallel execution → verification`
+
+Nexus may select any required combination of:
+
+- context and memory;
+- agent/collaborator/cognitive team;
+- capability composition;
+- model and inference route;
+- provider adapter;
+- connector/tool;
 - execution strategy;
-- internal architecture;
-- pipeline.
+- economic authorization;
+- HITL/approval;
+- lifecycle;
+- verification/reconciliation.
 
-The user declares intent. Nexus determines the internal plan from intent, context, objective, constraints, authorization and available capabilities.
-
-Nexus is provider/model-invisible at the product contract boundary. Model/provider selection belongs to inference/model routing and provider adapter layers.
+Provider/model selection is an internal routing concern; product contracts remain provider/model-agnostic.
 
 ### Nexus responsibilities
 
@@ -74,164 +71,133 @@ Nexus is provider/model-invisible at the product contract boundary. Model/provid
 2. context assembly;
 3. task decomposition;
 4. capability inference/composition;
-5. collaborator/agent selection;
+5. collaborator/agent/team selection;
 6. inference/model routing;
-7. connector/tool planning;
+7. connector/tool discovery and planning;
 8. execution strategy selection;
 9. economic authorization requirements;
 10. approval/HITL requirements;
-11. preview/staging/production strategy;
+11. lifecycle planning;
 12. verification and reconciliation.
 
 ## 4. Cognitive Core
 
-The Cognitive Core is the shared intelligence substrate beneath Nexus and the four commercial surfaces.
+The Cognitive Core is the shared intelligence substrate beneath Nexus and every commercial surface.
 
 ### 4.1 Context and memory
 
-- Memory Graph for durable user/workspace/project/agent context.
-- Short-term working context.
-- Long-term memory.
-- Semantic retrieval and context ranking.
-- RAG/context assembly.
-- Semantic cache where appropriate.
-- Context pruning/TTL policies.
-- Provenance and audit metadata for important facts/actions.
+- Memory Graph for durable user/workspace/project/agent context;
+- short-term working context;
+- long-term memory;
+- semantic retrieval and ranking;
+- RAG/context assembly;
+- semantic cache where appropriate;
+- pruning/TTL policies;
+- provenance and audit metadata.
 
-The existing memory foundation is implemented in the codebase; the broader infinite-memory behavior remains a roadmap capability until independently verified end-to-end.
+The existing memory foundation is implemented; broader end-to-end cognitive-memory behavior remains subject to independent verification.
 
-### 4.2 Inference/model routing
+### 4.2 Inference / model routing
 
-A routing layer selects the appropriate model/provider for each task according to capability, latency, cost, quality, context and policy. Product surfaces remain model-agnostic.
-
-The router must support future provider expansion without leaking provider-specific contracts into product APIs.
+A provider-neutral routing layer selects the appropriate model/provider per task using capability, latency, cost, quality, context and policy. Product surfaces never depend directly on a provider-specific model contract.
 
 ### 4.3 Agents / collaborators
 
-Agents are reusable cognitive workers with role, objective, instructions, memory scope, capabilities, connectors, permissions, economic policy and execution boundaries.
-
-A collaborator is a productized agent/team role. Agents are platform primitives; Colaboradores Digitais, Personal and Operations are commercial compositions of those primitives.
+Agents are reusable cognitive workers with role, objective, instructions, memory scope, capabilities, connectors, permissions, economic policy and execution boundaries. A collaborator is a productized agent/team role; Agents are platform primitives.
 
 ## 5. Capability system
 
-Capabilities are the canonical units of what the system can do. They are not synonymous with models or connectors.
+Capabilities are canonical units of what Hórus can do. They are distinct from models and connectors. A capability may require multiple models, tools, connectors and execution steps. One canonical registry must be used; parallel capability registries are prohibited.
 
-A capability may require one or more models, tools, connectors and execution steps. The registry must remain canonical; parallel registries must not be introduced.
+Studio already has a canonical capability composition contract; platform-wide capability coverage is separately tracked in the Roadmap.
 
-Studio already has a canonical capability registry and composition contract.
+## 6. Connector / Plugin Fabric — platform architecture
 
-## 6. Connector / plugin fabric
+Connector Fabric is a platform-wide extensible plugin fabric, not a list of three integrations. Its purpose is to let Nexus discover and invoke external capabilities without changing Nexus or Cognitive Core when new providers are added.
 
-Connectors provide controlled access to external systems. The current live Studio connector architecture explicitly covers GitHub, Vercel and Supabase plus an external API placeholder, with a design intended to expand to dozens of connectors.
+### Canonical connector contract
 
-Connector architecture requirements:
+The system must have one canonical **Connector Registry**. Each connector is represented by a versioned manifest exposing:
 
-- provider-neutral capability contract;
-- granular permissions;
-- server-side Vault secret references;
-- permission-before-secret boundary;
-- expiration/revocation;
-- provider adapters;
+- connector identity/version;
+- capabilities exposed;
+- provider-neutral operations;
+- permission scopes;
+- OAuth/API-key/service-credential requirements;
+- Vault-backed credential references;
+- credential lifecycle, expiration and revocation;
+- health checks;
+- rate limits;
+- retry/backoff policy;
+- idempotency contract;
+- webhook/event support;
 - request/response correlation;
-- idempotency;
-- auditability;
-- least privilege;
-- no provider credentials in client responses.
+- provider adapter binding;
+- compatibility/version constraints;
+- audit metadata;
+- least-privilege requirements.
+
+Nexus performs connector and capability discovery through this canonical registry. Product code must not embed provider-specific connector selection.
+
+Current live evidence covers the Studio connector domain for GitHub, Vercel and Supabase, with external API capability represented in the existing architecture. This is **Studio-scoped evidence**, not proof that the entire platform-wide fabric is complete.
+
+The architecture is intentionally extensible to dozens of connectors without changing Nexus or Cognitive Core.
 
 ## 7. Studio and Project Engine
 
 Studio is the project-oriented execution surface. Its canonical persistence includes `studio_projects`, `studio_project_revisions`, `studio_connectors` and `studio_executions`.
 
-### Project lifecycle
+Lifecycle:
 
 `INTENT → PROJECT → REVISION → APPROVAL → PREVIEW → STAGING → PRODUCTION APPROVAL → DELIVERY → VERIFICATION`
 
-Canonical revision classes:
+Revision classes:
 
 `MICRO → LOW → MEDIUM → MAJOR → REBUILD`
 
-Execution strategy and recomputation scale with change class.
+## 8. Execution Engine / Economics
 
-## 8. Execution Engine
-
-The execution engine is shared infrastructure, not a Studio-only implementation detail.
-
-Execution must preserve the chain:
+Execution is shared infrastructure, not inherently Studio-only. The canonical chain is:
 
 `intent → execution spec → authorization → connector/provider → attempt → usage/cost → reconciliation → result → audit`
 
-Execution boundaries must be explicit and idempotent. Provider side effects must not be represented as successful merely because an application request was accepted.
+Execution boundaries must be explicit and idempotent. Provider side effects require provider evidence.
 
-### Economic authorization
+Every economically relevant execution is governed by authorization, budget and attempt limits. A terminal successful attempt reconciles its budget to `SETTLED` with completion timestamp and usage/cost evidence. Failed attempts remain immutable.
 
-Every billable or economically relevant execution is governed by authorization, budget and attempt limits. Core structures include execution budgets, attempts, usage and provider cost metadata.
-
-A terminal successful attempt must reconcile the associated budget to `SETTLED` with a completed timestamp. Failed attempts must preserve failure evidence and must not be rewritten as success.
+Current live E2E evidence proves this contract in the Studio domain. It does not by itself prove cross-product execution/economics coverage.
 
 ## 9. Provider adapters
 
-Provider adapters translate the canonical execution contract to provider-specific APIs. They must preserve native status/code/message/details/headers and request correlation wherever available.
+Provider adapters translate canonical contracts to provider APIs while preserving native status/code/message/details/headers and request correlation where available.
 
-The Vercel rollback E2E established the architectural rule that **Delivery Anchor is provenance, not rollback target**. Rollback target resolution uses the current Production and provider deployment history; the canonical policy is `PREVIOUS_READY_PRODUCTION`.
+The Vercel rollback E2E established: **Delivery Anchor is provenance, not rollback target**. Rollback target resolution uses Current Production plus provider deployment history; canonical policy is `PREVIOUS_READY_PRODUCTION`.
 
 ## 10. Approval / HITL
 
-Human-in-the-loop is required where policy, authorization, financial impact, production mutation or other configured risk thresholds demand it.
+HITL applies where policy, authorization, financial impact, production mutation or configured risk thresholds demand it. Application approval state never substitutes for external side-effect evidence.
 
-Application approval states are not substitutes for external side-effect evidence.
+## 11. Deployment / Lifecycle
 
-## 11. Deployment lifecycle
+Application lifecycle and provider reality are separate contracts. Deployment evidence includes project, revision, deployment ID, target/current deployment, SHA/provenance, environment, provider status, runtime health, request/response correlation and reconciliation where applicable.
 
-Hórus separates application lifecycle state from provider reality.
+Rollback is an authorized production mutation with deterministic target resolution and provider verification. The Studio implementation is live verified; generalized cross-product lifecycle remains separately tracked.
 
-Required evidence for deployment operations includes, where applicable:
+## 12. Observability / Audit
 
-- project;
-- revision;
-- deployment ID;
-- target/current deployment;
-- SHA/provenance;
-- environment;
-- provider status;
-- runtime health;
-- request/response correlation;
-- reconciliation.
-
-### Rollback
-
-Rollback is an explicit production mutation with authorization and provider verification. The resolver must select the immediate previous eligible Production deployment rather than an arbitrary historical anchor.
-
-## 12. Observability and auditability
-
-Execution, provider interactions, deployment mutations, approvals, usage, attempts and reconciliation require durable audit evidence.
-
-Observability is a transversal platform concern. The independent Observability module remains separate from Studio closure and must not be falsely marked complete by Studio documentation.
+Execution, provider interactions, deployment mutations, approvals, usage, attempts and reconciliation require durable audit evidence. Observability is transversal; Studio evidence does not close the platform-wide Observability module.
 
 ## 13. Security
 
-Security boundaries include:
+Security boundaries include Supabase RLS, Vault/service-role-only secret functions, connector permission enforcement, credential expiry/revocation, authorization before secret access, least privilege, audit trails and tenant/workspace isolation.
 
-- Supabase RLS;
-- Vault/service-role-only secret functions;
-- connector permission enforcement;
-- credential expiry/revocation;
-- authorization before secret access;
-- provider identity minimization at product boundaries;
-- audit trails;
-- least privilege;
-- tenant/workspace isolation.
+The Studio domain has verified RLS/Vault boundaries. Platform-wide security remains subject to independent verification.
 
-The live Studio domain has verified RLS and Vault boundaries. Broader platform security remains subject to module-specific verification.
+## 14. Workspace / Identity / Multi-tenant
 
-## 14. Workspace and multi-tenant architecture
+Workspace is the primary organizational boundary. Users may belong to one or more workspaces under authorization. Projects, collaborators, agents, connectors, memories, executions, budgets and billing records require explicit tenant/workspace ownership. Authorization must be enforced server-side/database-side, never by client filtering.
 
-Workspace is the primary organizational boundary for teams/businesses. Users may belong to one or more workspaces subject to authorization. Resources such as projects, collaborators, agents, connectors, memories, executions, budgets and billing records must carry an explicit ownership/tenant boundary.
-
-Operations and enterprise collaboration must never rely on client-side filtering as the security boundary; authorization belongs in the server/database layer.
-
-## 15. Billing and monetization
-
-Canonical commercial models:
+## 15. Billing / Monetization
 
 | Surface | Model |
 |---|---|
@@ -239,53 +205,43 @@ Canonical commercial models:
 | Hórus Personal | Monthly subscription |
 | Hórus Operations | Monthly subscription |
 | Studio Projects | One-time payment |
-| Multimedia / high-cost execution | Metered credits where applicable |
+| Multimedia/high-cost execution | Metered credits where applicable |
 
-Billing must remain separate from execution authorization while exposing the economic constraints required by execution. No parallel billing registry should be introduced.
+Billing is distinct from execution authorization while exposing required economic constraints. No parallel billing registry is permitted.
 
-## 16. GitHub / Vercel / Supabase role
+## 16. Infrastructure roles
 
-- **GitHub:** source control, CI, code history, evidence and architectural documentation.
-- **Vercel:** application deployment/runtime and production deployment state.
-- **Supabase:** canonical relational persistence, RLS, Vault integration and execution/economic records.
+- **GitHub:** source, CI, code history and evidence.
+- **Vercel:** application deployment/runtime and provider deployment state.
+- **Supabase:** canonical persistence, RLS, Vault integration and execution/economic records.
 
-These are current infrastructure choices, not permanent product limitations. The connector fabric is designed to expand beyond them.
+These are current infrastructure choices, not product boundaries. Connector Fabric is designed for expansion beyond them.
 
-## 17. Current verified architectural baseline
-
-### 09 — Studio
-
-**🟢 COMPLETE** as of the final E2E 09 closure.
-
-Verified evidence includes real Vercel rollback, successful execution/attempt, settled budget, completed execution log, corrected reconciliation, CI success, Production readiness, clean runtime, Connector/Vault authorization and deterministic `PREVIOUS_READY_PRODUCTION` rollback target resolution.
-
-The historical failed rollback remains preserved as failure evidence.
+## 17. Current architectural baseline
 
 ### 03–08
+**CLOSED / preserved.** Existing closure/evidence documents remain authoritative for their gates; this reconciliation does not reopen them.
 
-**CLOSED / preserved.** This reconciliation does not reopen those blocks. Their exact state remains governed by their existing closure/evidence records.
+### 09 — Studio
+**🟢 COMPLETE.** Real Vercel rollback, successful execution/attempt, settled budget, completed execution log, corrected reconciliation, CI success, Production readiness, clean runtime, Connector/Vault authorization and deterministic `PREVIOUS_READY_PRODUCTION` resolution are recorded in `09-STUDIO-CLOSURE.md`.
 
 ### 10 — Agents
-
 **🔒 NOT_STARTED.** No functional work is initiated by this documentation reconciliation.
 
-### 12 — Observability
+All other platform modules are classified by direct evidence in `ROADMAP.md`; Studio evidence must not be promoted into platform-wide completion.
 
-**🔵 PLANNED / independent.** Studio evidence does not close the broader Observability module.
+## 18. Architectural dependency graph
 
-Other modules must be classified from direct repository/database/provider evidence before being marked VERIFIED or COMPLETE.
+This graph defines architectural dependency, independent of roadmap numbering:
 
-## 18. Architecture dependency graph
-
-`Workspace / Identity`
-→ `Cognitive Core`
+`Identity / Workspace`
+→ `Cognitive Core / Memory / RAG`
 → `Nexus`
 → `Agents / Collaborators`
 → `Capabilities`
 → `Inference / Model Routing`
-→ `Connector Fabric`
-→ `Execution Engine`
-→ `Economic Authorization`
+→ `Connector / Plugin Fabric`
+→ `Execution / Economics`
 → `Provider Adapters`
 → `Preview / Staging / Production`
 → `Verification / Reconciliation`
@@ -296,28 +252,43 @@ Commercial surfaces consume the shared graph:
 
 `Colaboradores Digitais` / `Hórus Personal` / `Hórus Operations` / `Studio Projects`
 
-## 19. Launch-readiness criteria
+Roadmap numbering is not this dependency graph; roadmap order is historical/project sequencing, while this graph is the architectural authority.
 
-Hórus is launch-ready only when the required commercial surface(s) satisfy, at minimum:
+## 19. Launch readiness
 
-1. user/workspace authorization;
-2. reliable intent handling;
-3. Nexus orchestration;
-4. required agent/capability composition;
-5. model routing;
-6. connector security;
-7. execution idempotency;
-8. economic authorization and billing;
-9. provider side-effect verification;
-10. observability/auditability;
-11. runtime reliability;
-12. security/RLS/Vault validation;
-13. recovery/rollback where applicable;
-14. evidence-backed CI/deployment;
-15. documented operational closure.
+Hórus is not globally `READY FOR MARKET` because one completed surface does not close the platform or other commercial surfaces.
 
-A product surface cannot be declared launch-ready solely from UI completeness or deployment `READY` status.
+### Shared platform gates
+
+Required for global launch readiness, as applicable:
+
+- Identity / Workspace;
+- authorization;
+- Cognitive Core;
+- Nexus;
+- capability composition;
+- inference/model routing;
+- connector security/fabric;
+- execution/idempotency;
+- economic authorization;
+- billing;
+- observability/audit;
+- RLS/Vault/security;
+- runtime reliability;
+- recovery/rollback;
+- CI/deployment evidence.
+
+### Commercial surface gates
+
+Each launched surface requires its own closure/evidence:
+
+- Colaboradores Digitais;
+- Hórus Personal;
+- Hórus Operations;
+- Studio Projects.
+
+A surface can be `COMPLETE` without making another surface `COMPLETE`.
 
 ## 20. Non-regression rule
 
-Any architectural change affecting a shared concept must update this Blueprint and the Roadmap in the same development cycle. No module may silently remove previously established architecture. Historical documents remain evidence, but the current Blueprint is the canonical architectural source.
+Any architectural change affecting a shared concept updates this Blueprint and the Roadmap in the same development cycle. No component may be silently removed. Current verified evidence determines current status; historical evidence remains preserved for provenance.
