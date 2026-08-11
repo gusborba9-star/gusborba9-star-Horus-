@@ -7,67 +7,89 @@
 
 ## 1. Product architecture
 
-Hórus is not the Studio alone. The commercial architecture has four first-class surfaces sharing the transversal Nexus and Cognitive Core:
+Hórus has four first-class commercial surfaces sharing the transversal Nexus and Cognitive Core:
 
-1. **Colaboradores Digitais** — specialized digital employees for any niche/profession/company. **Monthly subscription.**
-2. **Hórus Personal** — personal collaborator for everyday and professional contexts, with text and voice as first-class modalities. **Monthly subscription.**
-3. **Hórus Operations** — coordinated cognitive team for operating a company/business operation. **Monthly subscription.**
-4. **Studio Hórus / Projects** — universal intent-to-project environment with one-time project payment.
+1. **Colaboradores Digitais** — specialized digital employees for any niche, profession, market, company or function. **Monthly subscription.**
+2. **Hórus Personal** — personal cognitive collaborator for everyday/professional contexts, with **text + voice**. **Monthly subscription.**
+3. **Hórus Operations** — coordinated cognitive team for operating companies/processes. **Monthly subscription.**
+4. **Studio Hórus / Projects** — universal intent-to-project environment. **One-time payment per project.**
 
-The user declares intent. Nexus internally chooses the required context, agents, capabilities, models, connectors and execution strategy. Product surfaces do not require manual provider/model selection.
+The user declares intent. Nexus internally selects the required context, memory, agents/teams, capabilities, models, providers, connectors and execution strategy. Product surfaces do not require manual internal architecture selection.
 
 ## 2. Status taxonomy
 
-- 🔒 **NOT_STARTED** — no implementation work started.
-- 🔵 **PLANNED** — architecture/plan established, implementation not established.
+- 🔒 **NOT_STARTED** — no functional implementation started.
+- 🔵 **PLANNED** — architecture/plan established; implementation not established.
 - 🟡 **IN_PROGRESS** — active implementation/validation.
 - 🟢 **IMPLEMENTED** — implementation exists.
-- 🟢 **VERIFIED** — implementation has direct validation evidence.
-- 🟢 **COMPLETE** — all defined closure gates are satisfied and evidence is recorded.
-- ⚠️ **BLOCKED** — progress is prevented by a proven external/unresolved dependency.
+- 🟢 **VERIFIED** — direct validation evidence exists.
+- 🟢 **COMPLETE** — all module closure gates are satisfied and evidence is recorded.
+- ⚠️ **BLOCKED** — proven external/unresolved dependency prevents progress.
 
-A status is never promoted by inference.
+A status is never promoted by inference. Evidence qualifiers may specify `Studio-scoped`, `platform-wide`, or `LIVE VERIFIED` where needed.
 
-## 3. Global module map
+## 3. Progress map — historical module IDs preserved
 
-| Module | Status | Current evidence / boundary |
+> **Important:** roadmap order ≠ architectural dependency order. IDs 01–20 preserve project sequencing/history. The authoritative architectural dependency graph is in the Master Blueprint §18.
+
+| Module | Status | Scope / evidence boundary |
 |---|---|---|
-| 01 — Core / Foundation | 🟢 IMPLEMENTED | Supabase, LangGraph, Stripe and base Hórus Core foundations exist in repository history. Broader launch readiness remains governed by downstream modules. |
-| 02 — Cognitive Core / Memory | 🟡 IN_PROGRESS | Memory Graph foundation exists; broader short/long-term memory, pruning, TTL and full cognitive behavior remain to be independently verified. |
-| 03–08 — Prior closed blocks | 🟢 COMPLETE | Preserved as closed historical architecture; this reconciliation does not reopen them. Their closure evidence remains authoritative for their individual gates. |
-| 09 — Studio / Projects | 🟢 COMPLETE | Real provider rollback, successful execution/attempt, settled budget, completed log, reconciliation fix, CI success, Production READY, clean runtime and deterministic rollback-target policy verified. See `docs/blueprint/09-STUDIO-CLOSURE.md`. |
-| 10 — Agents / Collaborators | 🔒 NOT_STARTED | No functional work started by this reconciliation. Architecture is defined in Master Blueprint. |
-| 11 — Hórus Personal | 🔵 PLANNED | Commercial/product architecture defined; text/voice product implementation not started/verified. |
-| 12 — Observability | 🔵 PLANNED | Transversal architecture defined; independent module not closed by Studio evidence. |
-| 13 — Hórus Operations | 🔵 PLANNED | Commercial/team operating model defined; implementation not started/verified. |
-| 14 — Billing / Monetization | 🔵 PLANNED | Canonical commercial models defined; broader production billing flows require implementation/verification. |
-| 15 — Workspace / Multi-tenant | 🔵 PLANNED | Architectural boundary defined; full cross-product implementation not verified. |
-| 16 — Inference / Model Routing | 🔵 PLANNED | Provider/model-invisible routing architecture defined; full production router not independently closed. |
-| 17 — Connector / Plugin Fabric | 🟢 IMPLEMENTED | Studio connector architecture for GitHub/Vercel/Supabase is implemented and structurally verified; expansion to broader connector catalog remains planned. |
-| 18 — Execution / Economics | 🟢 IMPLEMENTED | Execution/attempt/budget/reconciliation contracts exist and were live-verified during E2E 09; broader cross-product execution coverage remains to be verified. |
-| 19 — Security / Vault / RLS | 🟢 VERIFIED | Studio RLS/Vault boundary and Security Advisor state were live verified; broader tenant/security coverage remains module-dependent. |
-| 20 — Deployment / Lifecycle | 🟢 VERIFIED | Studio Preview/Staging/Production/Delivery lifecycle and real rollback were verified during E2E 09. Generalized cross-product lifecycle remains future work. |
+| 01 — Core / Foundation | 🟢 IMPLEMENTED | Base Hórus/Supabase/LangGraph foundations exist in repository history; not a global launch gate closure. |
+| 02 — Cognitive Core / Memory | 🟡 IN_PROGRESS | Memory foundation exists; broader short/long-term memory, pruning/TTL and complete cognitive behavior remain independently unverified. |
+| 03–08 — Prior closed blocks | 🟢 COMPLETE | Historical closures preserved; not reopened by this reconciliation. |
+| 09 — Studio / Projects | 🟢 COMPLETE | **Studio-scoped + LIVE VERIFIED:** real Vercel rollback, execution/attempt success, budget settled, log completed, reconciliation corrected, CI success, Production READY, clean runtime, Connector/Vault and deterministic rollback target. See closure. |
+| 10 — Agents / Collaborators | 🔒 NOT_STARTED | Next functional module. Architecture defined; no functional implementation started here. |
+| 11 — Hórus Personal | 🔵 PLANNED | Commercial architecture defined; text/voice product not implemented/verified. |
+| 12 — Observability | 🔵 PLANNED | Transversal architecture defined; Studio evidence does not close platform-wide observability. |
+| 13 — Hórus Operations | 🔵 PLANNED | Commercial team architecture defined; implementation not started/verified. |
+| 14 — Billing / Monetization | 🔵 PLANNED | Commercial models defined; production billing flows not independently implemented/verified. |
+| 15 — Workspace / Identity / Multi-tenant | 🔵 PLANNED | Architectural boundary defined; full cross-product tenant implementation not verified. |
+| 16 — Inference / Model Routing | 🔵 PLANNED | Provider/model-agnostic architecture defined; full production router not independently closed. |
+| 17 — Connector / Plugin Fabric | 🟢 IMPLEMENTED | **Studio-scoped:** canonical connector architecture/integrations for GitHub, Vercel, Supabase are implemented/verified. Platform-wide extensible fabric, registry manifest lifecycle, OAuth/credentials/health/rate-limit/webhook/version compatibility remain to be completed. |
+| 18 — Execution / Economics | 🟢 IMPLEMENTED | **Studio-scoped + LIVE VERIFIED:** execution/attempt/budget/reconciliation contract proven in E2E 09. Cross-product execution coverage remains unverified. |
+| 19 — Security / Vault / RLS | 🟢 VERIFIED | **Studio-scoped + LIVE VERIFIED:** RLS/Vault boundary and relevant security state verified. Platform-wide tenant/security coverage remains open. |
+| 20 — Deployment / Lifecycle | 🟢 VERIFIED | **Studio-scoped + LIVE VERIFIED:** Preview/Staging/Production/Delivery and real rollback verified. Generalized cross-product lifecycle remains open. |
 
-## 4. Shared architecture dependencies
+## 4. Architectural dependency order — authoritative graph
 
-`Identity / Workspace`  
-→ `Cognitive Core / Memory / RAG`  
-→ `Nexus`  
-→ `Agents / Collaborators`  
-→ `Capabilities`  
-→ `Inference / Model Routing`  
-→ `Connector Fabric`  
-→ `Execution Engine`  
-→ `Economic Authorization`  
-→ `Provider Adapters`  
-→ `Preview / Staging / Production`  
-→ `Verification / Reconciliation`  
-→ `Observability / Audit`  
+The following is copied conceptually from the Blueprint and is **not** a claim that roadmap IDs execute in this sequence:
+
+`Identity / Workspace`
+→ `Cognitive Core / Memory / RAG`
+→ `Nexus`
+→ `Agents / Collaborators`
+→ `Capabilities`
+→ `Inference / Model Routing`
+→ `Connector / Plugin Fabric`
+→ `Execution / Economics`
+→ `Provider Adapters`
+→ `Preview / Staging / Production`
+→ `Verification / Reconciliation`
+→ `Observability / Audit`
 → `Billing / Usage`
 
-Commercial surfaces consume these shared services rather than creating parallel stacks.
+Commercial surfaces consume the shared platform:
 
-## 5. 09 — STUDIO — COMPLETE
+`Colaboradores Digitais` / `Hórus Personal` / `Hórus Operations` / `Studio Projects`
+
+## 5. Shared platform vs Studio scope
+
+### Platform-wide architecture
+
+The Blueprint defines shared contracts for Identity/Workspace, Cognitive Core, Nexus, Agents, Capabilities, Inference, Connector Fabric, Execution/Economics, Provider Adapters, Lifecycle, Observability, Security and Billing.
+
+### Currently directly proven in Studio
+
+The following evidence is **not automatically platform-wide**:
+
+- Connector security/operations — Studio-scoped;
+- Execution/Economics — Studio-scoped;
+- Security/Vault/RLS — Studio-scoped;
+- Deployment/Lifecycle — Studio-scoped.
+
+When a module has code but only Studio evidence, keep `IMPLEMENTED`/`VERIFIED` with a scope qualifier rather than promoting it to global `COMPLETE`.
+
+## 6. 09 — STUDIO — COMPLETE
 
 ### Closure evidence
 
@@ -76,62 +98,71 @@ Commercial surfaces consume these shared services rather than creating parallel 
 - Preview: `READY · VERIFIED`
 - Staging: `READY · VERIFIED`
 - Delivery: `DELIVERED · VERIFIED`
-- Real Vercel rollback executed through the authenticated Studio flow.
+- Real Vercel rollback executed through authenticated Studio flow.
 - Provider restored Production to `dpl_Hq1KzZzk9hMQqPGHhXEjrNVvY2bk`.
 - Restored deployment: `READY`, `production`, SHA `843170948682f23e5d23a43811bd9a12bb5d3eb8`.
 - Rollback policy: `PREVIOUS_READY_PRODUCTION`.
-- Delivery Anchor was preserved as provenance and was not used as rollback target.
+- Delivery Anchor is provenance only; it is not the operational rollback target.
 - Execution: `SUCCEEDED`.
 - Attempt: `SUCCEEDED`.
 - Budget: `SETTLED`.
 - Execution log: `COMPLETED`.
-- Reconciliation logic was corrected to persist terminal budget completion correctly.
-- CI for the corrected implementation: `SUCCESS`.
-- Production runtime: no `error/fatal` evidence after the corrected deployment.
-- Connector: `CONNECTED`.
-- `ROLLBACK_PRODUCTION`: available.
-- Vault `secret_ref`: resolvable.
+- Reconciliation logic corrected terminal budget completion.
+- Corrected implementation passed canonical CI.
+- Production runtime had no `error/fatal` evidence after corrected deployment.
+- Connector `CONNECTED`; `ROLLBACK_PRODUCTION` available; Vault `secret_ref` resolvable.
 
-### Important historical evidence
+The earlier failed rollback remains immutable evidence and was not rewritten.
 
-The earlier failed rollback is preserved as evidence. The provider returned HTTP 402 with `error.code=unprocessable_entity` and the native message that the selected Delivery Anchor was farther back than the previous Production deployment allowed by the current Vercel plan. This proved the architectural distinction:
+## 7. Launch readiness — explicit global gate
 
-**Delivery Anchor ≠ Rollback Target.**
+**Global Hórus status: NOT READY FOR MARKET.**
 
-The resolver was corrected to use Current Production plus provider deployment history and select the immediate previous eligible READY Production deployment.
+Completing one surface never promotes the entire Hórus to market-ready.
 
-The failed historical execution was not rewritten into success.
+### Shared platform gates required for global launch readiness
 
-## 6. Current launch-readiness boundary
-
-The Hórus platform is **not globally launch-ready** merely because Studio 09 is complete. Launch readiness must be established per commercial surface and then at platform level.
-
-Before a surface is marked COMPLETE, its roadmap closure must demonstrate, as applicable:
-
-- intent/Nexus behavior;
-- agent/capability composition;
-- model routing;
-- connector security;
-- execution idempotency;
+- Identity / Workspace;
+- authorization;
+- Cognitive Core;
+- Nexus;
+- capability composition;
+- inference/model routing;
+- connector security/fabric;
+- execution/idempotency;
 - economic authorization;
 - billing;
-- provider side-effect verification;
-- runtime reliability;
 - observability/audit;
 - RLS/Vault/security;
+- runtime reliability;
 - recovery/rollback;
 - CI/deployment evidence.
 
-## 7. Next-module boundary
+### Commercial surface gates
 
-**No next functional module was started during this reconciliation.**
+Each surface intended for launch requires its own closure/evidence:
 
-The next module must be selected from this global roadmap only after the current documentation source of truth is accepted and the dependency graph is respected.
+| Surface | Closure required |
+|---|---|
+| Colaboradores Digitais | Dedicated closure + platform gates |
+| Hórus Personal | Dedicated closure + platform gates |
+| Hórus Operations | Dedicated closure + platform gates |
+| Studio Projects | 09 closure + applicable platform gates |
 
-10 — AGENTS remains `🔒 NOT_STARTED`.
+A surface can be COMPLETE without making another surface COMPLETE.
 
-## 8. Documentation integrity
+## 8. Next-module boundary
 
-The Master Blueprint defines architecture. This Roadmap defines progress. Closure documents provide evidence. `ARCHITECTURE-LOCK.md` governs non-regression and reconciliation.
+**No functional module was started by this reconciliation.**
 
-Historical documentation remains preserved and is not deleted merely because its evidence boundary was later superseded. Current verified evidence takes precedence when determining current status.
+`10 — Agents / Collaborators` remains **🔒 NOT_STARTED** and is the next functional module. This statement does not override the Blueprint dependency graph; it identifies the next project work item after the documentation gate.
+
+## 9. Evidence and documentation integrity
+
+- Blueprint = what Hórus is.
+- Roadmap = where Hórus is.
+- Closures = why a gate is considered complete.
+- Architecture Lock = permanent anti-drift/non-regression rules.
+- Historical documents are preserved.
+- Current verified evidence determines current status.
+- Studio evidence is never silently promoted to platform-wide proof.
