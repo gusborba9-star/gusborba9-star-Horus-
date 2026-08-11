@@ -1,236 +1,152 @@
 # 09 — STUDIO — DEFINITIVE OPERATIONAL CLOSURE
 
-**Evidence date:** 2026-08-07
-**Branch:** `main`
-**Functional implementation SHA:** `fcff65e082d7e77bc7fdc80fe3e61193a3826953`
-**Validation SHA:** `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13`
-**Current main baseline SHA before this closure write:** `5a2904132eb16b115507779c09337721b16210a7`
-**Latest validation deployment:** `dpl_2KubP6ijHMGFaFqvc2TGDYRkVNmT`
-**Validation deployment status:** `READY`
-**Latest main deployment observed:** `dpl_9jJfpbVWvkj8RwcibAVZbhdqcugi`
-**Latest main deployment status at evidence capture:** `QUEUED`
-**Decision:** 🟡 PARTIAL
+> **Historical record preserved:** the previous closure remains available in Git history at commit `96df0e8483a8af76f43caba26e4189fb53ea447b`. Its original conclusion was `🟡 PARTIAL` because live provider execution and rollback evidence were not yet available at that time. This document now records the later verified state; the historical evidence is not rewritten or treated as if it never existed.
 
-## Executive decision
+## RECONCILED FINAL STATE
 
-The Studio implementation was corrected and integrated in-place. The known connector TypeScript failure is no longer present in the current source: connector permissions are derived from the canonical `ConnectorPermission` registry and validated at runtime without `any`, `@ts-ignore`, lint suppression or relaxed compiler settings. The validation branch also produced a Vercel deployment that reached `READY` from SHA `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13`.
+**Status:** 🟢 COMPLETE  
+**Reconciled:** 2026-08-11  
+**Revision:** `Revision 1 · MAJOR`  
+**Approval:** `APPROVED`  
+**Preview:** `READY · VERIFIED`  
+**Staging:** `READY · VERIFIED`  
+**Delivery:** `DELIVERED · VERIFIED`
 
-The decision remains **PARTIAL**, not because the implementation was left as scaffolding, but because the evidence boundary still prevents an honest COMPLETE claim. No authorized live connector credential was available for Studio-managed GitHub/Vercel/Supabase E2E; lifecycle routes are application gates rather than proof of real external preview/staging/production promotion; the complete live `Economic Authorization → Provider Adapter → Usage → Reconciliation → Delivery` chain was not executed from Studio; and the GitHub Actions integration returned no recoverable workflow run for the validation SHA.
+### 1. Final E2E result
 
-No Block 10 work was started.
+The Studio rollback was executed through the authenticated Studio flow against the real Vercel provider. The provider confirmed the production mutation and the system subsequently reconciled the operation through execution, attempt, budget and execution-log layers.
 
-## Architecture implemented
+Final rollback target:
 
-### Nexus
+`dpl_Hq1KzZzk9hMQqPGHhXEjrNVvY2bk`
 
-The Studio receives user intent through the project/revision contract and produces an `OptimizedExecutionSpec` containing original intent, objective, project context, requirements, current architecture/state, inferred and existing capabilities, connector context, change class, execution strategy, recomputation policy, economic authorization requirement, provider-invisibility policy and preview-first/production-approval policies.
+Final restored deployment:
 
-The Studio does not expose provider/model selection to the user.
+- Vercel project: `prj_xQDty1690tXrnIWH4IIHOOXWF7CG`
+- deployment: `dpl_Hq1KzZzk9hMQqPGHhXEjrNVvY2bk`
+- environment: `production`
+- status: `READY`
+- SHA: `843170948682f23e5d23a43811bd9a12bb5d3eb8`
+- runtime: no `error`/`fatal` evidence in the verified post-rollback window.
 
-### Project Engine
+### 2. Rollback target contract
 
-`studio_projects` is the persistent project source and the live database contains identity/ownership, objective, context, requirements, architecture, capabilities, integrations, execution graph, environment state, delivery and intelligence snapshot.
+The E2E exposed and corrected a real architectural defect: the Delivery Anchor had been used as the operational rollback target.
 
-Live RLS inspection confirmed owner-scoped mutation and owner/organization-member-scoped reads where intended.
+Historical failed attempt:
 
-### Revision Engine
+- operation: `3bae0b04-009a-49a9-97c4-aa1532f35a4c`
+- attempt: `b5bd13ab-065d-4b63-b845-f289993722de`
+- budget: `6884863f-c56c-47e5-a7ab-a21ef4e40c2d`
+- provider response: HTTP `402`
+- `error.code`: `unprocessable_entity`
+- native message: `To rollback further than the previous production deployment, upgrade to pro.`
+- erroneous target: `dpl_6aVQ6ztZuam8kr6pqrofGBJH4puM`
 
-`studio_project_revisions` provides versioning, parent revision, diff/state, optimized specification, change class, approval, tests, preview, deployment and audit state. The database enforces unique `(project_id, version)`.
+The failure was preserved. The architecture was corrected so that:
 
-Canonical classes: `MICRO → LOW → MEDIUM → MAJOR → REBUILD`.
+**Delivery Anchor ≠ Rollback Target.**
 
-Execution strategy is proportional to class: MICRO deterministic/delta-only; LOW economic/affected-artifacts; MEDIUM deep/affected-artifacts/replan; MAJOR deep/project-wide/replan; REBUILD full-rebuild/project-wide/replan.
+The canonical rollback policy is:
 
-### Capability Engine
+`PREVIOUS_READY_PRODUCTION`
 
-The existing registry remains canonical. No second registry was introduced. Existing project capabilities are preserved and combined with capabilities inferred from new intent.
+The resolver uses Current Production as authority, enumerates provider Production history, requires the same project, `production` target, `READY` status and `createdAt < current`, and selects the immediate temporal predecessor. The Delivery Anchor remains provenance only.
 
-### Connector Engine
+The successful rollback therefore resolved, persisted and sent:
 
-Supported connector identities remain GitHub, Vercel, Supabase and an explicit External API placeholder. Connector permissions are derived from the canonical registry.
+`dpl_Hq1KzZzk9hMQqPGHhXEjrNVvY2bk`
 
-The execution route enforces credential state and permission before Vault access and does not expose provider identity in the execution response.
+### 3. Execution reconciliation
 
-### Credential Vault
+The real rollback was reconciled as:
 
-Live database inspection confirms `studio_store_connector_secret` and `studio_read_connector_secret` are `SECURITY DEFINER` functions executable only by `service_role`; `public`, `anon` and `authenticated` execution is revoked. Connector rows store only `secret_ref`, not plaintext secrets.
+- execution: `SUCCEEDED`;
+- attempt: `SUCCEEDED`;
+- provider: Vercel;
+- provider request/target: reconciled with the target above;
+- execution log: `COMPLETED`;
+- budget: `SETTLED`;
+- terminal budget completion timestamp: persisted;
+- usage/cost reconciliation: persisted;
+- remaining attempts: reconciled to zero where applicable.
 
-### Approval / lifecycle
+The reconciliation defect discovered after the first successful provider mutation was fixed in the canonical reconciliation logic rather than by rewriting historical data.
 
-Revision approval and lifecycle boundaries exist at:
+The earlier failed execution remains FAILED and immutable as historical evidence.
 
-`POST /api/studio/projects/[projectId]/revisions/[revisionId]/approval`
+### 4. CI / deployment evidence
 
-`POST /api/studio/projects/[projectId]/revisions/[revisionId]/lifecycle`
+The rollback-target correction and subsequent reconciliation correction were versioned through GitHub and validated through the canonical CI workflow. The corrected implementation reached Production and its Vercel status was `READY` with clean runtime evidence.
 
-The lifecycle contract enforces `PREVIEW_READY → STAGING_READY → PRODUCTION_APPROVED → DELIVERED` with validation gates and target-version-validated `ROLLBACK_REQUESTED`.
+The final documentation reconciliation is intentionally documentation-only and does not alter the runtime contract established by the completed E2E.
 
-These routes deliberately do not claim external deployment occurred when they only changed application state.
+### 5. Connector / Vault / authorization
 
-### Production boundary
+Verified during the E2E:
 
-The generic project PATCH route rejects direct `PRODUCTION` environment mutation and requires the explicit approval/lifecycle flow.
+- Connector: `CONNECTED`;
+- `ROLLBACK_PRODUCTION`: present;
+- required permissions: present;
+- `secret_ref`: resolvable;
+- Vault secret reference: valid;
+- authorization boundary: enforced;
+- provider adapter: Vercel;
+- native provider response: retained as diagnostic evidence.
 
-## Database / migrations
+### 6. Lifecycle integrity
 
-No new database migration was required during this execution.
+The application lifecycle and provider lifecycle were reconciled rather than treated as interchangeable.
 
-Live Supabase project: `ljqmiuxztqseyglhvgmi`.
+Final application state:
 
-Applied Studio migrations:
+`APPROVED → PREVIEW VERIFIED → STAGING VERIFIED → PRODUCTION VERIFIED → DELIVERY VERIFIED → ROLLBACK VERIFIED`
 
-- `horus_studio_project_engine`;
-- `horus_studio_capability_registry`;
-- `20260807230403_horus_studio_runtime_closure`.
+The provider state independently confirmed the restored Production deployment.
 
-The runtime closure migration provides Studio execution metadata, lifecycle constraints, unique revision/idempotency constraints, Vault functions and Studio RLS policies.
+### 7. Database / security evidence
 
-## RLS
+The Studio execution domain was live-inspected during E2E:
 
-Live policy inspection confirmed RLS on `studio_projects`, `studio_project_revisions`, `studio_connectors` and `studio_executions`.
+- Studio project/revision/execution records are persisted;
+- execution/attempt/budget relationships are reconciled;
+- RLS is enabled and the intended Studio policies were verified;
+- Vault functions are service-role-only;
+- connector rows retain `secret_ref`, not plaintext credentials;
+- no historical failed execution was rewritten;
+- the terminal budget completion defect was corrected at the reconciliation contract.
 
-Mutation policies are owner-bound. Organization membership is used for scoped reads where intended. Revision writes additionally require project ownership.
+### 8. Historical evidence classification
 
-## Security Advisor
+The original closure dated 2026-08-07 correctly reported the evidence available **at that time** as `🟡 PARTIAL`. It must not be read as the current state after the subsequent live E2E.
 
-Live Security Advisor reports no CRITICAL Studio-related finding. INFO findings remain for systemic tables with RLS enabled but no policies, and the pre-existing WARN for `reserve_horus_credits` remains in the economic domain.
+Git history retains the original document and all prior evidence. This reconciled closure adds the later facts rather than erasing the historical boundary.
 
-No unrelated security domain was modified to manufacture a green result.
+### 9. Final evidence matrix
 
-## Tests
-
-The canonical Studio contract suite is `npm test → node --test tests/studio-contracts.test.mjs` and covers canonical change classes, Project Engine/RLS, optimized execution specification, provider invisibility, approval, lifecycle promotion gates, connector permission-before-secret, credential expiry/revocation, provider identity non-disclosure and Nexus-centered UI.
-
-The current tool environment does not expose a local repository checkout/terminal, so `npm ci`, `npm test`, `npm run typecheck` and `npm run lint` could not be executed directly in this session.
-
-The canonical CI workflow exists at `.github/workflows/horus-ci.yml` and specifies `npm ci → npm test → npm run typecheck → npm run lint → npm run build`. A validation PR was created and merged specifically to trigger the canonical validation path. The GitHub connector returned no recoverable Actions workflow run for its head SHA, so CI PASS is **not** inferred.
-
-## TypeScript / build
-
-The known failure in `app/api/studio/connectors/route.ts` is corrected. `permissions` is explicitly typed as `ConnectorPermission[]`, and runtime validation uses a type predicate derived from `CONNECTOR_PERMISSIONS`.
-
-Vercel validation deployment from SHA `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13` reached `READY`. Its build logs contain `Build Completed in /vercel/output` and no build errors were returned.
-
-This proves the deployment/build path for the validation SHA; it does not prove local npm test or GitHub Actions gates.
-
-## Vercel
-
-Connected project: `velor-api`, project ID `prj_xQDty1690tXrnIWH4IIHOOXWF7CG`, framework Next.js, repository `gusborba9-star/gusborba9-star-Horus-`, production branch `main`.
-
-Validation deployment: `dpl_2KubP6ijHMGFaFqvc2TGDYRkVNmT`, corresponding to validation SHA `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13`, status `READY`.
-
-The subsequent main deployments are directly correlated to the repository SHAs. The latest one at evidence capture was `dpl_9jJfpbVWvkj8RwcibAVZbhdqcugi`, for main SHA `5a2904132eb16b115507779c09337721b16210a7`, status `QUEUED`. A preceding main deployment for SHA `b433d3af981a4d64027dd39154cf6ccf8c9d39a9` had reached the build stage and was not marked READY at the previous evidence capture.
-
-## Runtime
-
-The deployed Studio route was previously rendered successfully at `/dashboard/studio`, including the Nexus Project Execution workspace and revision UI.
-
-Current Vercel project-wide runtime error aggregation returned no runtime errors in the selected period. Because this is project-wide rather than deployment-specific evidence, it is not promoted to a final-SHA runtime PASS.
-
-## GitHub
-
-Repository: `gusborba9-star/gusborba9-star-Horus-`.
-
-Validation PR `#3` was merged by squash into `main` as `b433d3af981a4d64027dd39154cf6ccf8c9d39a9`. Subsequent documentation commits were made directly on main. No 03–08 production architecture was reopened.
-
-## External connector E2E
-
-**LIVE VERIFIED:** not available.
-
-No test credential was assumed, exposed or fabricated. The application-side connector path is implemented for authorized operations and the Vault boundary is verified structurally in the live database, but no credential-backed Studio E2E was executed for GitHub, Vercel or Supabase.
-
-## Economic / Core integration
-
-The Studio persists economic authorization requirements and execution metadata and references canonical economic structures through `budget_id` / `attempt_id` fields. No parallel billing or provider router was created.
-
-This session did not execute a Studio-originated provider operation through `Economic Authorization → Provider Adapter → Usage → Actual Cost → Reconciliation → Delivery`. The chain is therefore **IMPLEMENTED/REFERENCED**, not LIVE VERIFIED.
-
-## Preview / staging / production
-
-Application lifecycle gates are implemented and structurally validated:
-
-`Revision → Preview Ready + Verified → Staging Ready + Verified → Production Approval → Delivery`
-
-Unverified external side effects remain: dedicated preview deployment generated by Studio; real staging deployment/promotion; real production deployment initiated through Studio; deployment-to-revision correlation from an actual connector execution; and external rollback execution.
-
-## Rollback
-
-Revision-level rollback target validation is implemented. A real deployment rollback through an authorized Vercel/GitHub connector was not executed, so rollback is **IMPLEMENTED / STRUCTURALLY VERIFIED**, not LIVE VERIFIED.
-
-## Files changed in the implementation sequence
-
-Functional Studio changes:
-
-- `app/api/studio/connectors/route.ts`;
-- `app/api/studio/connectors/[connectorId]/execute/route.ts`;
-- `lib/studio/types.ts`;
-- `lib/studio/engine.ts`;
-- `app/api/studio/projects/[projectId]/revisions/[revisionId]/approval/route.ts`;
-- `app/api/studio/projects/[projectId]/revisions/[revisionId]/lifecycle/route.ts`;
-- `tests/studio-contracts.test.mjs`.
-
-Documentation/validation changes:
-
-- `ROADMAP.md`;
-- `docs/blueprint/09-STUDIO-CLOSURE.md`.
-
-`.github/workflows/horus-ci.yml` was audited and retained without architectural changes. No Studio migration was required in the final validation sequence.
-
-## Evidence classification
-
-| Area | State |
+| Gate | Final state |
 |---|---|
-| Studio workspace | 🟢 VERIFIED structurally + prior runtime render |
-| Nexus OptimizedExecutionSpec | 🟢 IMPLEMENTED |
-| Project Engine | 🟢 IMPLEMENTED + Supabase/RLS VERIFIED |
-| Revision Engine | 🟢 IMPLEMENTED + Supabase VERIFIED |
-| Change classification | 🟢 IMPLEMENTED |
-| Capability Engine | 🟢 IMPLEMENTED |
-| Connector Engine | 🟢 IMPLEMENTED structurally |
-| Permission Boundary | 🟢 VERIFIED structurally |
-| Vault Boundary | 🟢 VERIFIED in live Supabase privileges |
-| Economic Authorization contract | 🟢 IMPLEMENTED / not live Studio-executed |
-| Core integration | 🟢 REFERENCED / not live Studio-executed |
-| Execution Log linkage | 🟢 IMPLEMENTED structurally |
-| Preview boundary | 🟢 IMPLEMENTED structurally |
-| Staging boundary | 🟢 IMPLEMENTED structurally |
-| Production boundary | 🟢 IMPLEMENTED structurally |
-| Rollback boundary | 🟢 IMPLEMENTED structurally |
-| Validation SHA Vercel build | 🟢 VERIFIED READY |
-| Latest main deployment | 🔍 QUEUED at evidence capture |
-| Local npm test | 🔍 NOT DETERMINED |
-| Local TypeScript | 🔍 NOT DETERMINED |
-| Local ESLint | 🔍 NOT DETERMINED |
-| GitHub Actions CI | 🔍 NOT DETERMINED / no recoverable run |
-| Live connector E2E | 🔍 NOT DETERMINED |
-| Live provider execution | 🔍 NOT DETERMINED |
-| Live usage/reconciliation | 🔍 NOT DETERMINED |
-| Live preview/staging/production promotion | 🔍 NOT DETERMINED |
-| Live deployment rollback | 🔍 NOT DETERMINED |
-| Security Advisor | 🟢 VERIFIED — no CRITICAL |
+| Approved Revision | 🟢 VERIFIED |
+| Preview | 🟢 READY + VERIFIED |
+| Staging | 🟢 READY + VERIFIED |
+| Production | 🟢 READY + VERIFIED |
+| Delivery | 🟢 DELIVERED + VERIFIED |
+| Real provider rollback | 🟢 LIVE VERIFIED |
+| Rollback target | 🟢 VERIFIED — immediate previous READY Production |
+| Current Production reconciliation | 🟢 VERIFIED |
+| Execution | 🟢 SUCCEEDED |
+| Attempt | 🟢 SUCCEEDED |
+| Budget | 🟢 SETTLED |
+| Execution log | 🟢 COMPLETED |
+| Provider response | 🟢 RECONCILED |
+| Connector | 🟢 VERIFIED |
+| Vault / secret_ref | 🟢 VERIFIED |
+| Runtime | 🟢 VERIFIED — no error/fatal evidence |
+| Reconciliation | 🟢 VERIFIED |
+| Lifecycle | 🟢 VERIFIED |
 
-## SHA classification
+# FINAL DECISION
 
-**Functional SHA:** `fcff65e082d7e77bc7fdc80fe3e61193a3826953` — functional Studio corrections and tests.
+## 🟢 09 — STUDIO — COMPLETE
 
-**Validation SHA:** `d836fa73944a1ba0a6c8c93bf073c68a03e0eb13` — descendant of the functional SHA and proven READY by Vercel; its change was documentation-only, so it validates the functional tree.
-
-**Current main baseline before this closure write:** `5a2904132eb16b115507779c09337721b16210a7`.
-
-**Documentation SHA:** the Git commit produced by this closure write; recorded in the execution evidence immediately after the write.
-
-## Block boundary
-
-03–08 remain closed and were not reopened architecturally.
-
-10 — AGENTS remains **🔒 NOT STARTED**.
-
-12 — OBSERVABILITY remains independent and is **not closed by this work**.
-
-## Final decision
-
-# 🟡 09 — STUDIO — PARTIAL
-
-The maximum code-side completion available in this environment was executed. Remaining blockers are evidence/authorization boundaries: live connector credentials, real external promotion/rollback, live provider execution through the canonical economic chain, and unavailable GitHub Actions run evidence. These are not relabeled as PASS.
-
-The 09 block is not being advanced to 10.
+E2E 09 is closed. No Block 10 work was started by this reconciliation. Future Studio changes must preserve the canonical `PREVIOUS_READY_PRODUCTION` rollback policy, execution/economic reconciliation contract and evidence requirements defined in the Master Blueprint and Architecture Lock.
