@@ -1,5 +1,6 @@
 name: horus-e2e10-authenticated
 
+# Live authenticated E2E is intentionally isolated from the deterministic horus-ci workflow.
 on:
   workflow_dispatch:
   push:
