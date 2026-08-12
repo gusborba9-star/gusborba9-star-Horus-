@@ -45,6 +45,10 @@ This document prevents documentation drift, silent architectural deletion, false
 32. **CI/deploy validation is asynchronous work, not a user step.** Never report `IN_PROGRESS` as a blocker; wait for a conclusive result when the integration permits it.
 33. **No next-module implementation starts merely because documentation was rewritten.** Complete reconciliation and validation first.
 34. **Documentation remains atomic.** Update only the documents whose architectural/progress/evidence responsibilities are affected; preserve history and avoid duplicate registries.
+35. **Digital Collaborators must reuse the canonical execution/economic primitives.** Agent-specific budgets, attempts, usage or reconciliation registries are prohibited when the shared platform contract already exists.
+36. **Autonomy is an execution boundary, not metadata.** `SUGGEST` and `PREPARE` cannot silently cross into provider execution; `EXECUTE`/`AUTONOMOUS` require the applicable authorization and economic gates.
+37. **Tenant authorization precedes privileged collaborator resolution.** Service-role execution paths must validate organization membership/ownership before reading or mutating tenant-scoped collaborator state.
+38. **Collaborator capabilities reuse the canonical capability registry.** A collaborator-owned capability registry is prohibited.
 
 ## Status taxonomy
 
