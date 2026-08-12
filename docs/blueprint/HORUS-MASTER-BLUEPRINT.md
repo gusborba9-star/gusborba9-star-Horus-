@@ -105,7 +105,7 @@ A provider-neutral routing layer selects the appropriate model/provider per task
 
 Agents are reusable cognitive workers with role, objective, instructions, memory scope, capabilities, connectors, permissions, economic policy and execution boundaries. A collaborator is a productized agent/team role; Agents are platform primitives.
 
-E2E 10 establishes the first reusable Digital Collaborator foundation without creating a parallel agent registry. The canonical collaborator model persists identity, role, specialization, objectives, instructions, memory scope, tools/connectors policy, autonomy, economic policy version, model preference, fallback policy, lifecycle state and version snapshots. Capability bindings are separate from the collaborator entity and reuse the existing canonical `capabilities` registry.
+E2E 10 establishes the first reusable Digital Collaborator foundation and closes its defined authenticated execution gate without creating a parallel agent registry. The canonical collaborator model persists identity, role, specialization, objectives, instructions, memory scope, tools/connectors policy, autonomy, economic policy version, model preference, fallback policy, lifecycle state and version snapshots. Capability bindings are separate from the collaborator entity and reuse the existing canonical `capabilities` registry.
 
 Collaborator execution reuses the existing execution/economic primitives rather than creating a second budget/attempt/usage system. The Nexus resolution boundary selects an active collaborator, resolves an enabled capability, selects an active provider/model, assembles bounded memory context, evaluates autonomy/approval policy, then enters the shared budget → attempt → provider → usage → reconciliation chain.
 
@@ -113,7 +113,7 @@ Autonomy levels are explicit: `READ`, `SUGGEST`, `PREPARE`, `EXECUTE`, `AUTONOMO
 
 The current implementation supports text generation through the existing OpenRouter provider/model registry and bounded Memory Graph reads. Connector binding is represented by collaborator policy and remains separately governed by the canonical Connector Fabric; no collaborator-owned credential store is permitted.
 
-This E2E establishes the platform primitive and API contract. It does not make all future collaborators, multimodal execution, team delegation, or platform-wide connector coverage complete.
+The authenticated E2E closure proves the defined collaborator platform primitive, API contract, tenant gate, autonomy/economic boundary and real text-provider execution path in Production. It does not make all future collaborators, multimodal execution, team delegation, or platform-wide connector coverage complete.
 
 ## 5. Capability system
 
@@ -242,7 +242,9 @@ These are current infrastructure choices, not product boundaries. Connector Fabr
 **🟢 COMPLETE.** Real Vercel rollback, successful execution/attempt, settled budget, completed execution log, corrected reconciliation, CI success, Production readiness, clean runtime, Connector/Vault authorization and deterministic `PREVIOUS_READY_PRODUCTION` resolution are recorded in `09-STUDIO-CLOSURE.md`.
 
 ### 10 — Agents / Digital Collaborators
-**🟢 IMPLEMENTED / VERIFIED at code, schema, CI and deployment level.** The collaborator primitive, capability binding, version snapshot, Nexus resolution boundary, autonomy policy, tenant gate, shared economics integration and text-provider execution boundary are implemented. Live provider E2E execution remains an evidence gate before `COMPLETE` because the available deployment integration does not expose an authenticated application-user execution surface for this audit.
+**🟢 COMPLETE.** The collaborator primitive, capability binding, version snapshot, Nexus resolution boundary, autonomy policy, tenant gate, shared economics integration and text-provider execution boundary are implemented and have passed the defined authenticated Production E2E closure. `10-AGENTS-CLOSURE.md` records the terminal evidence: real Supabase Auth/JWT, normal Collaborator API creation, Nexus/capability/policy resolution, real OpenRouter execution, execution/attempt/usage, economic reconciliation, settled budget, completed execution log, idempotency replay and negative authorization controls.
+
+The E2E 10 closure does not make all future collaborators, multimodal execution, team delegation, platform-wide connector coverage or the separate commercial launch surface complete. Those remain independently tracked in `ROADMAP.md`.
 
 All other platform modules are classified by direct evidence in `ROADMAP.md`; Studio evidence must not be promoted into platform-wide completion.
 
