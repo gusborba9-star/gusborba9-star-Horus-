@@ -1,0 +1,38 @@
+name: horus-e2e10-authenticated
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/api/collaborators/**'
+      - 'lib/collaborators/**'
+      - 'lib/studio/auth.ts'
+      - 'tests/e2e10-authenticated-collaborator.mjs'
+      - 'package.json'
+      - '.github/workflows/horus-e2e10-authenticated.yml'
+
+jobs:
+  authenticated-e2e10:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.HORUS_E2E_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.HORUS_E2E_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HORUS_E2E_SUPABASE_SERVICE_ROLE_KEY }}
+      E2E_BASE_URL: ${{ secrets.HORUS_E2E_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate required E2E configuration
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          test -n "$E2E_BASE_URL"
+      - name: Run authenticated E2E 10
+        run: npm run test:e2e10
