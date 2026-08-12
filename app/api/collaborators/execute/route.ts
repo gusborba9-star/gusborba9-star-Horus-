@@ -20,7 +20,7 @@ async function createBudget(service: ReturnType<typeof getServiceSupabase>, user
   if (policyError || !policy) throw new Error('ECONOMIC_POLICY_UNAVAILABLE');
   const { data: pricing, error: pricingError } = await service.from('pricing_snapshots').select('id').order('created_at', { ascending: false }).limit(1).single();
   if (pricingError || !pricing) throw new Error('PRICING_SNAPSHOT_UNAVAILABLE');
-  const { data: fx, error: fxError } = await service.from('fx_snapshots').select('id').eq('base_currency', 'USD').eq('quote_currency', 'BRL').order('observed_at', { ascending: false }).limit(1).single();
+  const { data: fx, error: fxError } = await service.from('fx_snapshots').select('id,rate').eq('base_currency', 'USD').eq('quote_currency', 'BRL').order('observed_at', { ascending: false }).limit(1).single();
   if (fxError || !fx) throw new Error('FX_SNAPSHOT_UNAVAILABLE');
   const minimumMargin = Number(policy.minimum_gross_margin_rate);
   const maximumTreeCost = REVENUE_BRL * (1 - minimumMargin);
@@ -61,7 +61,7 @@ async function createBudget(service: ReturnType<typeof getServiceSupabase>, user
 }
 
 async function createLog(service: ReturnType<typeof getServiceSupabase>, executionId: string, action: string) {
-  const { data, error } = await service.from('horus_execution_logs').insert({ request_id: executionId, event_type: 'COLLABORATOR_EXECUTION', source: 'nexus', action, status: 'RUNNING', confidence: 1, requires_human_review: false, memory_matches: 0, metadata: { executionId, action, surface: 'collaborators' } }).select('id').single();
+  const { data, error } = await service.from('horus_execution_logs').insert({ request_id: executionId, event_type: 'COLLABORATOR_EXECUTION', source: 'nexus', action, status: 'RUNNING', confidence: 1, requires_human_review: false, memory_matches: 0, error_message: null, metadata: { executionId, action, surface: 'collaborators' } }).select('id').single();
   if (error || !data) throw new Error(`EXECUTION_LOG_CREATE_FAILED:${error?.message ?? 'UNKNOWN'}`);
   return data.id as string;
 }
@@ -172,10 +172,17 @@ export async function POST(request: Request) {
     const outputTokens = Math.max(0, Number(usage.completion_tokens ?? 0));
     const reasoningTokens = Math.max(0, Number(usage.reasoning_tokens ?? 0));
     const cachedInputTokens = Math.max(0, Number(usage.prompt_tokens_details?.cached_tokens ?? 0));
-    const requestUnits = 1;
     const providerUsd = typeof usage.cost === 'number' ? usage.cost : (inputTokens * resolution.modelInputPrice + outputTokens * resolution.modelOutputPrice) / 1_000_000;
-    const actualCostBrl = Math.min(MAX_COST_BRL, Math.max(0, providerUsd * fxRate));
+    const actualCostBrl = Math.max(0, providerUsd * fxRate);
     const providerRequestId = response.headers.get('x-request-id') ?? (typeof payload?.id === 'string' ? payload.id : null);
+    const resultText = typeof payload?.choices?.[0]?.message?.content === 'string' ? payload.choices[0].message.content.trim() : '';
+    if (!resultText) {
+      await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: 0, p_status: 'FAILED', p_input_tokens: inputTokens, p_output_tokens: outputTokens, p_reasoning_tokens: reasoningTokens, p_cached_input_tokens: cachedInputTokens, p_request_units: 1, p_image_units: 0, p_provider_request_id: providerRequestId, p_actual_provider: resolution.providerId, p_actual_model: resolution.modelId, p_latency_ms: latencyMs, p_raw_usage: { ...usage, failure: 'PROVIDER_EMPTY_RESULT' } });
+      await service.from('horus_collaborator_executions').update({ status: 'FAILED', error_code: 'PROVIDER_EMPTY_RESULT', error_message: 'Provider returned no textual result', completed_at: new Date().toISOString() }).eq('id', executionId);
+      await updateLog(service, logId, 'FAILED', { error_message: 'Provider returned no textual result' });
+      throw new Error('PROVIDER_EMPTY_RESULT');
+    }
+
     const reconciled = await service.rpc('reconcile_horus_execution_attempt', {
       p_attempt_id: attemptId,
       p_actual_cost_brl: actualCostBrl,
@@ -184,7 +191,7 @@ export async function POST(request: Request) {
       p_output_tokens: outputTokens,
       p_reasoning_tokens: reasoningTokens,
       p_cached_input_tokens: cachedInputTokens,
-      p_request_units: requestUnits,
+      p_request_units: 1,
       p_image_units: 0,
       p_provider_request_id: providerRequestId,
       p_actual_provider: resolution.providerId,
@@ -194,8 +201,6 @@ export async function POST(request: Request) {
     });
     if (reconciled.error || !reconciled.data) throw new Error(`ECONOMIC_RECONCILIATION_FAILED:${reconciled.error?.message ?? 'UNKNOWN'}`);
 
-    const resultText = typeof payload?.choices?.[0]?.message?.content === 'string' ? payload.choices[0].message.content : '';
-    if (!resultText) throw new Error('PROVIDER_EMPTY_RESULT');
     const completedAt = new Date().toISOString();
     await service.from('horus_collaborator_executions').update({ status: 'SUCCEEDED', result: { text: resultText, usage: { input_tokens: inputTokens, output_tokens: outputTokens, reasoning_tokens: reasoningTokens, cached_input_tokens: cachedInputTokens, actual_cost_brl: actualCostBrl }, provider_request_id: providerRequestId, latency_ms: latencyMs, runtime_ms: Date.now() - startedAt }, completed_at: completedAt }).eq('id', executionId);
     await updateLog(service, logId, 'COMPLETED', { memory_matches: resolution.memory.length, metadata: { executionId, action: 'COMPLETED', provider: resolution.providerId, model: resolution.modelId, capability: resolution.capabilityId, latency_ms: latencyMs, actual_cost_brl: actualCostBrl } });
