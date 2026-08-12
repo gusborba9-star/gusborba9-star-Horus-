@@ -24,13 +24,13 @@
 
 **Hórus global status: NOT READY FOR MARKET.**
 
-The Studio 09 surface is complete and the Digital Collaborator foundation is now implemented/verified, but the Hórus platform and the other commercial surfaces are not globally closed. A completed surface never promotes the whole product to market readiness.
+Studio 09 and the Digital Collaborator E2E 10 platform primitive are closed at their respective scopes, but the Hórus platform and the other commercial surfaces are not globally closed. A completed surface never promotes the whole product to market readiness.
 
 ### Commercial surfaces
 
 | Surface | Status | Scope / evidence |
 |---|---|---|
-| Colaboradores Digitais | 🔵 PLANNED | Commercial surface architecture defined; E2E 10 foundation implemented/verified, but no dedicated commercial launch closure. |
+| Colaboradores Digitais | 🔵 PLANNED | Commercial surface architecture defined; E2E 10 platform primitive is COMPLETE, but no dedicated commercial launch closure. |
 | Hórus Personal | 🔵 PLANNED | Text + voice product architecture defined; no dedicated production closure. |
 | Hórus Operations | 🔵 PLANNED | Cognitive-team operating model defined; no dedicated production closure. |
 | Studio Hórus / Projects | 🟢 COMPLETE | 09 closure; live Vercel rollback and full Studio lifecycle/economic reconciliation verified. |
@@ -143,8 +143,8 @@ The Studio 09 surface is complete and the Digital Collaborator foundation is now
 Historical failed rollback remains immutable evidence; it is not rewritten as success.
 
 ### 10 — Agents / Digital Collaborators
-**Status: 🟢 VERIFIED — platform primitive; live deployment verified, live provider execution evidence unavailable**  
-**Evidence:** code/schema, Supabase migration and RLS inspection, `horus-ci` success, Vercel Production READY deployment. `COMPLETE` remains gated on a real authenticated application-user provider execution E2E.
+**Status: 🟢 COMPLETE — authenticated production E2E and terminal economic reconciliation verified**  
+**Evidence:** `docs/blueprint/10-AGENTS-CLOSURE.md`, final authenticated E2E run `31628461257`, `horus-ci` run `31628461226`, Supabase persistence audit and Production deployment verification.
 
 - [x] Agent/collaborator primitive
 - [x] Collaborator product model
@@ -163,17 +163,17 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Idempotency boundary
 - [x] Shared budget authorization
 - [x] Shared attempt authorization
-- [x] Real provider execution boundary in production code
-- [x] Usage/cost reconciliation contract
+- [x] Real provider execution boundary in production
+- [x] Usage/cost reconciliation
 - [x] Durable collaborator execution persistence
 - [x] Durable execution log correlation
 - [x] Deterministic autonomy rejection for `SUGGEST` / `PREPARE`
+- [x] Live provider E2E with authenticated user session
+- [x] Dedicated `10` closure with live provider evidence
 - [ ] Concrete collaborator connector binding/execution
 - [ ] Delegation / parent-child collaborator execution
 - [ ] Collaborator team orchestration
 - [ ] Learning/optimization loop
-- [ ] Live provider E2E with authenticated user session
-- [ ] Dedicated `10` closure with live provider evidence
 
 ### 11 — Hórus Personal
 **Status: 🔵 PLANNED**
@@ -369,7 +369,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [ ] Capability governance/compatibility closure
 
 ### Provider Adapters
-**Status: 🟢 IMPLEMENTED — Studio/Vercel live verified; collaborator text provider path implemented.**
+**Status: 🟢 IMPLEMENTED — Studio/Vercel live verified; collaborator text provider path implemented and live E2E verified.**
 
 - [x] Provider abstraction in persistence
 - [x] Vercel adapter path
@@ -380,7 +380,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [ ] Cross-product provider verification
 
 ### HITL / Approval
-**Status: 🟢 IMPLEMENTED — Studio-scoped; collaborator autonomy gate implemented; platform-wide policy pending.**
+**Status: 🟢 IMPLEMENTED — Studio-scoped; collaborator autonomy gate implemented and live E2E verified; platform-wide policy pending.**
 
 - [x] Revision approval boundary
 - [x] Production approval boundary
@@ -402,7 +402,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 | 07 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
 | 08 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
 | 09 | 🟢 COMPLETE | Studio + LIVE VERIFIED | `09-STUDIO-CLOSURE.md`, CI, Vercel, Supabase evidence |
-| 10 | 🟢 VERIFIED | platform collaborator primitive; live deployment verified; provider E2E evidence unavailable | code/schema, Supabase migration/RLS, `horus-ci`, Vercel Production READY |
+| 10 | 🟢 COMPLETE | authenticated production collaborator E2E | `10-AGENTS-CLOSURE.md`, E2E run `31628461257`, CI `31628461226`, Supabase persistence audit, Production READY |
 | 11 | 🔵 PLANNED | commercial surface | Blueprint only |
 | 12 | 🔵 PLANNED | platform-wide | Blueprint only |
 | 13 | 🔵 PLANNED | commercial surface | Blueprint only |
@@ -411,7 +411,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 | 16 | 🔵 PLANNED | platform-wide | architecture/schema foundation; no production router closure |
 | 17 | 🟢 IMPLEMENTED | Studio-scoped | Studio connector schema/code/E2E |
 | 18 | 🟢 IMPLEMENTED | Studio-scoped + LIVE VERIFIED; collaborator reuse verified | execution/attempt/budget/reconciliation E2E + E2E 10 code integration |
-| 19 | 🟢 VERIFIED | Studio LIVE VERIFIED; collaborator schema/code verified | RLS/Vault/Connector E2E + collaborator RLS/membership gate |
+| 19 | 🟢 VERIFIED | Studio LIVE VERIFIED; collaborator tenant boundary verified | RLS/Vault/Connector E2E + collaborator RLS/membership gate + negative E2E |
 | 20 | 🟢 VERIFIED | Studio LIVE VERIFIED; E2E 10 deployment verified | Vercel lifecycle/rollback E2E + Production READY deployment |
 
 ## 6. Dependency order — authoritative architectural graph
@@ -462,7 +462,7 @@ Commercial surfaces consume the shared platform:
 
 | Surface | Status | Required closure |
 |---|---|---|
-| Colaboradores Digitais | 🔵 PLANNED | dedicated product + platform closure; E2E 10 foundation exists |
+| Colaboradores Digitais | 🔵 PLANNED | dedicated product + platform closure; E2E 10 platform primitive is complete |
 | Hórus Personal | 🔵 PLANNED | dedicated product + platform closure |
 | Hórus Operations | 🔵 PLANNED | dedicated product + platform closure |
 | Studio Projects | 🟢 COMPLETE | 09 closure + applicable platform gates |
@@ -477,12 +477,14 @@ Commercial surfaces consume the shared platform:
 6. New collaborator foreign keys were indexed in the hardening migration after Supabase performance review identified missing covering indexes.
 7. Service-role API paths now validate organization membership before privileged collaborator resolution/creation, preventing client-supplied organization IDs from bypassing tenant authorization.
 8. `SUGGEST` and `PREPARE` collaborators are blocked before economic authorization; only `EXECUTE` and `AUTONOMOUS` enter the provider execution boundary.
-9. CI run `horus-ci` for the final validated implementation completed SUCCESS with npm test, TypeScript, ESLint and production build all successful.
-10. Vercel Production deployment for the final validated SHA is READY. Runtime error aggregation reports no runtime errors in the selected recent window.
+9. Final validated `horus-ci` run `31628461226` completed SUCCESS with npm test, TypeScript, ESLint and production build all successful.
+10. Vercel Production deployment `dpl_BAWDtYo8trWL7Yndm93hH4dc4cpy` for the production SHA `3e3e21e4850398f9bf23170a2b6c5d0cca391add` is READY; runtime verification during closure reported no relevant runtime errors/fatals.
 11. Supabase confirms all four collaborator tables have RLS enabled and explicit policies. Security/performance advisors show no collaborator-specific RLS-no-policy issue; existing unrelated project-wide advisories remain unchanged.
-12. Live provider execution could not be promoted to evidence because the available Vercel integration exposes deployment/runtime data but not an authenticated application-user session for invoking the collaborator execution endpoint. This is classified as **EVIDENCE UNAVAILABLE**, not product failure.
-13. Module 09 remains COMPLETE and no historical 03–09 progress was reclassified downward.
-14. No functional module 11 work was initiated.
+12. Final authenticated E2E run `31628461257` proved GitHub OIDC → Vercel Trusted Source → Production Next.js → Supabase Auth → real JWT → Collaborator API → Nexus → canonical capability → policy/autonomy → OpenRouter → execution/attempt/usage → economic reconciliation → budget SETTLED → `horus_execution_logs` terminal completion.
+13. The same E2E proved idempotency replay without a second execution or economic charge.
+14. Negative security tests proved unauthenticated access is denied and forged organization access is denied with `ORGANIZATION_ACCESS_DENIED`.
+15. Module 09 remains COMPLETE and no historical 03–09 progress was reclassified downward.
+16. No functional module 11 work was initiated.
 
 ## 9. Documentation rules for future progress
 
@@ -494,6 +496,6 @@ A checkbox never creates evidence. Evidence creates the status; the checkbox mir
 
 ## 10. Next-module boundary
 
-**11 — Hórus Personal is the next historical functional module after E2E 10.**
+**10 — Agents / Digital Collaborators is CLOSED.** Its closure evidence is recorded in `docs/blueprint/10-AGENTS-CLOSURE.md`.
 
-Module 10 remains `🟢 VERIFIED`, not `COMPLETE`, until a real authenticated application-user provider execution E2E is recorded. No module 11 implementation is started by this execution.
+**11 — Hórus Personal remains `🔵 PLANNED` / NOT_STARTED.** No module 11 implementation was started by this reconciliation.
