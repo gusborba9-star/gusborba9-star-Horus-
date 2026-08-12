@@ -81,10 +81,10 @@ const { data: attempt, error: attemptError } = await admin.from('execution_attem
 if (attemptError) throw new Error(`E2E_ATTEMPT_QUERY_FAILED:${attemptError.message}`);
 assert.equal(attempt.status, 'SUCCEEDED');
 
-const { data: usage, error: usageError } = await admin.from('execution_usage').select('*').eq('attempt_id', attempt.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+const { data: usage, error: usageError } = await admin.from('execution_usage').select('*').eq('attempt_id', attempt.id).order('recorded_at', { ascending: false }).limit(1).maybeSingle();
 if (usageError) throw new Error(`E2E_USAGE_QUERY_FAILED:${usageError.message}`);
 assert.ok(usage);
-assert.ok(Number(usage.actual_cost_brl ?? usage.cost_brl ?? 0) >= 0);
+assert.ok(Number(usage.actual_total_cost_brl ?? usage.actual_provider_cost_brl ?? 0) >= 0);
 
 const { data: budget, error: budgetError } = await admin.from('execution_budgets').select('*').eq('id', execution.budget_id).single();
 if (budgetError) throw new Error(`E2E_BUDGET_QUERY_FAILED:${budgetError.message}`);
@@ -116,7 +116,7 @@ console.log(JSON.stringify({
   execution_status: execution.status, attempt_status: attempt.status, log_status: log.status,
   provider_id: execution.provider_id, model_id: execution.model_id,
   provider_request_id: execution.provider_request_id ?? null,
-  actual_cost_brl: execution.result?.usage?.actual_cost_brl ?? null,
+  actual_cost_brl: usage.actual_total_cost_brl ?? usage.actual_provider_cost_brl ?? null,
   idempotency_replay: true, unauthenticated_denied: true, forged_organization_denied: true,
   cleanup: 'evidence_preserved; temporary password and JWT were process-local only',
 }));
