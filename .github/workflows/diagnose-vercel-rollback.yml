@@ -1,89 +1,47 @@
 name: Diagnose Vercel rollback adapter
+
 on:
   push:
-    branches: [fix/studio-vercel-rollback-native-error]
+    branches: [main]
+    paths:
+      - 'app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts'
+      - '.github/workflows/diagnose-vercel-rollback.yml'
   workflow_dispatch:
+
 permissions:
-  contents: write
+  contents: read
+
 jobs:
-  patch:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply rollback target contract
+
+      - name: Validate rollback target contract
+        shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts')
-          s = p.read_text()
-          start = s.index('async function resolveRollbackTarget(')
-          end = s.index('type VercelRollbackFailure', start)
-          new = '''async function resolveRollbackTarget(secret: string, projectId: string, deliveryAnchorId?: string) {
-            const projectResponse = await fetch(`https://api.vercel.com/v9/projects/${encodeURIComponent(projectId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
-            if (!projectResponse.ok) throw new Error(`VERCEL_PROJECT_READ_FAILED:${projectResponse.status}`);
-            const projectPayload = await projectResponse.json() as { targets?: { production?: { id?: string } } };
-            const currentId = projectPayload.targets?.production?.id;
-            if (!currentId) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
+          set -euo pipefail
+          FILE='app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts'
+          test -f "$FILE"
+          grep -q "resolutionPolicy: 'PREVIOUS_READY_PRODUCTION'" "$FILE"
+          grep -q "deliveryAnchorDeploymentId" "$FILE"
+          grep -q "VERCEL_CURRENT_PRODUCTION_REQUIRED" "$FILE"
+          grep -q "VERCEL_ROLLBACK_TARGET_REQUIRED" "$FILE"
+          grep -q "VERCEL_DELIVERY_ANCHOR_RECONCILIATION_REQUIRED" "$FILE"
 
-            const currentResponse = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(currentId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
-            if (!currentResponse.ok) throw new Error(`VERCEL_CURRENT_PRODUCTION_READ_FAILED:${currentResponse.status}`);
-            const currentPayload = await currentResponse.json() as { id?: string; projectId?: string; target?: string | null; readyState?: string; createdAt?: number };
-            if (currentPayload.projectId && currentPayload.projectId !== projectId) throw new Error('VERCEL_CURRENT_PRODUCTION_PROJECT_MISMATCH');
-            if (currentPayload.target !== 'production' || currentPayload.readyState !== 'READY' || !currentPayload.createdAt) throw new Error('VERCEL_CURRENT_PRODUCTION_REQUIRED');
-            const currentCreated = Number(currentPayload.createdAt);
-
-            if (deliveryAnchorId) {
-              const anchorResponse = await fetch(`https://api.vercel.com/v13/deployments/${encodeURIComponent(deliveryAnchorId)}`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
-              if (!anchorResponse.ok) throw new Error(`VERCEL_DELIVERY_ANCHOR_READ_FAILED:${anchorResponse.status}`);
-              const anchorPayload = await anchorResponse.json() as { id?: string; projectId?: string; target?: string | null; readyState?: string; createdAt?: number };
-              if (anchorPayload.projectId && anchorPayload.projectId !== projectId) throw new Error('VERCEL_DELIVERY_ANCHOR_PROJECT_MISMATCH');
-              if (anchorPayload.target !== 'production' || anchorPayload.readyState !== 'READY' || !anchorPayload.createdAt || Number(anchorPayload.createdAt) >= currentCreated) throw new Error('VERCEL_DELIVERY_ANCHOR_RECONCILIATION_REQUIRED');
-            }
-
-            const deploymentsResponse = await fetch(`https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&state=READY&until=${currentCreated}&limit=100`, { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' });
-            if (!deploymentsResponse.ok) throw new Error(`VERCEL_DEPLOYMENTS_READ_FAILED:${deploymentsResponse.status}`);
-            const deploymentsPayload = await deploymentsResponse.json() as { deployments?: Array<{ uid?: string; id?: string; created?: number; readyState?: string; target?: string | null; state?: string }> };
-            const deployments = deploymentsPayload.deployments ?? [];
-            const idOf = (deployment: (typeof deployments)[number]) => deployment.uid ?? deployment.id;
-            const candidates = deployments
-              .filter((deployment) => {
-                const deploymentId = idOf(deployment);
-                return Boolean(deploymentId) && deploymentId !== currentId && deployment.target === 'production' && (deployment.readyState === 'READY' || deployment.state === 'READY') && Number(deployment.created ?? 0) < currentCreated;
-              })
-              .sort((a, b) => Number(b.created ?? 0) - Number(a.created ?? 0));
-            if (!candidates.length) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
-            const targetDeploymentId = idOf(candidates[0]);
-            if (!targetDeploymentId) throw new Error('VERCEL_ROLLBACK_TARGET_REQUIRED');
-
-            return {
-              currentDeploymentId: currentId,
-              deliveryAnchorDeploymentId: deliveryAnchorId ?? null,
-              targetDeploymentId,
-              targetCreatedAt: Number(candidates[0].created ?? 0),
-              resolutionPolicy: 'PREVIOUS_READY_PRODUCTION',
-            };
-          }
-'''
-          s = s[:start] + new + s[end:]
-          old_request = "request: { environment, revisionId, operation, rollbackTargetDeploymentId: rollbackTarget?.targetDeploymentId ?? null }"
-          new_request = "request: { environment, revisionId, operation, rollbackTargetDeploymentId: rollbackTarget?.targetDeploymentId ?? null, rollbackResolution: rollbackTarget ? { currentProductionDeploymentId: rollbackTarget.currentDeploymentId, deliveryAnchorDeploymentId: rollbackTarget.deliveryAnchorDeploymentId, targetDeploymentId: rollbackTarget.targetDeploymentId, targetCreatedAt: rollbackTarget.targetCreatedAt, policy: rollbackTarget.resolutionPolicy } : null }"
-          if old_request not in s: raise SystemExit('execution request contract marker not found')
-          s = s.replace(old_request, new_request, 1)
-          old_result = "const result = { deploymentId, url: deploymentUrl, readyState: 'READY', environment, operation };"
-          new_result = "const result = { deploymentId, url: deploymentUrl, readyState: 'READY', environment, operation, ...(operation === 'ROLLBACK' && rollbackTarget ? { rollback: { currentProductionDeploymentId: rollbackTarget.currentDeploymentId, deliveryAnchorDeploymentId: rollbackTarget.deliveryAnchorDeploymentId, targetDeploymentId: rollbackTarget.targetDeploymentId, targetCreatedAt: rollbackTarget.targetCreatedAt, policy: rollbackTarget.resolutionPolicy } } : {}) };"
-          if old_result not in s: raise SystemExit('execution result contract marker not found')
-          s = s.replace(old_result, new_result, 1)
-          p.write_text(s)
-          PY
-      - name: Commit patch
+      - name: Validate workflow is non-mutating
+        shell: bash
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix(studio): persist rollback resolution provenance'
-          git push
-      - name: Verify rollback target contract
+          set -euo pipefail
+          FILE='.github/workflows/diagnose-vercel-rollback.yml'
+          ! grep -qE 'git (commit|push)|contents: write|git add' "$FILE"
+
+      - name: Validate TypeScript rollback markers
+        shell: bash
         run: |
-          grep -q "resolutionPolicy: 'PREVIOUS_READY_PRODUCTION'" app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts
-          grep -q "deliveryAnchorDeploymentId" app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts
+          set -euo pipefail
+          FILE='app/api/studio/projects/[projectId]/revisions/[revisionId]/execute/route.ts'
+          grep -q "const currentId = projectPayload.targets?.production?.id" "$FILE"
+          grep -q "targetDeploymentId" "$FILE"
+          grep -q "targetCreatedAt" "$FILE"
+          grep -q "policy: rollbackTarget.resolutionPolicy" "$FILE"
