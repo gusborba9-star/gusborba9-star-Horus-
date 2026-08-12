@@ -8,6 +8,13 @@ function errorResponse(error: unknown) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
+async function assertOrganizationAccess(service: ReturnType<typeof getServiceSupabase>, userId: string, organizationId: string | null) {
+  if (!organizationId) return;
+  const { data, error } = await service.from('organization_memberships').select('organization_id').eq('organization_id', organizationId).eq('user_id', userId).maybeSingle();
+  if (error) throw new Error(`ORGANIZATION_ACCESS_CHECK_FAILED:${error.message}`);
+  if (!data) throw new Error('ORGANIZATION_ACCESS_DENIED');
+}
+
 export async function GET(request: Request) {
   try {
     const { client } = await requireStudioUser(request);
@@ -29,10 +36,12 @@ export async function POST(request: Request) {
     const description = typeof body.description === 'string' ? body.description.trim() : '';
     const specialization = typeof body.specialization === 'string' ? body.specialization.trim() : '';
     const capabilities = Array.isArray(body.capabilities) ? body.capabilities.filter((item: unknown): item is string => typeof item === 'string') : ['TEXT_GENERATION'];
+    const organizationId = typeof body.organization_id === 'string' ? body.organization_id : null;
     if (!name || !slug || !role) throw new Error('COLLABORATOR_NAME_SLUG_ROLE_REQUIRED');
     if (name.length > 160 || slug.length > 80 || role.length > 160 || description.length > 5000 || capabilities.length === 0) throw new Error('COLLABORATOR_INPUT_TOO_LARGE');
 
     const service = getServiceSupabase();
+    await assertOrganizationAccess(service, user.id, organizationId);
     const { data: policy, error: policyError } = await service.from('economic_policy').select('version').eq('id', true).single();
     if (policyError || !policy) throw new Error('ECONOMIC_POLICY_UNAVAILABLE');
     const { data: validCapabilities, error: capabilityError } = await service.from('capabilities').select('id').in('id', capabilities).eq('enabled', true);
@@ -42,7 +51,7 @@ export async function POST(request: Request) {
 
     const collaboratorPayload = {
       owner_user_id: user.id,
-      organization_id: typeof body.organization_id === 'string' ? body.organization_id : null,
+      organization_id: organizationId,
       slug,
       name,
       description,
