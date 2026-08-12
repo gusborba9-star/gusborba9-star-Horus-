@@ -1,7 +1,7 @@
 # Hórus Cognitive OS — Master Blueprint
 
 **Status:** CANONICAL ARCHITECTURAL SOURCE OF TRUTH  
-**Last reconciled:** 2026-08-11  
+**Last reconciled:** 2026-08-12  
 **Scope:** Entire Hórus product and platform, not only Studio.
 
 ## 1. Purpose and architectural authority
@@ -105,6 +105,16 @@ A provider-neutral routing layer selects the appropriate model/provider per task
 
 Agents are reusable cognitive workers with role, objective, instructions, memory scope, capabilities, connectors, permissions, economic policy and execution boundaries. A collaborator is a productized agent/team role; Agents are platform primitives.
 
+E2E 10 establishes the first reusable Digital Collaborator foundation without creating a parallel agent registry. The canonical collaborator model persists identity, role, specialization, objectives, instructions, memory scope, tools/connectors policy, autonomy, economic policy version, model preference, fallback policy, lifecycle state and version snapshots. Capability bindings are separate from the collaborator entity and reuse the existing canonical `capabilities` registry.
+
+Collaborator execution reuses the existing execution/economic primitives rather than creating a second budget/attempt/usage system. The Nexus resolution boundary selects an active collaborator, resolves an enabled capability, selects an active provider/model, assembles bounded memory context, evaluates autonomy/approval policy, then enters the shared budget → attempt → provider → usage → reconciliation chain.
+
+Autonomy levels are explicit: `READ`, `SUGGEST`, `PREPARE`, `EXECUTE`, `AUTONOMOUS`. `SUGGEST` and `PREPARE` cannot silently execute side effects. Cross-tenant access is rejected before service-role reads when an organization scope is supplied.
+
+The current implementation supports text generation through the existing OpenRouter provider/model registry and bounded Memory Graph reads. Connector binding is represented by collaborator policy and remains separately governed by the canonical Connector Fabric; no collaborator-owned credential store is permitted.
+
+This E2E establishes the platform primitive and API contract. It does not make all future collaborators, multimodal execution, team delegation, or platform-wide connector coverage complete.
+
 ## 5. Capability system
 
 Capabilities are canonical units of what Hórus can do. They are distinct from models and connectors. A capability may require multiple models, tools, connectors and execution steps. One canonical registry must be used; parallel capability registries are prohibited.
@@ -165,7 +175,7 @@ Execution boundaries must be explicit and idempotent. Provider side effects requ
 
 Every economically relevant execution is governed by authorization, budget and attempt limits. A terminal successful attempt reconciles its budget to `SETTLED` with completion timestamp and usage/cost evidence. Failed attempts remain immutable.
 
-Current live E2E evidence proves this contract in the Studio domain. It does not by itself prove cross-product execution/economics coverage.
+Current live E2E evidence proves this contract in the Studio domain. E2E 10 reuses the same budget, attempt, usage and reconciliation primitives for collaborator executions; this is not a second economic architecture. Cross-product execution/economics coverage remains separately tracked.
 
 ## 9. Provider adapters
 
@@ -177,6 +187,8 @@ The Vercel rollback E2E established: **Delivery Anchor is provenance, not rollba
 
 HITL applies where policy, authorization, financial impact, production mutation or configured risk thresholds demand it. Application approval state never substitutes for external side-effect evidence.
 
+E2E 10 enforces autonomy policy before economic authorization. `SUGGEST` and `PREPARE` are approval-bound states; only `EXECUTE` and `AUTONOMOUS` may enter the provider execution boundary in the current collaborator E2E.
+
 ## 11. Deployment / Lifecycle
 
 Application lifecycle and provider reality are separate contracts. Deployment evidence includes project, revision, deployment ID, target/current deployment, SHA/provenance, environment, provider status, runtime health, request/response correlation and reconciliation where applicable.
@@ -187,15 +199,19 @@ Rollback is an authorized production mutation with deterministic target resoluti
 
 Execution, provider interactions, deployment mutations, approvals, usage, attempts and reconciliation require durable audit evidence. Observability is transversal; Studio evidence does not close the platform-wide Observability module.
 
+Collaborator executions persist correlation through collaborator execution ID, shared budget/attempt/log references, provider/model identity, usage, latency, result and terminal status.
+
 ## 13. Security
 
 Security boundaries include Supabase RLS, Vault/service-role-only secret functions, connector permission enforcement, credential expiry/revocation, authorization before secret access, least privilege, audit trails and tenant/workspace isolation.
 
-The Studio domain has verified RLS/Vault boundaries. Platform-wide security remains subject to independent verification.
+The Studio domain has verified RLS/Vault boundaries. E2E 10 adds RLS-backed collaborator/organization isolation and a server-side organization membership gate before service-role resolution. Platform-wide security remains subject to independent verification.
 
 ## 14. Workspace / Identity / Multi-tenant
 
 Workspace is the primary organizational boundary. Users may belong to one or more workspaces under authorization. Projects, collaborators, agents, connectors, memories, executions, budgets and billing records require explicit tenant/workspace ownership. Authorization must be enforced server-side/database-side, never by client filtering.
+
+E2E 10 collaborator and collaborator-execution records carry owner and optional organization scope. Organization access is checked before privileged execution queries, while database RLS remains the client-facing boundary.
 
 ## 15. Billing / Monetization
 
@@ -225,8 +241,8 @@ These are current infrastructure choices, not product boundaries. Connector Fabr
 ### 09 — Studio
 **🟢 COMPLETE.** Real Vercel rollback, successful execution/attempt, settled budget, completed execution log, corrected reconciliation, CI success, Production readiness, clean runtime, Connector/Vault authorization and deterministic `PREVIOUS_READY_PRODUCTION` resolution are recorded in `09-STUDIO-CLOSURE.md`.
 
-### 10 — Agents
-**🔒 NOT_STARTED.** No functional work is initiated by this documentation reconciliation.
+### 10 — Agents / Digital Collaborators
+**🟢 IMPLEMENTED / VERIFIED at code, schema, CI and deployment level.** The collaborator primitive, capability binding, version snapshot, Nexus resolution boundary, autonomy policy, tenant gate, shared economics integration and text-provider execution boundary are implemented. Live provider E2E execution remains an evidence gate before `COMPLETE` because the available deployment integration does not expose an authenticated application-user execution surface for this audit.
 
 All other platform modules are classified by direct evidence in `ROADMAP.md`; Studio evidence must not be promoted into platform-wide completion.
 
