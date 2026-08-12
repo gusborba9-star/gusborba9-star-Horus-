@@ -4,7 +4,7 @@
 **Progress authority:** this file  
 **Integrity contract:** `docs/blueprint/ARCHITECTURE-LOCK.md`  
 **Evidence authority:** closure/evidence documents  
-**Last audited:** 2026-08-11
+**Last audited:** 2026-08-12
 
 > This document answers **WHERE Hórus is**. It does not redefine architecture and it does not replace closure/evidence documents.
 
@@ -24,13 +24,13 @@
 
 **Hórus global status: NOT READY FOR MARKET.**
 
-The Studio 09 surface is complete, but the Hórus platform and the other commercial surfaces are not globally closed. A completed surface never promotes the whole product to market readiness.
+The Studio 09 surface is complete and the Digital Collaborator foundation is now implemented/verified, but the Hórus platform and the other commercial surfaces are not globally closed. A completed surface never promotes the whole product to market readiness.
 
 ### Commercial surfaces
 
 | Surface | Status | Scope / evidence |
 |---|---|---|
-| Colaboradores Digitais | 🔵 PLANNED | Commercial architecture defined in Blueprint; no dedicated production closure. |
+| Colaboradores Digitais | 🔵 PLANNED | Commercial surface architecture defined; E2E 10 foundation implemented/verified, but no dedicated commercial launch closure. |
 | Hórus Personal | 🔵 PLANNED | Text + voice product architecture defined; no dedicated production closure. |
 | Hórus Operations | 🔵 PLANNED | Cognitive-team operating model defined; no dedicated production closure. |
 | Studio Hórus / Projects | 🟢 COMPLETE | 09 closure; live Vercel rollback and full Studio lifecycle/economic reconciliation verified. |
@@ -142,21 +142,38 @@ The Studio 09 surface is complete, but the Hórus platform and the other commerc
 
 Historical failed rollback remains immutable evidence; it is not rewritten as success.
 
-### 10 — Agents / Collaborators
-**Status: 🔒 NOT_STARTED**  
-**Next functional module. No implementation is initiated by this reconciliation.**
+### 10 — Agents / Digital Collaborators
+**Status: 🟢 VERIFIED — platform primitive; live deployment verified, live provider execution evidence unavailable**  
+**Evidence:** code/schema, Supabase migration and RLS inspection, `horus-ci` success, Vercel Production READY deployment. `COMPLETE` remains gated on a real authenticated application-user provider execution E2E.
 
-- [ ] Agent primitive
-- [ ] Collaborator product model
-- [ ] Agent role/objective/instruction contract
-- [ ] Agent memory scope
-- [ ] Capability binding
-- [ ] Connector binding
-- [ ] Permission model
-- [ ] Economic policy binding
-- [ ] Agent lifecycle
-- [ ] Agent execution
-- [ ] Verification
+- [x] Agent/collaborator primitive
+- [x] Collaborator product model
+- [x] Identity / role / specialization / objectives / instructions
+- [x] Memory-scope contract
+- [x] Capability binding to canonical `capabilities`
+- [x] Permission/autonomy model
+- [x] Economic policy binding
+- [x] Version snapshot/lifecycle foundation
+- [x] Nexus collaborator resolution
+- [x] Capability resolution
+- [x] Provider/model selection from canonical registry
+- [x] Bounded Memory Graph context assembly
+- [x] Organization membership gate before privileged resolution
+- [x] RLS tenant/user isolation
+- [x] Idempotency boundary
+- [x] Shared budget authorization
+- [x] Shared attempt authorization
+- [x] Real provider execution boundary in production code
+- [x] Usage/cost reconciliation contract
+- [x] Durable collaborator execution persistence
+- [x] Durable execution log correlation
+- [x] Deterministic autonomy rejection for `SUGGEST` / `PREPARE`
+- [ ] Concrete collaborator connector binding/execution
+- [ ] Delegation / parent-child collaborator execution
+- [ ] Collaborator team orchestration
+- [ ] Learning/optimization loop
+- [ ] Live provider E2E with authenticated user session
+- [ ] Dedicated `10` closure with live provider evidence
 
 ### 11 — Hórus Personal
 **Status: 🔵 PLANNED**
@@ -260,7 +277,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [ ] Platform-wide compatibility/version governance
 
 ### 18 — Execution / Economics
-**Status: 🟢 IMPLEMENTED — Studio-scoped + LIVE VERIFIED**  
+**Status: 🟢 IMPLEMENTED — Studio-scoped + LIVE VERIFIED; collaborator reuse verified at implementation level**  
 **Platform-wide completion remains open.**
 
 - [x] Execution specification
@@ -274,12 +291,13 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Terminal budget settlement
 - [x] Reconciliation contract
 - [x] Failed-attempt immutability
+- [x] Collaborator execution reuses canonical budget/attempt/usage/reconciliation
 - [ ] Cross-product execution coverage
 - [ ] Cross-product economic authorization
 - [ ] Cross-product budget/usage reconciliation
 
 ### 19 — Security / Vault / RLS
-**Status: 🟢 VERIFIED — Studio-scoped + LIVE VERIFIED**  
+**Status: 🟢 VERIFIED — Studio-scoped + LIVE VERIFIED; collaborator tenant boundary verified at schema/code level**  
 **Platform-wide completion remains open.**
 
 - [x] Supabase RLS on relevant Studio domain tables
@@ -287,6 +305,8 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Connector `secret_ref`
 - [x] Permission enforcement for Studio execution
 - [x] Authorization before protected connector use
+- [x] Collaborator RLS policies
+- [x] Collaborator organization membership gate
 - [x] Security evidence during E2E
 - [ ] Platform-wide tenant isolation closure
 - [ ] Platform-wide credential lifecycle closure
@@ -294,7 +314,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [ ] Dedicated security closure
 
 ### 20 — Deployment / Lifecycle
-**Status: 🟢 VERIFIED — Studio-scoped + LIVE VERIFIED**  
+**Status: 🟢 VERIFIED — Studio-scoped + LIVE VERIFIED; E2E 10 production deployment verified**  
 **Platform-wide completion remains open.**
 
 - [x] Preview lifecycle
@@ -307,6 +327,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Deterministic rollback target resolution
 - [x] Runtime verification
 - [x] Provider/application state reconciliation
+- [x] E2E 10 Production deployment READY
 - [ ] Cross-product deployment lifecycle
 - [ ] Generalized lifecycle contracts for non-Studio surfaces
 - [ ] Dedicated lifecycle closure
@@ -319,6 +340,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Memory Graph schema/foundation
 - [x] Semantic cache schema/foundation
 - [x] Context/memory service foundation
+- [x] Collaborator bounded Memory Graph reads
 - [ ] Full short/long-term memory lifecycle
 - [ ] Full retrieval/RAG verification
 - [ ] Cross-product memory governance
@@ -329,7 +351,9 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Intent-oriented central orchestration contract
 - [x] Provider/model-agnostic architecture
 - [x] Context/capability/connector decision model
-- [x] Current routing foundation
+- [x] Collaborator resolution boundary
+- [x] Capability resolution
+- [x] Model/provider selection foundation
 - [ ] Full dynamic capability/agent/team composition
 - [ ] Full production inference routing
 - [ ] Cross-product verification
@@ -340,25 +364,28 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Canonical `capabilities` registry
 - [x] Capability/provider/model relationships
 - [x] Studio capability composition
+- [x] Collaborator capability binding
 - [ ] Full Nexus-driven platform-wide capability composition
 - [ ] Capability governance/compatibility closure
 
 ### Provider Adapters
-**Status: 🟢 IMPLEMENTED — Studio/Vercel live verified.**
+**Status: 🟢 IMPLEMENTED — Studio/Vercel live verified; collaborator text provider path implemented.**
 
 - [x] Provider abstraction in persistence
 - [x] Vercel adapter path
+- [x] OpenRouter text provider path for collaborators
 - [x] Native provider diagnostic preservation
 - [x] Provider request/target correlation for rollback
 - [ ] Generalized multi-provider adapter contract
 - [ ] Cross-product provider verification
 
 ### HITL / Approval
-**Status: 🟢 IMPLEMENTED — Studio-scoped; platform-wide policy pending.**
+**Status: 🟢 IMPLEMENTED — Studio-scoped; collaborator autonomy gate implemented; platform-wide policy pending.**
 
 - [x] Revision approval boundary
 - [x] Production approval boundary
 - [x] Risk/approval fields in execution model
+- [x] Collaborator `READ/SUGGEST/PREPARE/EXECUTE/AUTONOMOUS` policy boundary
 - [ ] Platform-wide HITL policy engine
 - [ ] Cross-product approval governance
 
@@ -375,7 +402,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 | 07 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
 | 08 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
 | 09 | 🟢 COMPLETE | Studio + LIVE VERIFIED | `09-STUDIO-CLOSURE.md`, CI, Vercel, Supabase evidence |
-| 10 | 🔒 NOT_STARTED | platform | no functional implementation initiated |
+| 10 | 🟢 VERIFIED | platform collaborator primitive; live deployment verified; provider E2E evidence unavailable | code/schema, Supabase migration/RLS, `horus-ci`, Vercel Production READY |
 | 11 | 🔵 PLANNED | commercial surface | Blueprint only |
 | 12 | 🔵 PLANNED | platform-wide | Blueprint only |
 | 13 | 🔵 PLANNED | commercial surface | Blueprint only |
@@ -383,9 +410,9 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 | 15 | 🔵 PLANNED | platform-wide | schema foundation exists; no cross-product closure |
 | 16 | 🔵 PLANNED | platform-wide | architecture/schema foundation; no production router closure |
 | 17 | 🟢 IMPLEMENTED | Studio-scoped | Studio connector schema/code/E2E |
-| 18 | 🟢 IMPLEMENTED | Studio-scoped + LIVE VERIFIED | execution/attempt/budget/reconciliation E2E |
-| 19 | 🟢 VERIFIED | Studio-scoped + LIVE VERIFIED | RLS/Vault/Connector E2E |
-| 20 | 🟢 VERIFIED | Studio-scoped + LIVE VERIFIED | Vercel lifecycle/rollback E2E |
+| 18 | 🟢 IMPLEMENTED | Studio-scoped + LIVE VERIFIED; collaborator reuse verified | execution/attempt/budget/reconciliation E2E + E2E 10 code integration |
+| 19 | 🟢 VERIFIED | Studio LIVE VERIFIED; collaborator schema/code verified | RLS/Vault/Connector E2E + collaborator RLS/membership gate |
+| 20 | 🟢 VERIFIED | Studio LIVE VERIFIED; E2E 10 deployment verified | Vercel lifecycle/rollback E2E + Production READY deployment |
 
 ## 6. Dependency order — authoritative architectural graph
 
@@ -435,21 +462,27 @@ Commercial surfaces consume the shared platform:
 
 | Surface | Status | Required closure |
 |---|---|---|
-| Colaboradores Digitais | 🔵 PLANNED | dedicated product + platform closure |
+| Colaboradores Digitais | 🔵 PLANNED | dedicated product + platform closure; E2E 10 foundation exists |
 | Hórus Personal | 🔵 PLANNED | dedicated product + platform closure |
 | Hórus Operations | 🔵 PLANNED | dedicated product + platform closure |
 | Studio Projects | 🟢 COMPLETE | 09 closure + applicable platform gates |
 
-## 8. Audit findings and reconciliation decisions — 2026-08-11
+## 8. Audit findings and reconciliation decisions — 2026-08-12
 
-1. The previous Roadmap was root-only and acted as an independent progress authority. Corrected by creating this canonical `docs/blueprint/ROADMAP.md` and converting the root file into a bridge.
-2. The Blueprint already correctly distinguished Hórus from Studio and correctly described Nexus as a transversal decision/orchestration layer.
-3. The Blueprint already contains the platform-wide Connector Fabric concept; Roadmap now distinguishes Studio-proven connector work from platform-wide completion.
-4. Execution/Economics, Security/Vault/RLS and Deployment/Lifecycle are implemented/verified in the Studio domain, but their platform-wide gates remain open.
-5. Supabase currently contains real execution/economic primitives: `execution_budgets`, `execution_attempts`, `execution_usage`, `economic_policy`, `economic_policy_versions`, `credit_accounts`, `credit_ledger`, `credit_holds`, `economic_events`, `idempotency_keys`, plus Studio execution/revision/connector tables. This supports the `IMPLEMENTED` scope claims but does not close cross-product behavior.
-6. Current Vercel history confirms real Production deployments and the live rollback target lineage. The current Production has subsequently advanced beyond the 09 restored deployment; this does not invalidate the historical 09 closure.
-7. The current repository's canonical blueprint directory contains `09-STUDIO-CLOSURE.md`, `ARCHITECTURE-LOCK.md` and `HORUS-MASTER-BLUEPRINT.md`; no standalone 03–08 closure files are present. Their historical COMPLETE status is preserved, but no new granular claims are invented.
-8. No functional implementation for module 10 was started by this audit.
+1. E2E 10 introduced a canonical collaborator foundation without creating a second agent/capability/economic registry.
+2. Collaborator capability bindings reference the existing canonical `capabilities` registry.
+3. Collaborator execution reuses `execution_budgets`, `execution_attempts`, `execution_usage` and `reconcile_horus_execution_attempt`; no parallel budget/attempt/usage system was created.
+4. The first migration initially attempted an invalid scalar foreign key to the composite `models` primary key. The migration was corrected before successful application; provider/model references remain provider-neutral text fields and are resolved against the canonical model/provider registry at runtime.
+5. The initial collaborator RLS mutation policy used a broad `FOR ALL` policy alongside a SELECT policy. This was corrected into explicit INSERT/UPDATE/DELETE policies and `auth.uid()` was wrapped as a statement-level initplan to reduce repeated evaluation.
+6. New collaborator foreign keys were indexed in the hardening migration after Supabase performance review identified missing covering indexes.
+7. Service-role API paths now validate organization membership before privileged collaborator resolution/creation, preventing client-supplied organization IDs from bypassing tenant authorization.
+8. `SUGGEST` and `PREPARE` collaborators are blocked before economic authorization; only `EXECUTE` and `AUTONOMOUS` enter the provider execution boundary.
+9. CI run `horus-ci` for the final validated implementation completed SUCCESS with npm test, TypeScript, ESLint and production build all successful.
+10. Vercel Production deployment for the final validated SHA is READY. Runtime error aggregation reports no runtime errors in the selected recent window.
+11. Supabase confirms all four collaborator tables have RLS enabled and explicit policies. Security/performance advisors show no collaborator-specific RLS-no-policy issue; existing unrelated project-wide advisories remain unchanged.
+12. Live provider execution could not be promoted to evidence because the available Vercel integration exposes deployment/runtime data but not an authenticated application-user session for invoking the collaborator execution endpoint. This is classified as **EVIDENCE UNAVAILABLE**, not product failure.
+13. Module 09 remains COMPLETE and no historical 03–09 progress was reclassified downward.
+14. No functional module 11 work was initiated.
 
 ## 9. Documentation rules for future progress
 
@@ -461,6 +494,6 @@ A checkbox never creates evidence. Evidence creates the status; the checkbox mir
 
 ## 10. Next-module boundary
 
-**10 — Agents / Collaborators remains 🔒 NOT_STARTED.**
+**11 — Hórus Personal is the next historical functional module after E2E 10.**
 
-This roadmap reconciliation is documentation/audit work only. No functional Agent/Collaborator implementation was started.
+Module 10 remains `🟢 VERIFIED`, not `COMPLETE`, until a real authenticated application-user provider execution E2E is recorded. No module 11 implementation is started by this execution.
