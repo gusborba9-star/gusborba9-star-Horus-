@@ -1,6 +1,7 @@
 name: horus-e2e10-authenticated
 
 # Live authenticated E2E is intentionally isolated from the deterministic horus-ci workflow.
+# Only the Supabase service-role key is sensitive. Public Supabase/Vercel configuration is stable.
 on:
   workflow_dispatch:
   push:
@@ -18,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.HORUS_E2E_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.HORUS_E2E_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HORUS_E2E_SUPABASE_SERVICE_ROLE_KEY }}
-      E2E_BASE_URL: ${{ secrets.HORUS_E2E_BASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: https://ljqmiuxztqseyglhvgmi.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_Jmz78HPb__KT2zqC3AslIg_8CkWkmIq
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      E2E_BASE_URL: https://velor-api-gustavo-borba-s-projects.vercel.app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,9 +32,9 @@ jobs:
       - run: npm ci
       - name: Validate required E2E configuration
         run: |
-          test -n "$NEXT_PUBLIC_SUPABASE_URL"
-          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
-          test -n "$SUPABASE_SERVICE_ROLE_KEY"
-          test -n "$E2E_BASE_URL"
+          test -n "$NEXT_PUBLIC_SUPABASE_URL" || { echo 'Missing Supabase URL'; exit 1; }
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" || { echo 'Missing public Supabase key'; exit 1; }
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo 'Missing SUPABASE_SERVICE_ROLE_KEY GitHub Actions secret'; exit 1; }
+          test -n "$E2E_BASE_URL" || { echo 'Missing Production URL'; exit 1; }
       - name: Run authenticated E2E 10
         run: npm run test:e2e10
