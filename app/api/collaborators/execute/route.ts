@@ -15,6 +15,13 @@ function errorResponse(error: unknown) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
+async function assertOrganizationAccess(service: ReturnType<typeof getServiceSupabase>, userId: string, organizationId: string | null) {
+  if (!organizationId) return;
+  const { data, error } = await service.from('organization_memberships').select('organization_id').eq('organization_id', organizationId).eq('user_id', userId).maybeSingle();
+  if (error) throw new Error(`ORGANIZATION_ACCESS_CHECK_FAILED:${error.message}`);
+  if (!data) throw new Error('ORGANIZATION_ACCESS_DENIED');
+}
+
 async function createBudget(service: ReturnType<typeof getServiceSupabase>, userId: string, operationId: string) {
   const { data: policy, error: policyError } = await service.from('economic_policy').select('version,minimum_gross_margin_rate').eq('id', true).single();
   if (policyError || !policy) throw new Error('ECONOMIC_POLICY_UNAVAILABLE');
@@ -86,6 +93,7 @@ export async function POST(request: Request) {
     if (!idempotencyKey || idempotencyKey.length > 160) throw new Error('IDEMPOTENCY_KEY_REQUIRED');
 
     const service = getServiceSupabase();
+    await assertOrganizationAccess(service, user.id, organizationId);
     const requestHash = hashRequest(intent, { organization_id: organizationId });
     const { data: existing } = await service.from('horus_collaborator_executions').select('*').eq('owner_user_id', user.id).eq('idempotency_key', idempotencyKey).maybeSingle();
     if (existing) {
@@ -94,6 +102,7 @@ export async function POST(request: Request) {
     }
 
     const resolution = await resolveCollaborator(service, user.id, organizationId, intent);
+    const approvalRequired = resolution.collaborator.autonomy_level === 'SUGGEST' || resolution.collaborator.autonomy_level === 'PREPARE';
     const policyDecision = {
       collaborator_id: resolution.collaborator.id,
       capability_id: resolution.capabilityId,
@@ -102,9 +111,11 @@ export async function POST(request: Request) {
       autonomy: resolution.collaborator.autonomy_level,
       economic_policy_version: resolution.collaborator.economic_policy_version,
       connector_required: false,
-      approval_required: resolution.collaborator.autonomy_level === 'SUGGEST' || resolution.collaborator.autonomy_level === 'PREPARE',
+      approval_required: approvalRequired,
       fallback_policy: resolution.collaborator.fallback_policy,
     };
+    if (approvalRequired) throw new Error('HUMAN_APPROVAL_REQUIRED');
+    if (resolution.collaborator.autonomy_level !== 'EXECUTE' && resolution.collaborator.autonomy_level !== 'AUTONOMOUS') throw new Error('AUTONOMOUS_EXECUTION_NOT_ALLOWED');
 
     const { data: execution, error: executionError } = await service.from('horus_collaborator_executions').insert({
       collaborator_id: resolution.collaborator.id,
@@ -147,14 +158,7 @@ export async function POST(request: Request) {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY ?? ''}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: resolution.modelId,
-        messages: [
-          { role: 'system', content: buildSystemPrompt(resolution) },
-          { role: 'user', content: intent },
-        ],
-        max_tokens: MAX_OUTPUT_TOKENS,
-      }),
+      body: JSON.stringify({ model: resolution.modelId, messages: [{ role: 'system', content: buildSystemPrompt(resolution) }, { role: 'user', content: intent }], max_tokens: MAX_OUTPUT_TOKENS }),
       cache: 'no-store',
     });
     const payload = await response.json().catch(() => ({}));
@@ -183,22 +187,7 @@ export async function POST(request: Request) {
       throw new Error('PROVIDER_EMPTY_RESULT');
     }
 
-    const reconciled = await service.rpc('reconcile_horus_execution_attempt', {
-      p_attempt_id: attemptId,
-      p_actual_cost_brl: actualCostBrl,
-      p_status: 'SUCCEEDED',
-      p_input_tokens: inputTokens,
-      p_output_tokens: outputTokens,
-      p_reasoning_tokens: reasoningTokens,
-      p_cached_input_tokens: cachedInputTokens,
-      p_request_units: 1,
-      p_image_units: 0,
-      p_provider_request_id: providerRequestId,
-      p_actual_provider: resolution.providerId,
-      p_actual_model: resolution.modelId,
-      p_latency_ms: latencyMs,
-      p_raw_usage: usage,
-    });
+    const reconciled = await service.rpc('reconcile_horus_execution_attempt', { p_attempt_id: attemptId, p_actual_cost_brl: actualCostBrl, p_status: 'SUCCEEDED', p_input_tokens: inputTokens, p_output_tokens: outputTokens, p_reasoning_tokens: reasoningTokens, p_cached_input_tokens: cachedInputTokens, p_request_units: 1, p_image_units: 0, p_provider_request_id: providerRequestId, p_actual_provider: resolution.providerId, p_actual_model: resolution.modelId, p_latency_ms: latencyMs, p_raw_usage: usage });
     if (reconciled.error || !reconciled.data) throw new Error(`ECONOMIC_RECONCILIATION_FAILED:${reconciled.error?.message ?? 'UNKNOWN'}`);
 
     const completedAt = new Date().toISOString();
