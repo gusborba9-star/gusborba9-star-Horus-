@@ -1,231 +1,187 @@
 # Hórus E2E 10 — Agents / Digital Collaborators Evidence
 
-**Status:** 🟢 VERIFIED — implementation and deployment gates verified; live authenticated provider E2E remains open.  
+**Status:** 🟢 COMPLETE — authenticated production E2E and terminal economic reconciliation verified.  
 **Date:** 2026-08-12  
-**Scope:** Digital Collaborator platform primitive, Nexus resolution, policy boundary, shared economics integration, tenant isolation and production deployment.
+**Scope:** Digital Collaborator platform primitive, Nexus resolution, canonical capability binding, autonomy/policy boundary, shared economics, tenant isolation, production deployment and live authenticated provider execution.
 
-## 1. Purpose
+## 1. Closure evidence
 
-E2E 10 establishes the first reusable Digital Collaborator primitive for Hórus. It is not a generic `agent = prompt + model` implementation and it does not create a second execution/economic/capability registry.
+Final authenticated E2E workflow:
+
+- Workflow: `horus-e2e10-authenticated`
+- Run: `31628461257`
+- Attempt: `1`
+- SHA: `6fc046ea94f16e76c842e163732ddc395488fc11`
+- Job: `authenticated-e2e10` — SUCCESS
+- OIDC token acquisition — SUCCESS
+- Required E2E configuration validation — SUCCESS
+- Real Supabase Auth user creation/sign-in — SUCCESS
+- Real JWT application authentication — SUCCESS
+- `POST /api/collaborators` — HTTP 201
+- `POST /api/collaborators/execute` — HTTP 200 / terminal SUCCESS
+- Real OpenRouter provider execution — SUCCESS
+- Idempotency replay — SUCCESS
+- Unauthenticated request — DENIED / 401
+- Forged organization request — DENIED / 400 `ORGANIZATION_ACCESS_DENIED`
+
+Persisted terminal execution:
+
+- `user_id`: `34a48aa2-74cf-4808-a357-74586b287082`
+- `collaborator_id`: `0dae6476-5710-4dba-af06-bf6e41145e5d`
+- `execution_id`: `febfcb37-6257-4678-943e-e00b82027bc1`
+- `attempt_id`: `f48fdf2c-82cc-481c-9abd-8ab7bc9d3a81`
+- `budget_id`: `8cb8168c-82e1-46f8-9056-ce7c772b280a`
+- `execution_log_id`: `3e02f688-dc09-4809-96c9-079632ee6b7a`
+- execution: `SUCCEEDED`
+- attempt: `SUCCEEDED`
+- usage: present
+- budget: `SETTLED`
+- execution log: `COMPLETED`
+- provider: `openrouter`
+- model: `google/gemini-2.5-flash-lite`
+- provider request id: present in persisted attempt
+- actual provider cost: `0.00008314 BRL`
+- actual total cost: `0.00008314 BRL`
+- input tokens: `115`
+- output tokens: `12`
+
+The persisted database audit independently confirms the execution → attempt → usage → budget → log relationship and terminal timestamps.
+
+## 2. Implemented architecture
 
 The implemented path is:
 
-`User Intent → Nexus Resolution → Collaborator → Capability → Policy → Economic Authorization → Provider Boundary → Result Persistence → Usage/Reconciliation → Audit`
+`Authenticated User → Nexus Resolution → Collaborator → Capability → Policy/Autonomy → Economic Authorization → Provider Boundary → OpenRouter → Result Persistence → Usage/Reconciliation → Budget Settlement → Audit`
 
-The current evidence proves the code/schema/deployment contracts. A live provider execution using an authenticated application-user session is not marked as verified because the available Vercel integration does not expose such a session for this audit.
-
-## 2. Implemented architecture
+No second execution/economic/capability registry was introduced.
 
 ### Collaborator primitive
 
 Table: `public.horus_collaborators`
 
-The entity persists:
-
-- identity/name/slug;
-- owner and optional organization scope;
-- role and specialization;
-- description/objectives/instructions;
-- memory scope;
-- knowledge source contract;
-- tool/connector policy;
-- execution policy;
-- economic policy version;
-- autonomy level;
-- preferred provider/model;
-- fallback policy;
-- lifecycle status;
-- version and metadata.
+The entity persists identity, ownership, organization scope, role, specialization, objectives, instructions, memory scope, knowledge sources, tool/connector policy, execution policy, economic policy version, autonomy, provider/model preference, fallback policy, lifecycle and version metadata.
 
 ### Capability binding
 
-Table: `public.horus_collaborator_capabilities`
-
-Bindings reference the existing canonical `public.capabilities` registry. No collaborator-specific capability registry was created.
+`public.horus_collaborator_capabilities` references the canonical `public.capabilities` registry. The E2E creation/execution path does not permit the client to select an arbitrary provider/model implementation.
 
 ### Versioning
 
-Table: `public.horus_collaborator_versions`
-
-Version 1 is snapshotted at collaborator creation. Future updates can add immutable version snapshots without replacing the collaborator identity.
+`public.horus_collaborator_versions` stores the immutable collaborator snapshot created by the normal Collaborator API.
 
 ### Execution
 
-Table: `public.horus_collaborator_executions`
+`public.horus_collaborator_executions` correlates collaborator, owner, intent, capability, provider/model, policy decision, bounded memory context, budget, attempt, execution log, idempotency key/request hash, result and terminal state.
 
-Execution records preserve:
+## 3. Nexus / capability / autonomy
 
-- collaborator;
-- owner/organization;
-- parent execution relationship;
-- intent;
-- capability/provider/model;
-- policy decision;
-- bounded memory context;
-- shared budget/attempt/log references;
-- idempotency key/request hash;
-- result/error;
-- terminal timestamps.
+`lib/collaborators/nexus.ts` remains the resolution boundary. The authenticated execution resolves collaborator/capability/provider/model through the product path rather than requiring the client to select an internal provider implementation.
 
-## 3. Nexus integration
+The E2E fixture uses `EXECUTE` autonomy and crosses the normal policy/economic/provider boundary. Existing `SUGGEST`/`PREPARE` rejection behavior remains implemented and was not bypassed by the harness.
 
-`lib/collaborators/nexus.ts` implements the collaborator resolution boundary.
+## 4. Memory
 
-The resolver:
+The collaborator execution uses the existing bounded Memory Graph context path. The execution record persisted a bounded memory context rather than indiscriminately loading tenant memory.
 
-1. selects active collaborators available to the authenticated user/organization;
-2. discovers enabled capability bindings;
-3. infers the capability from intent against available capabilities;
-4. selects an enabled model for that capability;
-5. prefers the collaborator's configured model when compatible;
-6. verifies the provider is active;
-7. reads bounded Memory Graph context;
-8. returns a provider-neutral resolution object.
+## 5. Economics
 
-The user does not need to choose the provider/model/capability when executing a collaborator intent.
+The E2E reused the canonical economic primitives:
 
-## 4. Execution / Economics integration
+- `execution_budgets`
+- `execution_attempts`
+- `execution_usage`
+- `economic_policy`
+- `economic_policy_versions`
+- `authorize_horus_execution_attempt`
+- `reconcile_horus_execution_attempt`
+- `horus_execution_logs`
 
-The implementation reuses the existing economic primitives:
+The persisted evidence shows:
 
-- `execution_budgets`;
-- `execution_attempts`;
-- `execution_usage` through reconciliation;
-- `economic_policy`;
-- pricing snapshots;
-- FX snapshots;
-- `authorize_horus_execution_attempt`;
-- `reconcile_horus_execution_attempt`;
-- `horus_execution_logs`.
+`AUTHORIZED → provider execution → usage → reconciliation → SETTLED budget → terminal execution/log`.
 
-No parallel collaborator budget/attempt/usage/reconciliation system was created.
+Actual cost was persisted as `0.00008314 BRL`; provider and total cost agree. No clamp or artificial cost was introduced by the E2E harness.
 
-The collaborator execution boundary applies bounded input/output token and cost limits before provider execution.
+## 6. Idempotency
 
-## 5. Autonomy / HITL
+The same idempotency key was replayed after the original terminal success. The API returned the original execution with `replay: true`.
 
-Supported autonomy states:
+Database audit found exactly one execution for the E2E idempotency key and one usage row for its attempt. No second attempt or second economic charge was created.
 
-- `READ`;
-- `SUGGEST`;
-- `PREPARE`;
-- `EXECUTE`;
-- `AUTONOMOUS`.
+## 7. Security / tenancy
 
-`SUGGEST` and `PREPARE` are explicitly rejected before economic authorization/provider execution. Only `EXECUTE` and `AUTONOMOUS` cross the current provider execution boundary.
+RLS remains enabled on:
 
-This prevents metadata from silently becoming execution authority.
+- `horus_collaborators`
+- `horus_collaborator_capabilities`
+- `horus_collaborator_versions`
+- `horus_collaborator_executions`
 
-## 6. Security / tenancy
+The negative tests proved:
 
-RLS is enabled on:
+1. no JWT → `401 AUTHENTICATION_REQUIRED`;
+2. authenticated user with a forged organization id → `400 ORGANIZATION_ACCESS_DENIED`.
 
-- `horus_collaborators`;
-- `horus_collaborator_capabilities`;
-- `horus_collaborator_versions`;
-- `horus_collaborator_executions`.
+The application Authorization header contained the real Supabase access token, not the Supabase service-role key. The service-role credential was confined to test-side fixture/audit operations.
 
-The privileged service path independently validates organization membership before collaborator resolution or creation when an organization scope is supplied.
+No RLS bypass, temporary endpoint, provider mock or manual execution/usage/attempt insertion was used.
 
-The hardening migration also replaced the broad collaborator capability `FOR ALL` policy with explicit INSERT/UPDATE/DELETE policies and statement-level `auth.uid()` evaluation.
+## 8. Provider
 
-## 7. Connector boundary
+The final run crossed Vercel Deployment Protection through the configured GitHub Actions Trusted Source and reached the Production Next.js application.
 
-Collaborators do not store credentials. Connector policy is persisted as collaborator configuration and remains subject to the canonical Connector Fabric/Vault architecture.
+The provider execution was real OpenRouter execution using `google/gemini-2.5-flash-lite`. The terminal persisted provider/model and a real provider request id at the attempt boundary.
 
-Concrete connector invocation/binding is intentionally not claimed as complete by E2E 10.
+## 9. Production / Vercel
 
-## 8. Memory boundary
+Production deployment verified during the closure audit:
 
-The resolver reads bounded active Memory Graph entries for the authenticated user and, when authorized, the organization. Entries are truncated before being incorporated into the collaborator prompt context.
+- deployment: `dpl_BAWDtYo8trWL7Yndm93hH4dc4cpy`
+- target: `production`
+- state: `READY`
+- production SHA: `3e3e21e4850398f9bf23170a2b6c5d0cca391add`
+- canonical production alias: `velor-api-gustavo-borba-s-projects.vercel.app`
 
-Automatic long-term learning, memory mutation and optimization loops remain outside this closure.
+The E2E used that Production alias and did not substitute `velor-api.vercel.app`.
 
-## 9. Provider boundary
+## 10. CI
 
-Current implementation provides a production OpenRouter text-generation execution path using the canonical model/provider registry.
+Final code correction commit:
 
-The route preserves provider request correlation when returned by the provider and records model/provider, latency, usage and calculated cost in the execution result/audit path.
+`6fc046ea94f16e76c842e163732ddc395488fc11`
 
-A live authenticated user execution was not falsely promoted to evidence because the available Vercel integration did not expose the application's authenticated session required to invoke the route as a real user.
+Canonical `horus-ci` run:
 
-Classification: **EVIDENCE UNAVAILABLE — not a product failure.**
+- Run: `31628461226`
+- `npm ci` — SUCCESS
+- `npm test` — SUCCESS
+- TypeScript — SUCCESS
+- ESLint — SUCCESS
+- Build — SUCCESS
 
-## 10. Database migrations
+The only defect found during the final E2E was a harness query ordering by nonexistent `execution_usage.created_at`. The live schema uses `recorded_at`. The test harness was corrected to query `recorded_at` and assert `actual_total_cost_brl` / `actual_provider_cost_brl`.
 
-### `20260812120000_horus_agents_collaborators_e2e10.sql`
+## 11. Database migrations
 
-Creates the collaborator, capability-binding, version and collaborator-execution persistence model with initial RLS, indexes and timestamp triggers.
+No migration was required for closure. Existing E2E 10 migrations remain authoritative:
 
-### `20260812123000_horus_agents_collaborators_e2e10_hardening.sql`
+- `20260812120000_horus_agents_collaborators_e2e10.sql`
+- `20260812123000_horus_agents_collaborators_e2e10_hardening.sql`
 
-Hardens collaborator RLS and adds covering indexes for new foreign keys after Supabase advisor review.
+The final correction was test-only and did not modify the product schema.
 
-## 11. Validation evidence
+## 12. Cleanup
 
-### GitHub / CI
+The temporary password and JWT were process-local and were not persisted to source control, artifacts or logs.
 
-Final canonical workflow: `horus-ci`.
-
-Validated run for the implementation commits completed successfully with:
-
-- `npm ci` — SUCCESS;
-- `npm test` — SUCCESS;
-- `npm run typecheck` — SUCCESS;
-- `npm run lint` — SUCCESS;
-- `npm run build` — SUCCESS.
-
-### Vercel
-
-Production deployment for the final validated commit:
-
-- project: `prj_xQDty1690tXrnIWH4IIHOOXWF7CG`;
-- deployment: `dpl_EDJ4UprG4rohesj4QnqbdSExyypV`;
-- target: `production`;
-- readyState: `READY`;
-- createdAt: `1786547195575`;
-- deployment URL: `velor-2k1kr9thq-gustavo-borba-s-projects.vercel.app`;
-- Git SHA reported by Vercel: `aca86042bdd84176beee16aebe8454e991c2db3c`.
-
-Recent Vercel runtime aggregation reported no runtime errors in the selected audit window.
-
-### Supabase
-
-Direct validation confirmed:
-
-- all four collaborator tables exist;
-- RLS is enabled on all four;
-- explicit policies exist;
-- collaborator capability bindings reference the canonical capability registry;
-- shared economic RPCs remain the execution authorization/reconciliation path;
-- security/performance advisor review identified and the hardening migration corrected collaborator-specific policy/index findings.
-
-Existing unrelated project-wide advisor findings were not modified by this E2E.
-
-## 12. Failure-state coverage implemented
-
-The execution boundary has deterministic handling for:
-
-- missing intent;
-- missing idempotency key;
-- idempotency mismatch;
-- collaborator unavailable;
-- capability unavailable;
-- model unavailable;
-- provider unavailable;
-- organization authorization failure;
-- autonomy/approval rejection;
-- provider HTTP failure;
-- empty provider result;
-- economic authorization failure;
-- reconciliation failure.
-
-Duplicate requests with the same idempotency key and request hash replay the existing execution rather than creating a second execution record.
+The authenticated E2E evidence records were preserved because they are the closure evidence. No historical execution records were deleted to fabricate cleanup. The test identity remains represented by the preserved evidence and must not be interpreted as an administrative account.
 
 ## 13. Closure decision
 
-**Module 10 status: 🟢 VERIFIED, not COMPLETE.**
+**10 — 🟢 COMPLETE.**
 
-The remaining closure gate is a real authenticated application-user provider execution proving the full runtime chain through terminal economic reconciliation and audit evidence.
+The final terminal evidence proves the required authenticated chain:
 
-No evidence has been fabricated to close that gate.
+`GitHub OIDC → Vercel Trusted Source → Production Next.js → Supabase Auth → real JWT → Collaborator API → Nexus → canonical capability → policy/autonomy → OpenRouter → execution_attempt → execution_usage → economic reconciliation → budget settlement → horus_execution_logs → terminal SUCCESS → idempotency replay → negative authorization controls`.
+
+Module 11 was not started by this closure execution.
