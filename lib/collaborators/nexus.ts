@@ -15,6 +15,7 @@ export type CollaboratorRow = {
   tool_policy: Record<string, unknown>;
   connector_policy: Record<string, unknown>;
   execution_policy: Record<string, unknown>;
+  economic_policy_version: number;
   autonomy_level: 'READ' | 'SUGGEST' | 'PREPARE' | 'EXECUTE' | 'AUTONOMOUS';
   preferred_provider_id: string | null;
   preferred_model_id: string | null;
