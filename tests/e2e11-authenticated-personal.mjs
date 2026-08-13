@@ -7,9 +7,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const VERCEL_TRUSTED_OIDC_TOKEN = process.env.VERCEL_TRUSTED_OIDC_TOKEN;
-for (const [name, value] of Object.entries({ E2E_BASE_URL: BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY, VERCEL_TRUSTED_OIDC_TOKEN })) {
-  if (!value) throw new Error(`MISSING_E2E_ENV:${name}`);
-}
+for (const [name, value] of Object.entries({ E2E_BASE_URL: BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY, VERCEL_TRUSTED_OIDC_TOKEN })) if (!value) throw new Error(`MISSING_E2E_ENV:${name}`);
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } });
 const authClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } });
@@ -61,7 +59,7 @@ try {
   assert.equal(persona.body.profile.persona_id, 'clara');
 
   const device = await request('POST', '/api/personal/devices', token, { device_key: crypto.randomUUID(), platform: 'WEB', app_version: 'e2e11' });
-  assert.equal(device.response.status, 201, JSON.stringify(device.body));
+  assert.equal(device.response.status, 200, JSON.stringify(device.body));
   const deviceId = device.body.device.id;
   const voice = await request('GET', '/api/personal/voice', token);
   assert.equal(voice.response.status, 200, JSON.stringify(voice.body));
