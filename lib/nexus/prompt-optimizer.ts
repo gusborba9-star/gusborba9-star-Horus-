@@ -1,12 +1,7 @@
-import { buildTaskProfile, type TaskProfile } from '@/lib/nexus/task-profile';
+import { buildTaskProfile, type TaskProfile } from './task-profile';
 
 export type PromptTaskProfile = TaskProfile;
-
-export type OptimizedPrompt = {
-  original: string;
-  optimized: string;
-  profile: PromptTaskProfile;
-};
+export type OptimizedPrompt = { original: string; optimized: string; profile: PromptTaskProfile };
 
 export function optimizePrompt(input: string, context: string[] = []): OptimizedPrompt {
   const original = input.trim();
@@ -35,4 +30,4 @@ export function optimizePrompt(input: string, context: string[] = []): Optimized
   return { original, optimized, profile };
 }
 
-export { buildTaskProfile } from '@/lib/nexus/task-profile';
+export { buildTaskProfile } from './task-profile';
