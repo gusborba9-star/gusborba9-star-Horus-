@@ -4,7 +4,7 @@
 **Progress authority:** this file  
 **Integrity contract:** `docs/blueprint/ARCHITECTURE-LOCK.md`  
 **Evidence authority:** closure/evidence documents  
-**Last audited:** 2026-08-12
+**Last audited:** 2026-08-13
 
 > This document answers **WHERE Hórus is**. It does not redefine architecture and it does not replace closure/evidence documents.
 
@@ -13,35 +13,32 @@
 - 🔒 `NOT_STARTED` — no functional implementation started for the defined module scope.
 - 🔵 `PLANNED` — architecture/plan established; implementation not established for the defined scope.
 - 🟡 `IN_PROGRESS` — active implementation or validation is underway.
-- 🟢 `IMPLEMENTED` — implementation exists, but the complete verification/closure gates are not satisfied.
+- 🟢 `IMPLEMENTED` — implementation exists, but complete verification/closure gates are not satisfied.
 - 🟢 `VERIFIED` — direct validation evidence exists for the stated scope.
 - 🟢 `COMPLETE` — all closure gates for the stated scope are satisfied and evidence is recorded.
 - ⚠️ `BLOCKED` — a proven external/unresolved dependency prevents progress.
 
-**Checkbox rule:** `[x]` is derived from the corresponding status/evidence. It is not an independent registry. `[x]` is allowed only where the item has sufficient evidence for its stated status. `[ ]` means the item is not complete. `🟡 IN_PROGRESS` uses `[ ]`; no `[~]` convention is used.
+**Checkbox rule:** `[x]` is derived from the corresponding status/evidence. It is not an independent registry. `[x]` is allowed only where sufficient evidence exists for the stated status. `[ ]` means not complete. `🟡 IN_PROGRESS` uses `[ ]`; no `[~]` convention is used.
 
 ## 2. Global status
 
 **Hórus global status: NOT READY FOR MARKET.**
 
-Studio 09 and the Digital Collaborator E2E 10 platform primitive are closed at their respective scopes, but the Hórus platform and the other commercial surfaces are not globally closed. A completed surface never promotes the whole product to market readiness.
-
-### Commercial surfaces
+Studio 09 and the Digital Collaborator E2E 10 platform primitive are closed at their respective scopes. The platform and the other commercial surfaces are not globally closed.
 
 | Surface | Status | Scope / evidence |
 |---|---|---|
-| Colaboradores Digitais | 🔵 PLANNED | Commercial surface architecture defined; E2E 10 platform primitive is COMPLETE, but no dedicated commercial launch closure. |
-| Hórus Personal | 🔵 PLANNED | Text + voice product architecture defined; no dedicated production closure. |
-| Hórus Operations | 🔵 PLANNED | Cognitive-team operating model defined; no dedicated production closure. |
-| Studio Hórus / Projects | 🟢 COMPLETE | 09 closure; live Vercel rollback and full Studio lifecycle/economic reconciliation verified. |
+| Colaboradores Digitais | 🔵 PLANNED | E2E 10 platform primitive COMPLETE; commercial launch surface not closed. |
+| Hórus Personal | 🔵 PLANNED | Product architecture defined; implementation/production closure not established. |
+| Hórus Operations | 🔵 PLANNED | Cognitive-team operating model defined; no dedicated closure. |
+| Studio Hórus / Projects | 🟢 COMPLETE | 09 closure; live Vercel rollback and Studio lifecycle/economic reconciliation verified. |
 
 ## 3. Historical module sequence — IDs preserved
 
 > **Roadmap order ≠ dependency order.** IDs preserve project sequencing/history. The Blueprint dependency graph is the architectural authority.
 
 ### 01 — Core / Foundation
-**Status: 🟢 IMPLEMENTED**  
-**Evidence boundary:** repository history and current core routes/configuration. This is not a global launch closure.
+**Status: 🟢 IMPLEMENTED**
 
 - [x] Base Hórus application foundation
 - [x] Supabase integration
@@ -51,8 +48,7 @@ Studio 09 and the Digital Collaborator E2E 10 platform primitive are closed at t
 - [ ] Global launch-readiness closure
 
 ### 02 — Cognitive Core / Memory
-**Status: 🟡 IN_PROGRESS**  
-**Evidence boundary:** Memory Graph foundation is implemented; broader cognitive-memory behavior is not fully verified.
+**Status: 🟡 IN_PROGRESS**
 
 - [x] Memory Graph foundation
 - [x] Durable memory persistence schema
@@ -62,92 +58,39 @@ Studio 09 and the Digital Collaborator E2E 10 platform primitive are closed at t
 - [ ] Complete long-term memory lifecycle
 - [ ] Pruning / TTL / invalidation closure
 - [ ] End-to-end cognitive retrieval verification
+- [ ] Cross-product memory governance
 
-### 03 — Prior closed block
-**Status: 🟢 COMPLETE — historical closure preserved**  
-**Evidence boundary:** historical project closure/evidence referenced by prior Roadmap versions. No separate 03 closure artifact is present in the current `docs/blueprint/` tree; this audit therefore does not invent new component-level claims for 03.
+### 03–08 — Prior closed blocks
+**Status: 🟢 COMPLETE — historical closure preserved**
 
-- [x] Historical module closure preserved
-- [x] Historical status preserved without reopening
-- [ ] No new component claim added without direct evidence
-
-### 04 — Prior closed block
-**Status: 🟢 COMPLETE — historical closure preserved**  
-**Evidence boundary:** historical project closure/evidence referenced by prior Roadmap versions. No separate 04 closure artifact is present in the current `docs/blueprint/` tree; no unsupported component claims are added.
-
-- [x] Historical module closure preserved
-- [x] Historical status preserved without reopening
-- [ ] No new component claim added without direct evidence
-
-### 05 — Prior closed block
-**Status: 🟢 COMPLETE — historical closure preserved**  
-**Evidence boundary:** historical project closure/evidence referenced by prior Roadmap versions. No separate 05 closure artifact is present in the current `docs/blueprint/` tree; no unsupported component claims are added.
-
-- [x] Historical module closure preserved
-- [x] Historical status preserved without reopening
-- [ ] No new component claim added without direct evidence
-
-### 06 — Prior closed block
-**Status: 🟢 COMPLETE — historical closure preserved**  
-**Evidence boundary:** historical project closure/evidence referenced by prior Roadmap versions. No separate 06 closure artifact is present in the current `docs/blueprint/` tree; no unsupported component claims are added.
-
-- [x] Historical module closure preserved
-- [x] Historical status preserved without reopening
-- [ ] No new component claim added without direct evidence
-
-### 07 — Prior closed block
-**Status: 🟢 COMPLETE — historical closure preserved**  
-**Evidence boundary:** historical project closure/evidence referenced by prior Roadmap versions. No separate 07 closure artifact is present in the current `docs/blueprint/` tree; no unsupported component claims are added.
-
-- [x] Historical module closure preserved
-- [x] Historical status preserved without reopening
-- [ ] No new component claim added without direct evidence
-
-### 08 — Prior closed block
-**Status: 🟢 COMPLETE — historical closure preserved**  
-**Evidence boundary:** historical project closure/evidence referenced by prior Roadmap versions. No separate 08 closure artifact is present in the current `docs/blueprint/` tree; no unsupported component claims are added.
-
-- [x] Historical module closure preserved
-- [x] Historical status preserved without reopening
-- [ ] No new component claim added without direct evidence
+- [x] Historical module closures/statuses preserved
+- [x] No reopening of 03–08 in this reconciliation
+- [ ] No new component claim without direct evidence
 
 ### 09 — Studio / Projects
 **Status: 🟢 COMPLETE — Studio-scoped + LIVE VERIFIED**  
 **Evidence:** `docs/blueprint/09-STUDIO-CLOSURE.md`.
 
-- [x] Project lifecycle
-- [x] Revision system
-- [x] Approval boundary
-- [x] Preview verification
-- [x] Staging verification
-- [x] Production verification
+- [x] Project/revision lifecycle
+- [x] Approval, preview, staging and production verification
 - [x] Delivery verification
 - [x] Connector execution contract
-- [x] Execution specification
-- [x] Economic authorization
-- [x] Attempt tracking
-- [x] Budget authorization
-- [x] Budget reconciliation / terminal settlement
+- [x] Execution/economic authorization
+- [x] Attempt tracking and budget reconciliation
 - [x] Execution-log lifecycle
 - [x] Provider adapter execution
-- [x] Native Vercel error preservation
 - [x] Deterministic `PREVIOUS_READY_PRODUCTION` rollback policy
-- [x] Delivery Anchor ≠ Rollback Target
-- [x] Real Vercel production rollback
-- [x] Provider-side Production verification
-- [x] Runtime verification
-- [x] CI verification
-- [x] Connector `CONNECTED`
-- [x] Vault `secret_ref` resolution
+- [x] Real Vercel production rollback and provider verification
+- [x] Runtime/CI verification
+- [x] Connector `CONNECTED` and Vault `secret_ref`
 
-Historical failed rollback remains immutable evidence; it is not rewritten as success.
+Historical failed rollback remains immutable evidence.
 
 ### 10 — Agents / Digital Collaborators
 **Status: 🟢 COMPLETE — authenticated production E2E and terminal economic reconciliation verified**  
-**Evidence:** `docs/blueprint/10-AGENTS-CLOSURE.md`, final authenticated E2E run `31628461257`, `horus-ci` run `31628461226`, Supabase persistence audit and Production deployment verification.
+**Evidence:** `docs/blueprint/10-AGENTS-CLOSURE.md`, authenticated E2E run `31628461257`, `horus-ci` run `31628461226`, Supabase persistence audit and Production deployment verification.
 
-- [x] Agent/collaborator primitive
-- [x] Collaborator product model
+- [x] Agent/collaborator primitive and product model
 - [x] Identity / role / specialization / objectives / instructions
 - [x] Memory-scope contract
 - [x] Capability binding to canonical `capabilities`
@@ -156,36 +99,114 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Version snapshot/lifecycle foundation
 - [x] Nexus collaborator resolution
 - [x] Capability resolution
-- [x] Provider/model selection from canonical registry
+- [x] Canonical provider/model selection
 - [x] Bounded Memory Graph context assembly
-- [x] Organization membership gate before privileged resolution
-- [x] RLS tenant/user isolation
+- [x] Organization membership gate and RLS isolation
 - [x] Idempotency boundary
-- [x] Shared budget authorization
-- [x] Shared attempt authorization
-- [x] Real provider execution boundary in production
-- [x] Usage/cost reconciliation
-- [x] Durable collaborator execution persistence
-- [x] Durable execution log correlation
-- [x] Deterministic autonomy rejection for `SUGGEST` / `PREPARE`
-- [x] Live provider E2E with authenticated user session
-- [x] Dedicated `10` closure with live provider evidence
+- [x] Shared budget/attempt authorization
+- [x] Real OpenRouter provider execution in Production
+- [x] Usage/cost reconciliation and settled budget
+- [x] Durable collaborator execution/log persistence
+- [x] Deterministic rejection of `SUGGEST` / `PREPARE` side effects
+- [x] Authenticated live E2E and negative authorization tests
 - [ ] Concrete collaborator connector binding/execution
-- [ ] Delegation / parent-child collaborator execution
+- [ ] Delegation / parent-child execution
 - [ ] Collaborator team orchestration
 - [ ] Learning/optimization loop
 
 ### 11 — Hórus Personal
-**Status: 🔵 PLANNED**
+**Status: 🔵 PLANNED — architecture defined; implementation not started/verified**
 
-- [ ] Personal collaborator model
+#### Product model — mandatory
+
+- [ ] Personal is a pre-built product, not a user-created agent
+- [ ] Flow: `LOGIN → PERSONAL → SUBSCRIBE → SELECT IDENTITY → ACTIVATE → OPTIONAL PERMISSIONS → USE`
+- [ ] Six fixed official identities: Aline, Luiza, Íris, Clara, Bel, Lúcia
+- [ ] No free-form persona creation
+- [ ] Persona identity ≠ independent agent
+- [ ] All six identities share the same Personal runtime/Nexus/infrastructure
+- [ ] Persistent identity selection per authenticated user
+
+#### Subscription / activation
+
+- [ ] Personal subscription lifecycle
+- [ ] Device/session activation
+- [ ] Personal availability on supported device
+- [ ] Subscription change/cancellation lifecycle
+
+**Commercial baseline only:** R$49,90 / R$79,90 / R$159,90. These are provisional values, not frozen prices. Tier names, prices, usage policies and economic profiles require validation.
+
+#### Cognition / voice / memory
+
 - [ ] Text interaction
-- [ ] Voice interaction
-- [ ] User-defined role/context
-- [ ] Personal memory scope
-- [ ] Safety/permission boundary
-- [ ] Subscription lifecycle
-- [ ] Dedicated closure
+- [ ] STT contract
+- [ ] TTS contract
+- [ ] Primary + compatible fallback voice per persona
+- [ ] Personal Identity Profile
+- [ ] Personal memory semantics over shared Memory Graph
+- [ ] Context continuity
+- [ ] Proactive behavior foundation
+
+#### Permissions / App Actions
+
+- [ ] User-owned capability grants over canonical `capabilities`
+- [ ] Capability scope
+- [ ] Permission state and revocation
+- [ ] Confirmation policy for sensitive actions
+- [ ] Permission Center
+- [ ] Permission audit
+- [ ] Initial deterministic App Actions
+- [ ] Official API integrations where available
+- [ ] Native Android integrations where appropriate
+- [ ] Android Intent/share where appropriate
+- [ ] UI automation only as a last resort and only after security/platform-policy/reliability validation
+- [ ] External side-effect evidence
+- [ ] Idempotent App Action execution
+
+#### Economics / Nexus routing
+
+- [ ] Personal subscription → internal economic profile mapping
+- [ ] Reuse canonical budgets/attempts/usage/reconciliation
+- [ ] Cost-aware internal model routing
+- [ ] STT/TTS routing policy
+- [ ] Research/tool cost routing
+- [ ] Expected-use economic simulation
+- [ ] Heavy-use economic simulation
+- [ ] Worst-reasonable legitimate-use simulation
+- [ ] Final pricing validation
+- [ ] Final tier naming validation
+
+#### Mandatory reuse from 03–10
+
+- [x] Reuse Nexus architecture from E2E 10
+- [x] Reuse canonical capability registry
+- [x] Reuse provider/model registry
+- [x] Reuse execution budget/attempt/usage/reconciliation
+- [x] Reuse idempotency architecture
+- [x] Reuse provider-adapter foundation
+- [x] Reuse Memory Graph foundation
+- [x] Reuse authentication/RLS/security primitives
+- [x] Reuse execution/audit correlation
+- [ ] Generalize domain-scoped primitives where required for Personal
+
+`[x]` here means the shared primitive is established and must be consumed; it does **not** mean the Personal consumer is implemented.
+
+#### Dedicated closure gates
+
+- [ ] Authenticated Personal E2E
+- [ ] Persona persistence E2E
+- [ ] Text E2E
+- [ ] Voice E2E
+- [ ] Memory/context E2E
+- [ ] Permission grant E2E
+- [ ] Permission revocation E2E
+- [ ] App Action E2E with external evidence
+- [ ] Idempotency replay E2E
+- [ ] Economic authorization/reconciliation E2E
+- [ ] Negative authorization/security E2E
+- [ ] Production deployment/runtime verification
+- [ ] CI / TypeScript / ESLint / build closure
+- [ ] Dedicated `11` closure document
 
 ### 12 — Observability / Audit
 **Status: 🔵 PLANNED — platform-wide**
@@ -196,6 +217,7 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [ ] Deployment audit coverage
 - [ ] Approval/HITL audit coverage
 - [ ] Usage/economic audit coverage
+- [ ] Personal permission grant/revocation audit coverage
 - [ ] Retention/query policy
 - [ ] Dedicated closure
 
@@ -223,6 +245,8 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [ ] Payment provider integration
 - [ ] Webhook/idempotency lifecycle
 - [ ] Reconciliation
+- [ ] Personal tier → economic-profile mapping
+- [ ] Collaborator Nexus-driven pricing flow
 - [ ] Dedicated closure
 
 ### 15 — Workspace / Identity / Multi-tenant
@@ -236,98 +260,100 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [ ] Cross-product ownership model
 - [ ] Workspace-scoped memory
 - [ ] Workspace-scoped agents/collaborators
+- [ ] User-scoped Personal ownership
 - [ ] Workspace-scoped billing
 - [ ] Dedicated closure
 
 ### 16 — Inference / Model Routing
-**Status: 🔵 PLANNED**
+**Status: 🟢 IMPLEMENTED — foundation exists; platform-wide closure pending**
 
-- [ ] Provider-neutral inference contract
-- [ ] Capability-aware routing
-- [ ] Model selection policy
+- [x] Provider-neutral architecture
+- [x] Canonical provider/model registry foundation
+- [x] Collaborator OpenRouter text path
+- [ ] Capability-aware routing closure
+- [ ] Model selection policy closure
 - [ ] Cost/quality/latency routing
 - [ ] Context-window constraints
 - [ ] Fallback strategy
 - [ ] Provider health integration
 - [ ] Economic policy integration
+- [ ] OpenRouter pricing/model-data contract for Nexus economics
+- [ ] Personal routing verification
+- [ ] Collaborator dynamic pricing/routing verification
 - [ ] Dedicated closure
 
 ### 17 — Connector / Plugin Fabric
-**Status: 🟢 IMPLEMENTED — Studio-scoped**  
-**Platform-wide completion remains open.**
+**Status: 🟢 IMPLEMENTED — Studio-scoped; platform-wide completion open**
 
 - [x] Studio connector contract
-- [x] GitHub connector
-- [x] Vercel connector
-- [x] Supabase connector
-- [x] External API capability represented
+- [x] GitHub / Vercel / Supabase connectors
 - [x] Permission boundary
 - [x] Vault-backed `secret_ref`
 - [x] Provider adapter binding in Studio
-- [x] Request/response correlation in rollback diagnostics
 - [ ] Canonical platform-wide connector registry lifecycle
 - [ ] Versioned connector manifest lifecycle
 - [ ] OAuth lifecycle
 - [ ] API-key/service-credential lifecycle generalized platform-wide
 - [ ] Credential expiry/revocation lifecycle generalized platform-wide
-- [ ] Connector health-check lifecycle
+- [ ] Health-check lifecycle
 - [ ] Platform-wide rate-limit/retry/backoff policy
 - [ ] Platform-wide webhook lifecycle
-- [ ] Broad connector catalog / dozens of connectors
+- [ ] Broad connector catalog
 - [ ] Platform-wide compatibility/version governance
+- [ ] Personal connector/action coverage
 
 ### 18 — Execution / Economics
-**Status: 🟢 IMPLEMENTED — Studio-scoped + LIVE VERIFIED; collaborator reuse verified at implementation level**  
-**Platform-wide completion remains open.**
+**Status: 🟢 IMPLEMENTED — Studio LIVE VERIFIED; collaborator reuse verified; platform-wide closure open**
 
 - [x] Execution specification
 - [x] Authorization contract
 - [x] Attempt tracking
 - [x] Budget model
-- [x] Usage/cost tracking schema
+- [x] Usage/cost tracking
 - [x] Economic policy
 - [x] Provider correlation
-- [x] Idempotency primitives
-- [x] Terminal budget settlement
-- [x] Reconciliation contract
+- [x] Idempotency
+- [x] Terminal settlement
+- [x] Reconciliation
 - [x] Failed-attempt immutability
-- [x] Collaborator execution reuses canonical budget/attempt/usage/reconciliation
+- [x] Collaborator reuse of canonical economics
 - [ ] Cross-product execution coverage
 - [ ] Cross-product economic authorization
-- [ ] Cross-product budget/usage reconciliation
+- [ ] Cross-product reconciliation
+- [ ] Personal subscription → economic-profile adapter
+- [ ] Personal economic-routing E2E
 
 ### 19 — Security / Vault / RLS
-**Status: 🟢 VERIFIED — Studio-scoped + LIVE VERIFIED; collaborator tenant boundary verified at schema/code level**  
-**Platform-wide completion remains open.**
+**Status: 🟢 VERIFIED — Studio LIVE VERIFIED; collaborator boundary verified; platform-wide closure open**
 
-- [x] Supabase RLS on relevant Studio domain tables
+- [x] Studio RLS
 - [x] Vault/service-role secret boundary
 - [x] Connector `secret_ref`
-- [x] Permission enforcement for Studio execution
+- [x] Studio permission enforcement
 - [x] Authorization before protected connector use
-- [x] Collaborator RLS policies
+- [x] Collaborator RLS
 - [x] Collaborator organization membership gate
-- [x] Security evidence during E2E
-- [ ] Platform-wide tenant isolation closure
-- [ ] Platform-wide credential lifecycle closure
-- [ ] Cross-product authorization closure
+- [x] Negative security E2E
+- [ ] Platform-wide tenant isolation
+- [ ] Platform-wide credential lifecycle
+- [ ] Cross-product authorization
+- [ ] Personal user-owned capability grants
+- [ ] Personal permission revocation enforcement
 - [ ] Dedicated security closure
 
 ### 20 — Deployment / Lifecycle
-**Status: 🟢 VERIFIED — Studio-scoped + LIVE VERIFIED; E2E 10 production deployment verified**  
-**Platform-wide completion remains open.**
+**Status: 🟢 VERIFIED — Studio LIVE VERIFIED; E2E 10 Production deployment verified; platform-wide closure open**
 
-- [x] Preview lifecycle
-- [x] Staging lifecycle
-- [x] Production lifecycle
+- [x] Preview / staging / production lifecycle
 - [x] Delivery lifecycle
 - [x] Production approval boundary
 - [x] Provider deployment verification
 - [x] Real production rollback
 - [x] Deterministic rollback target resolution
 - [x] Runtime verification
-- [x] Provider/application state reconciliation
+- [x] Provider/application reconciliation
 - [x] E2E 10 Production deployment READY
+- [ ] Personal device/session activation lifecycle
 - [ ] Cross-product deployment lifecycle
 - [ ] Generalized lifecycle contracts for non-Studio surfaces
 - [ ] Dedicated lifecycle closure
@@ -335,18 +361,19 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 ## 4. Shared platform progress — evidence boundaries
 
 ### Cognitive Core / Memory
-**Status: 🟡 IN_PROGRESS.** Memory foundation exists; broader cognitive behavior is not closed.
+**Status: 🟡 IN_PROGRESS**
 
 - [x] Memory Graph schema/foundation
-- [x] Semantic cache schema/foundation
+- [x] Semantic cache foundation
 - [x] Context/memory service foundation
 - [x] Collaborator bounded Memory Graph reads
 - [ ] Full short/long-term memory lifecycle
 - [ ] Full retrieval/RAG verification
 - [ ] Cross-product memory governance
+- [ ] Personal memory behavior verification
 
 ### Nexus
-**Status: 🟢 IMPLEMENTED — architecture + current routing foundation; platform-wide closure pending.**
+**Status: 🟢 IMPLEMENTED — current routing foundation; platform-wide closure pending**
 
 - [x] Intent-oriented central orchestration contract
 - [x] Provider/model-agnostic architecture
@@ -354,91 +381,126 @@ Historical failed rollback remains immutable evidence; it is not rewritten as su
 - [x] Collaborator resolution boundary
 - [x] Capability resolution
 - [x] Model/provider selection foundation
+- [x] Shared execution/economic boundary consumption in E2E 10
 - [ ] Full dynamic capability/agent/team composition
 - [ ] Full production inference routing
+- [ ] OpenRouter pricing/model-data contract for dynamic economics
+- [ ] Personal runtime verification
+- [ ] Collaborator dynamic pricing/routing verification
 - [ ] Cross-product verification
 
 ### Capability System
-**Status: 🟢 IMPLEMENTED — current canonical registry; platform-wide composition closure pending.**
+**Status: 🟢 IMPLEMENTED — canonical registry; platform-wide composition closure pending**
 
 - [x] Canonical `capabilities` registry
 - [x] Capability/provider/model relationships
 - [x] Studio capability composition
 - [x] Collaborator capability binding
+- [ ] Personal capability grant domain
 - [ ] Full Nexus-driven platform-wide capability composition
 - [ ] Capability governance/compatibility closure
 
 ### Provider Adapters
-**Status: 🟢 IMPLEMENTED — Studio/Vercel live verified; collaborator text provider path implemented and live E2E verified.**
+**Status: 🟢 IMPLEMENTED — Studio/Vercel live verified; collaborator text provider path live E2E verified**
 
-- [x] Provider abstraction in persistence
-- [x] Vercel adapter path
-- [x] OpenRouter text provider path for collaborators
+- [x] Provider abstraction
+- [x] Vercel adapter
+- [x] OpenRouter collaborator text path
 - [x] Native provider diagnostic preservation
-- [x] Provider request/target correlation for rollback
+- [x] Provider request/target correlation
 - [ ] Generalized multi-provider adapter contract
+- [ ] STT adapter
+- [ ] TTS adapter
 - [ ] Cross-product provider verification
 
 ### HITL / Approval
-**Status: 🟢 IMPLEMENTED — Studio-scoped; collaborator autonomy gate implemented and live E2E verified; platform-wide policy pending.**
+**Status: 🟢 IMPLEMENTED — Studio and collaborator boundaries verified; platform-wide policy pending**
 
 - [x] Revision approval boundary
 - [x] Production approval boundary
-- [x] Risk/approval fields in execution model
+- [x] Risk/approval fields
 - [x] Collaborator `READ/SUGGEST/PREPARE/EXECUTE/AUTONOMOUS` policy boundary
+- [ ] Personal confirmation/permission policy closure
 - [ ] Platform-wide HITL policy engine
 - [ ] Cross-product approval governance
 
 ## 5. Evidence matrix
 
-| Item | Status | Scope | Evidence |
+| Area | Current status | Verified scope | Next closure requirement |
 |---|---|---|---|
-| 01 | 🟢 IMPLEMENTED | platform foundation | Git history / current code |
-| 02 | 🟡 IN_PROGRESS | Cognitive Core / Memory | current schema/code |
-| 03 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
-| 04 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
-| 05 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
-| 06 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
-| 07 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
-| 08 | 🟢 COMPLETE | historical module scope | prior Roadmap/history; current closure artifact not present |
-| 09 | 🟢 COMPLETE | Studio + LIVE VERIFIED | `09-STUDIO-CLOSURE.md`, CI, Vercel, Supabase evidence |
-| 10 | 🟢 COMPLETE | authenticated production collaborator E2E | `10-AGENTS-CLOSURE.md`, E2E run `31628461257`, CI `31628461226`, Supabase persistence audit, Production READY |
-| 11 | 🔵 PLANNED | commercial surface | Blueprint only |
-| 12 | 🔵 PLANNED | platform-wide | Blueprint only |
-| 13 | 🔵 PLANNED | commercial surface | Blueprint only |
-| 14 | 🔵 PLANNED | platform-wide/commercial | current schemas/history; no production billing closure |
-| 15 | 🔵 PLANNED | platform-wide | schema foundation exists; no cross-product closure |
-| 16 | 🔵 PLANNED | platform-wide | architecture/schema foundation; no production router closure |
-| 17 | 🟢 IMPLEMENTED | Studio-scoped | Studio connector schema/code/E2E |
-| 18 | 🟢 IMPLEMENTED | Studio-scoped + LIVE VERIFIED; collaborator reuse verified | execution/attempt/budget/reconciliation E2E + E2E 10 code integration |
-| 19 | 🟢 VERIFIED | Studio LIVE VERIFIED; collaborator tenant boundary verified | RLS/Vault/Connector E2E + collaborator RLS/membership gate + negative E2E |
-| 20 | 🟢 VERIFIED | Studio LIVE VERIFIED; E2E 10 deployment verified | Vercel lifecycle/rollback E2E + Production READY deployment |
+| 01 | 🟢 IMPLEMENTED | Foundation | Global launch closure |
+| 02 | 🟡 IN_PROGRESS | Memory foundation + bounded collaborator reads | Full lifecycle/retrieval |
+| 03–08 | 🟢 COMPLETE | Historical closure preserved | No reopening without evidence |
+| 09 | 🟢 COMPLETE | Studio live lifecycle | None for defined 09 scope |
+| 10 | 🟢 COMPLETE | Authenticated Production E2E | Commercial surface/connectors/delegation/team remain separate |
+| 11 | 🔵 PLANNED | Architecture defined only | Personal-specific implementation + dedicated E2E |
+| 12 | 🔵 PLANNED | No platform-wide closure | Cross-product audit |
+| 13 | 🔵 PLANNED | Architecture defined | Team execution surface |
+| 14 | 🔵 PLANNED | No commercial closure | Payment + reconciliation |
+| 15 | 🔵 PLANNED | Partial domain boundaries exist | Platform-wide identity/tenant closure |
+| 16 | 🟢 IMPLEMENTED | Provider/model foundation + collaborator path | Dynamic routing/economics |
+| 17 | 🟢 IMPLEMENTED | Studio scope | Platform-wide fabric |
+| 18 | 🟢 IMPLEMENTED | Studio live + collaborator reuse | Cross-product closure |
+| 19 | 🟢 VERIFIED | Studio live + collaborator boundary | Personal + platform-wide closure |
+| 20 | 🟢 VERIFIED | Studio live + E2E 10 deployment | Personal + cross-product lifecycle |
 
-## 6. Dependency order — authoritative architectural graph
+## 6. Personal dependency/reuse matrix
 
-Roadmap IDs are not dependency order. The Blueprint graph is authoritative:
+| Personal requirement | Existing source | Action |
+|---|---|---|
+| Nexus orchestration | E2E 10 / Nexus | REUSE |
+| Canonical capabilities | Shared `capabilities` registry | REUSE |
+| Policy/autonomy | E2E 10 | REUSE / EXTEND for personal confirmation |
+| Execution budget | Shared execution economics | REUSE |
+| Attempts | Shared execution economics | REUSE |
+| Usage/cost | Shared execution economics | REUSE |
+| Reconciliation | Shared execution economics | REUSE |
+| Idempotency | E2E 10 | REUSE |
+| Provider/model registry | Shared provider registry | REUSE |
+| OpenRouter text path | E2E 10 | REUSE |
+| Memory Graph | Cognitive Core / E2E 10 | REUSE / EXTEND semantics |
+| RLS/Auth | Shared security foundation | REUSE / EXTEND user ownership |
+| Audit/execution logs | Shared execution/audit | REUSE |
+| Connector Fabric | 17 | EXTEND/generalize where needed |
+| STT/TTS | Provider layer | NEW domain contracts |
+| Six identities | Personal product | NEW |
+| Personal Identity Profile | Personal product | NEW |
+| Capability grants | Security/product boundary | NEW domain contract over canonical capabilities |
+| Permission Center | Personal product | NEW |
+| Android/device activation | Personal product | NEW |
+| App Actions | Personal product + Connector Fabric | NEW/EXTEND |
+| Proactivity/pending intents | Personal product + event infrastructure | NEW/EXTEND |
+| Personal subscription mapping | Billing/economics | NEW domain mapping; shared billing |
 
-`Identity / Workspace`
-→ `Cognitive Core / Memory / RAG`
-→ `Nexus`
-→ `Agents / Collaborators`
-→ `Capabilities`
-→ `Inference / Model Routing`
-→ `Connector / Plugin Fabric`
-→ `Execution / Economics`
-→ `Provider Adapters`
-→ `Preview / Staging / Production`
-→ `Verification / Reconciliation`
-→ `Observability / Audit`
-→ `Billing / Usage`
+## 7. Audit/reconciliation decisions — 2026-08-13
 
-Commercial surfaces consume the shared platform:
+1. Module 10 remains COMPLETE and is not reopened.
+2. Personal is now explicitly defined as a **pre-built product**, not a dynamic agent-creation surface.
+3. Personal has exactly six official identities: Aline, Luiza, Íris, Clara, Bel and Lúcia.
+4. No free-form Personal persona builder is permitted.
+5. Personal and Collaborator share Nexus and platform primitives but have different lifecycles: Personal is selected/activated; Collaborator is designed/composed by Nexus from user intent.
+6. Personal capability permissions are explicit, user-owned, scoped, auditable and revocable.
+7. Personal must not receive unrestricted device authority.
+8. Personal must reuse the canonical capability registry, provider/model registry, execution/economic primitives, idempotency, memory foundation, authentication/RLS and audit infrastructure.
+9. The provisional Personal price baseline is R$49,90 / R$79,90 / R$159,90. It is not a frozen commercial decision.
+10. Personal commercial pricing must be validated against expected, heavy and worst-reasonable legitimate consumption before launch closure.
+11. Collaborator pricing remains a separate Nexus-driven flow using objective/task requirements and current provider/model economics.
+12. OpenRouter/model pricing is an internal Nexus input, not a user-facing model selection contract.
+13. No functional Personal implementation is claimed by this reconciliation.
 
-`Colaboradores Digitais` / `Hórus Personal` / `Hórus Operations` / `Studio Projects`
+## 8. Documentation rules for future progress
 
-## 7. Launch readiness
+When an item becomes complete:
 
-### Global platform gates — all required before global market readiness
+`IMPLEMENT/CORRECT → VALIDATE → RECORD EVIDENCE → UPDATE STATUS → DERIVE CHECKBOX → UPDATE CLOSURE IF APPLICABLE → CI → DEPLOY/VERIFY → CONTINUE`
+
+A checkbox never creates evidence. Evidence creates the status; the checkbox mirrors it.
+
+Any shared architectural change updates the Blueprint and Roadmap in the same development cycle.
+
+## 9. Launch readiness
+
+### Global platform gates
 
 - [ ] Identity / Workspace
 - [ ] Authorization
@@ -462,40 +524,13 @@ Commercial surfaces consume the shared platform:
 
 | Surface | Status | Required closure |
 |---|---|---|
-| Colaboradores Digitais | 🔵 PLANNED | dedicated product + platform closure; E2E 10 platform primitive is complete |
-| Hórus Personal | 🔵 PLANNED | dedicated product + platform closure |
-| Hórus Operations | 🔵 PLANNED | dedicated product + platform closure |
+| Colaboradores Digitais | 🔵 PLANNED | Dedicated product + platform closure; E2E 10 primitive is complete |
+| Hórus Personal | 🔵 PLANNED | Dedicated product + platform closure |
+| Hórus Operations | 🔵 PLANNED | Dedicated product + platform closure |
 | Studio Projects | 🟢 COMPLETE | 09 closure + applicable platform gates |
-
-## 8. Audit findings and reconciliation decisions — 2026-08-12
-
-1. E2E 10 introduced a canonical collaborator foundation without creating a second agent/capability/economic registry.
-2. Collaborator capability bindings reference the existing canonical `capabilities` registry.
-3. Collaborator execution reuses `execution_budgets`, `execution_attempts`, `execution_usage` and `reconcile_horus_execution_attempt`; no parallel budget/attempt/usage system was created.
-4. The first migration initially attempted an invalid scalar foreign key to the composite `models` primary key. The migration was corrected before successful application; provider/model references remain provider-neutral text fields and are resolved against the canonical model/provider registry at runtime.
-5. The initial collaborator RLS mutation policy used a broad `FOR ALL` policy alongside a SELECT policy. This was corrected into explicit INSERT/UPDATE/DELETE policies and `auth.uid()` was wrapped as a statement-level initplan to reduce repeated evaluation.
-6. New collaborator foreign keys were indexed in the hardening migration after Supabase performance review identified missing covering indexes.
-7. Service-role API paths now validate organization membership before privileged collaborator resolution/creation, preventing client-supplied organization IDs from bypassing tenant authorization.
-8. `SUGGEST` and `PREPARE` collaborators are blocked before economic authorization; only `EXECUTE` and `AUTONOMOUS` enter the provider execution boundary.
-9. Final validated `horus-ci` run `31628461226` completed SUCCESS with npm test, TypeScript, ESLint and production build all successful.
-10. Vercel Production deployment `dpl_BAWDtYo8trWL7Yndm93hH4dc4cpy` for the production SHA `3e3e21e4850398f9bf23170a2b6c5d0cca391add` is READY; runtime verification during closure reported no relevant runtime errors/fatals.
-11. Supabase confirms all four collaborator tables have RLS enabled and explicit policies. Security/performance advisors show no collaborator-specific RLS-no-policy issue; existing unrelated project-wide advisories remain unchanged.
-12. Final authenticated E2E run `31628461257` proved GitHub OIDC → Vercel Trusted Source → Production Next.js → Supabase Auth → real JWT → Collaborator API → Nexus → canonical capability → policy/autonomy → OpenRouter → execution/attempt/usage → economic reconciliation → budget SETTLED → `horus_execution_logs` terminal completion.
-13. The same E2E proved idempotency replay without a second execution or economic charge.
-14. Negative security tests proved unauthenticated access is denied and forged organization access is denied with `ORGANIZATION_ACCESS_DENIED`.
-15. Module 09 remains COMPLETE and no historical 03–09 progress was reclassified downward.
-16. No functional module 11 work was initiated.
-
-## 9. Documentation rules for future progress
-
-When an item becomes complete:
-
-`IMPLEMENT/CORRECT → VALIDATE → RECORD EVIDENCE → UPDATE STATUS → DERIVE CHECKBOX → UPDATE CLOSURE IF APPLICABLE → CI → DEPLOY/VERIFY → CONTINUE`
-
-A checkbox never creates evidence. Evidence creates the status; the checkbox mirrors it.
 
 ## 10. Next-module boundary
 
 **10 — Agents / Digital Collaborators is CLOSED.** Its closure evidence is recorded in `docs/blueprint/10-AGENTS-CLOSURE.md`.
 
-**11 — Hórus Personal remains `🔵 PLANNED` / NOT_STARTED.** No module 11 implementation was started by this reconciliation.
+**11 — Hórus Personal is now structurally defined and remains `🔵 PLANNED` / NOT_STARTED.** The next implementation work must begin with a reuse audit of the 03–10 primitives and Personal-domain contracts only; it must not rebuild shared Nexus, capabilities, economics, provider registry or memory infrastructure.
