@@ -8,14 +8,16 @@ export async function GET(request: Request) {
     const { user } = await requireStudioUser(request);
     const service = getServiceSupabase();
     const context = await loadPersonalContext(service, user.id);
-    const voice = context.persona.voice_profile;
+    const voice = context.persona.voice_profile as Record<string, any>;
+    const locale = typeof voice.locale === 'string' ? voice.locale : 'pt-BR';
+    const gender = typeof voice.gender === 'string' ? voice.gender : 'female';
     return NextResponse.json({
       success: true,
       contract_version: '1.0',
       mode: 'BROWSER_NATIVE_WITH_PROVIDER_FALLBACK',
       persona_id: context.profile.persona_id,
-      primary: voice.primary ?? { engine: 'browser', locale: 'pt-BR', gender: 'female' },
-      fallback: voice.fallback ?? { engine: 'browser', locale: 'pt-BR', gender: 'female' },
+      primary: { ...(voice.primary ?? { engine: 'browser', voice_hint: 'pt-BR-female-neutral' }), locale, gender },
+      fallback: { ...(voice.fallback ?? { engine: 'browser', voice_hint: 'pt-BR-female-neutral' }), locale, gender },
       identity_lock: true,
       stt: { contract: 'VOICE_TO_TEXT', provider_neutral: true },
       tts: { contract: 'TEXT_TO_VOICE', provider_neutral: true },
