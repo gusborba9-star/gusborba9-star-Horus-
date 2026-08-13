@@ -48,7 +48,6 @@ try {
   const plans = await request('GET', '/api/personal/plans', token);
   assert.equal(plans.response.status, 200, JSON.stringify(plans.body));
   assert.deepEqual(plans.body.plans.map((plan) => plan.id), ['PERSONAL', 'PERSONAL_PRO', 'PERSONAL_PRIME']);
-
   const subscription = await request('POST', '/api/personal/subscriptions', token, { tier: 'PERSONAL_PRO' });
   assert.equal(subscription.response.status, 201, JSON.stringify(subscription.body));
   assert.equal(subscription.body.subscription.status, 'PENDING');
@@ -57,15 +56,13 @@ try {
   const personal = await request('GET', '/api/personal', token);
   assert.equal(personal.response.status, 200, JSON.stringify(personal.body));
   assert.deepEqual(personal.body.personas.map((persona) => persona.id), ['aline', 'bel', 'clara', 'iris', 'lucia', 'luiza']);
-
   const persona = await request('POST', '/api/personal', token, { persona_id: 'clara' });
   assert.equal(persona.response.status, 200, JSON.stringify(persona.body));
   assert.equal(persona.body.profile.persona_id, 'clara');
 
-  const device = await request('POST', '/api/personal/devices', token, { device_key: crypto.randomUUID(), platform: 'E2E', app_version: 'e2e11' });
+  const device = await request('POST', '/api/personal/devices', token, { device_key: crypto.randomUUID(), platform: 'WEB', app_version: 'e2e11' });
   assert.equal(device.response.status, 201, JSON.stringify(device.body));
   const deviceId = device.body.device.id;
-
   const voice = await request('GET', '/api/personal/voice', token);
   assert.equal(voice.response.status, 200, JSON.stringify(voice.body));
   assert.equal(voice.body.identity_lock, true);
