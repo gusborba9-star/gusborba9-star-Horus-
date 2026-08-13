@@ -57,3 +57,25 @@ export async function POST(request: Request) {
     return errorResponse(error);
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { user } = await requireStudioUser(request);
+    const body = await request.json();
+    const grantId = typeof body.grant_id === 'string' ? body.grant_id : '';
+    if (!grantId) throw new Error('PERSONAL_PERMISSION_GRANT_ID_REQUIRED');
+
+    const service = getServiceSupabase();
+    const { data: grant, error: lookupError } = await service.from('personal_capability_grants').select('id,capability_id,status').eq('id', grantId).eq('user_id', user.id).maybeSingle();
+    if (lookupError) throw new Error(`PERSONAL_PERMISSION_LOOKUP_FAILED:${lookupError.message}`);
+    if (!grant) throw new Error('PERSONAL_PERMISSION_NOT_FOUND');
+
+    const { data: revoked, error } = await service.from('personal_capability_grants').update({ status: 'REVOKED', revoked_at: new Date().toISOString() }).eq('id', grantId).eq('user_id', user.id).select('id,capability_id,status,revoked_at,updated_at').single();
+    if (error || !revoked) throw new Error(`PERSONAL_PERMISSION_REVOKE_FAILED:${error?.message ?? 'UNKNOWN'}`);
+    const { error: auditError } = await service.from('personal_permission_audit').insert({ user_id: user.id, grant_id: grantId, capability_id: grant.capability_id, action: 'REVOKE', metadata: {} });
+    if (auditError) throw new Error(`PERSONAL_PERMISSION_AUDIT_FAILED:${auditError.message}`);
+    return NextResponse.json({ success: true, permission: revoked });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
