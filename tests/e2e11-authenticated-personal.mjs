@@ -35,7 +35,7 @@ const { data: created, error: createError } = await admin.auth.admin.createUser(
 if (createError || !created.user) throw new Error(`E2E_USER_CREATE_FAILED:${createError?.message ?? 'UNKNOWN'}`);
 const userId = created.user.id;
 let secondUserId = null;
-let secondSubscriptionId = null;
+let memoryFixtureId = null;
 try {
   const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({ email, password });
   if (signInError || !sessionData.session?.access_token) throw new Error(`E2E_AUTH_FAILED:${signInError?.message ?? 'NO_SESSION'}`);
@@ -61,18 +61,36 @@ try {
   const device = await request('POST', '/api/personal/devices', token, { device_key: crypto.randomUUID(), platform: 'WEB', app_version: 'e2e11' });
   assert.equal(device.response.status, 200, JSON.stringify(device.body));
   const deviceId = device.body.device.id;
+
+  const memoryContent = `E2E11 memory fixture ${runId}: preferred response language is Portuguese Brazilian.`;
+  const memoryHash = crypto.createHash('sha256').update(memoryContent).digest('hex');
+  const { data: memoryFixture, error: memoryFixtureError } = await admin.from('memory_graph_nodes').insert({
+    node_type: 'preference',
+    content: memoryContent,
+    importance: 0.9,
+    metadata: { source: 'e2e11-fixture', run_id: runId },
+    owner_scope: 'USER',
+    user_id: userId,
+    lifecycle_state: 'ACTIVE',
+    content_hash: memoryHash,
+  }).select('id').single();
+  if (memoryFixtureError || !memoryFixture) throw new Error(`E2E_MEMORY_FIXTURE_FAILED:${memoryFixtureError?.message ?? 'UNKNOWN'}`);
+  memoryFixtureId = memoryFixture.id;
+
   const voice = await request('GET', '/api/personal/voice', token);
   assert.equal(voice.response.status, 200, JSON.stringify(voice.body));
   assert.equal(voice.body.identity_lock, true);
   assert.equal(voice.body.mode, 'BROWSER_NATIVE_WITH_PROVIDER_FALLBACK');
   assert.equal(voice.body.primary.locale, 'pt-BR');
   assert.equal(voice.body.fallback.locale, 'pt-BR');
+  assert.equal(voice.body.stt.provider_neutral, true);
+  assert.equal(voice.body.tts.provider_neutral, true);
 
   const grant = await request('POST', '/api/personal/permissions', token, { capability_id: 'REMINDERS_CREATE', autonomy: 'EXECUTE', confirmation_required: false, scope: { device_id: deviceId } });
   assert.equal(grant.response.status, 201, JSON.stringify(grant.body));
   assert.equal(grant.body.permission.status, 'GRANTED');
 
-  const intent = 'Explique em uma frase por que a identidade da Clara deve permanecer estável.';
+  const intent = 'Explique em uma frase por que a identidade da Clara deve permanecer estável e considere o contexto do usuário.';
   const idempotencyKey = `e2e11-${runId}-${crypto.randomUUID()}`;
   const execution = await request('POST', '/api/personal/execute', token, { intent, device_id: deviceId }, idempotencyKey);
   assert.equal(execution.response.status, 200, JSON.stringify(execution.body));
@@ -82,6 +100,14 @@ try {
   assert.ok(execution.body.execution.provider_id && execution.body.execution.model_id);
   assert.ok(execution.body.execution.attempt_id && execution.body.execution.budget_id && execution.body.execution.execution_log_id);
   assert.ok(execution.body.execution.result?.text);
+  assert.equal(execution.body.execution.task_profile.expectedFormat, 'TEXT');
+  assert.equal(execution.body.execution.task_profile.intent, intent);
+  assert.equal(execution.body.execution.task_profile.contextRequirement, 'SMALL');
+  assert.ok(execution.body.execution.prompt_optimized.includes('HORUS TASK INSTRUCTION'));
+  assert.equal(execution.body.execution.policy_decision.prompt_optimization, true);
+  assert.ok(['REGISTRY', 'LIVE_CATALOG'].includes(execution.body.execution.policy_decision.routing_source));
+  assert.ok(Array.isArray(execution.body.execution.memory_context));
+  assert.ok(execution.body.execution.memory_context.some((item) => item.content === memoryContent));
   const executionId = execution.body.execution.id;
 
   const replay = await request('POST', '/api/personal/execute', token, { intent, device_id: deviceId }, idempotencyKey);
@@ -111,7 +137,6 @@ try {
   secondUserId = secondUser.user.id;
   const { data: secondSubscription, error: secondSubscriptionError } = await admin.from('personal_subscriptions').insert({ user_id: secondUserId, tier: 'PERSONAL', status: 'ACTIVE', economic_profile: 'PERSONAL_STANDARD', current_period_start: new Date().toISOString(), current_period_end: new Date(Date.now() + 30 * 86400000).toISOString() }).select('id').single();
   if (secondSubscriptionError || !secondSubscription) throw new Error(`E2E_SECOND_SUBSCRIPTION_FAILED:${secondSubscriptionError?.message ?? 'UNKNOWN'}`);
-  secondSubscriptionId = secondSubscription.id;
   const secondAuthClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } });
   const { data: secondSession, error: secondSignInError } = await secondAuthClient.auth.signInWithPassword({ email: secondEmail, password: secondPassword });
   if (secondSignInError || !secondSession.session?.access_token) throw new Error(`E2E_SECOND_AUTH_FAILED:${secondSignInError?.message ?? 'NO_SESSION'}`);
@@ -127,6 +152,11 @@ try {
   assert.equal(dbExecution.user_id, userId);
   assert.equal(dbExecution.status, 'SUCCEEDED');
   assert.equal(dbExecution.persona_id, 'clara');
+  assert.ok(dbExecution.prompt_optimized.includes('HORUS TASK INSTRUCTION'));
+  assert.ok(dbExecution.task_profile?.reasoningDepth);
+  assert.ok(dbExecution.memory_context?.some((item) => item.content === memoryContent));
+  assert.equal(dbExecution.policy_decision?.prompt_optimization, true);
+  assert.ok(['REGISTRY', 'LIVE_CATALOG'].includes(dbExecution.policy_decision?.routing_source));
   const { data: attempt, error: attemptError } = await admin.from('execution_attempts').select('*').eq('id', dbExecution.attempt_id).single();
   if (attemptError || !attempt) throw new Error(`E2E_ATTEMPT_AUDIT_FAILED:${attemptError?.message ?? 'UNKNOWN'}`);
   assert.equal(attempt.status, 'SUCCEEDED');
@@ -135,13 +165,16 @@ try {
   const { data: budget, error: budgetError } = await admin.from('execution_budgets').select('*').eq('id', dbExecution.budget_id).single();
   if (budgetError || !budget) throw new Error(`E2E_BUDGET_AUDIT_FAILED:${budgetError?.message ?? 'UNKNOWN'}`);
   assert.equal(budget.status, 'SETTLED');
+  assert.ok(budget.pricing_snapshot_id);
+  assert.ok(Number(usage.actual_total_cost_brl ?? usage.actual_provider_cost_brl ?? 0) <= Number(budget.maximum_total_cost_brl));
   const { data: log, error: logError } = await admin.from('horus_execution_logs').select('*').eq('id', dbExecution.execution_log_id).single();
   if (logError || !log) throw new Error(`E2E_LOG_AUDIT_FAILED:${logError?.message ?? 'UNKNOWN'}`);
   assert.equal(log.status, 'COMPLETED');
   assert.ok(log.completed_at);
 
-  console.log(JSON.stringify({ suite: 'e2e11-authenticated-personal', authenticated: true, user_id: userId, persona_id: 'clara', subscription_status: activatedSubscription.status, device_id: deviceId, execution_id: executionId, attempt_id: attempt.id, usage_present: true, budget_id: budget.id, budget_status: budget.status, execution_log_id: log.id, execution_status: dbExecution.status, provider_id: dbExecution.provider_id, model_id: dbExecution.model_id, actual_cost_brl: usage.actual_total_cost_brl ?? usage.actual_provider_cost_brl ?? null, idempotency_replay: true, permission_grant: true, permission_revocation: true, action_execution: true, unauthenticated_denied: true, cross_user_denied: true, cleanup: 'evidence preserved; test identities isolated and banned after run' }));
+  console.log(JSON.stringify({ suite: 'e2e11-authenticated-personal', authenticated: true, user_id: userId, persona_id: 'clara', subscription_status: activatedSubscription.status, device_id: deviceId, execution_id: executionId, attempt_id: attempt.id, usage_present: true, budget_id: budget.id, budget_status: budget.status, execution_log_id: log.id, execution_status: dbExecution.status, provider_id: dbExecution.provider_id, model_id: dbExecution.model_id, routing_source: dbExecution.policy_decision?.routing_source ?? null, prompt_optimization: true, task_profile: true, memory_context: true, actual_cost_brl: usage.actual_total_cost_brl ?? usage.actual_provider_cost_brl ?? null, idempotency_replay: true, permission_grant: true, permission_revocation: true, action_execution: true, unauthenticated_denied: true, cross_user_denied: true, cleanup: 'evidence preserved; test identities isolated and banned after run' }));
 } finally {
+  if (memoryFixtureId) await admin.from('memory_graph_nodes').delete().eq('id', memoryFixtureId).eq('user_id', userId);
   await admin.from('personal_capability_grants').delete().eq('user_id', userId);
   await admin.from('personal_devices').delete().eq('user_id', userId);
   await admin.from('personal_profiles').delete().eq('user_id', userId);
