@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const service = getServiceSupabase();
     const [{ data: profile, error: profileError }, { data: subscription, error: subscriptionError }, { data: personas, error: personaError }] = await Promise.all([
       service.from('personal_profiles').select('user_id,persona_id,status,activated_at,created_at,updated_at').eq('user_id', user.id).maybeSingle(),
-      service.from('personal_subscriptions').select('id,tier,status,economic_profile,current_period_start,current_period_end,created_at,updated_at').eq('user_id', user.id).in('status', ['PENDING','ACTIVE','PAST_DUE','PAUSED']).maybeSingle(),
+      service.from('personal_subscriptions').select('id,tier,status,economic_profile,current_period_start,current_period_end,created_at,updated_at').eq('user_id', user.id).in('status', ['PENDING','ACTIVE','PAST_DUE','PAUSED','CANCELED','EXPIRED']).maybeSingle(),
       service.from('personal_personas').select('id,display_name,locale,voice_profile,personality_profile,communication_profile,behavior_profile').eq('enabled', true).order('display_name'),
     ]);
     if (profileError) throw new Error(`PERSONAL_PROFILE_LOOKUP_FAILED:${profileError.message}`);
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       .from('personal_subscriptions')
       .select('id,status,tier,economic_profile')
       .eq('user_id', user.id)
-      .in('status', ['ACTIVE','PAST_DUE','PAUSED'])
+      .eq('status', 'ACTIVE')
       .maybeSingle();
     if (subscriptionError) throw new Error(`PERSONAL_SUBSCRIPTION_LOOKUP_FAILED:${subscriptionError.message}`);
     if (!subscription) throw new Error('PERSONAL_SUBSCRIPTION_REQUIRED');
