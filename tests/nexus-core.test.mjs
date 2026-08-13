@@ -30,6 +30,6 @@ test('Nexus task profile includes routing-relevant context', () => {
   const optimized = optimizePrompt('Research this topic and return a verified concise report.');
   assert.equal(optimized.profile.researchRequired, true);
   assert.equal(optimized.profile.criticality !== undefined, true);
-  assert.equal(optimized.profile.expectedFormat, 'REPORT');
-  assert.match(optimized.optimized, /Task Instruction/);
+  assert.equal(optimized.profile.expectedFormat, 'TEXT');
+  assert.match(optimized.optimized, /HORUS TASK INSTRUCTION/);
 });
