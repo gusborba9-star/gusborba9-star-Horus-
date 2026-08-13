@@ -7,7 +7,7 @@
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test tests/studio-contracts.test.mjs tests/collaborators-contracts.test.mjs",
+    "test": "node --experimental-strip-types --test tests/studio-contracts.test.mjs tests/collaborators-contracts.test.mjs tests/prompt-optimizer.test.mjs",
     "test:e2e10": "node tests/e2e10-authenticated-collaborator.mjs",
     "typecheck": "tsc --noEmit",
     "clean": "next clean"
