@@ -114,8 +114,6 @@ try {
   const { data: secondUser, error: secondError } = await admin.auth.admin.createUser({ email: secondEmail, password: secondPassword, email_confirm: true, user_metadata: { e2e: true, suite: 'e2e11-cross-user' } });
   if (secondError || !secondUser.user) throw new Error(`E2E_SECOND_USER_CREATE_FAILED:${secondError?.message ?? 'UNKNOWN'}`);
   secondUserId = secondUser.user.id;
-  const secondSub = await request('POST', '/api/personal/subscriptions', null, { tier: 'PERSONAL' });
-  void secondSub;
   const { data: secondSubscription, error: secondSubscriptionError } = await admin.from('personal_subscriptions').insert({ user_id: secondUserId, tier: 'PERSONAL', status: 'ACTIVE', economic_profile: 'PERSONAL_STANDARD', current_period_start: new Date().toISOString(), current_period_end: new Date(Date.now() + 30 * 86400000).toISOString() }).select('id').single();
   if (secondSubscriptionError || !secondSubscription) throw new Error(`E2E_SECOND_SUBSCRIPTION_FAILED:${secondSubscriptionError?.message ?? 'UNKNOWN'}`);
   secondSubscriptionId = secondSubscription.id;
