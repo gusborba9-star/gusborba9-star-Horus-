@@ -37,9 +37,9 @@ function modalityScore(entry: ModelCatalogEntry, task: TaskProfile) {
   return entry.inputModalities.some((item) => ['image', 'audio', 'video', 'file'].includes(item)) ? 1 : 0;
 }
 
-export function rankModels(entries: ModelCatalogEntry[], task: TaskProfile, budgetBrl: number): RoutedModel[] {
+export function rankModels(entries: ModelCatalogEntry[], task: TaskProfile, budgetBrl: number, capability?: string): RoutedModel[] {
   return entries
-    .filter((entry) => entry.capability === 'TEXT_GENERATION' || entry.capability === 'PERSONAL_TEXT')
+    .filter((entry) => capability ? entry.capability === capability : entry.capability === 'TEXT_GENERATION' || entry.capability === 'PERSONAL_TEXT')
     .filter((entry) => entry.outputModalities.includes('text'))
     .map((entry) => {
       const quality = clamp(entry.qualityScore);
@@ -55,7 +55,7 @@ export function rankModels(entries: ModelCatalogEntry[], task: TaskProfile, budg
     .sort((a, b) => b.score - a.score);
 }
 
-export async function resolveAdaptiveModel(service: SupabaseClient, task: TaskProfile, budgetBrl: number, liveCatalog: ModelCatalogEntry[] = []): Promise<RoutedModel> {
+export async function resolveAdaptiveModel(service: SupabaseClient, task: TaskProfile, budgetBrl: number, liveCatalog: ModelCatalogEntry[] = [], capability?: string): Promise<RoutedModel> {
   const { data: models, error } = await service.from('models').select('id,provider_id,capability,input_price_per_million,output_price_per_million,quality_score,latency_score,reliability_score,context_window,enabled,input_modalities,output_modalities,expiration_date').eq('enabled', true);
   if (error) throw new Error(`MODEL_ROUTING_LOOKUP_FAILED:${error.message}`);
   const { data: providers, error: providerError } = await service.from('providers').select('id,status,health_score');
@@ -77,7 +77,7 @@ export async function resolveAdaptiveModel(service: SupabaseClient, task: TaskPr
   }));
   const merged = new Map(registry.map((entry) => [`${entry.providerId}:${entry.modelId}:${entry.capability}`, entry]));
   for (const entry of liveCatalog.filter((entry) => activeProviders.has(entry.providerId))) merged.set(`${entry.providerId}:${entry.modelId}:${entry.capability}`, entry);
-  const ranked = rankModels([...merged.values()], task, budgetBrl);
+  const ranked = rankModels([...merged.values()], task, budgetBrl, capability);
   if (!ranked.length) throw new Error('MODEL_ROUTING_NO_COMPATIBLE_MODEL');
   return ranked[0];
 }
