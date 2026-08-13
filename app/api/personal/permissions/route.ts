@@ -47,8 +47,73 @@ export async function POST(request: Request) {
     if (capabilityError) throw new Error(`CAPABILITY_LOOKUP_FAILED:${capabilityError.message}`);
     if (!capability) throw new Error('CAPABILITY_NOT_FOUND');
 
-    const { data: grant, error } = await service.from('personal_capability_grants').upsert({ user_id: user.id, capability_id: capabilityId, scope, autonomy, confirmation_required: confirmationRequired, status: 'GRANTED', granted_at: new Date().toISOString(), revoked_at: null }, { onConflict: 'user_id,capability_id' }).select('id,capability_id,scope,autonomy,confirmation_required,status,granted_at,revoked_at,created_at,updated_at').single();
-    if (error || !grant) throw new Error(`PERSONAL_PERMISSION_GRANT_FAILED:${error?.message ?? 'UNKNOWN'}`);
+    // The database intentionally keeps REVOKED rows as history and enforces
+    // uniqueness only for the active GRANTED row via a partial unique index.
+    // Therefore a generic ON CONFLICT(user_id, capability_id) is invalid here.
+    const grantPayload = {
+      scope,
+      autonomy,
+      confirmation_required: confirmationRequired,
+      status: 'GRANTED',
+      granted_at: new Date().toISOString(),
+      revoked_at: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: activeGrant, error: activeLookupError } = await service
+      .from('personal_capability_grants')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('capability_id', capabilityId)
+      .eq('status', 'GRANTED')
+      .maybeSingle();
+    if (activeLookupError) throw new Error(`PERSONAL_PERMISSION_LOOKUP_FAILED:${activeLookupError.message}`);
+
+    let grant;
+    if (activeGrant) {
+      const { data, error } = await service
+        .from('personal_capability_grants')
+        .update(grantPayload)
+        .eq('id', activeGrant.id)
+        .eq('user_id', user.id)
+        .eq('capability_id', capabilityId)
+        .eq('status', 'GRANTED')
+        .select('id,capability_id,scope,autonomy,confirmation_required,status,granted_at,revoked_at,created_at,updated_at')
+        .single();
+      if (error || !data) throw new Error(`PERSONAL_PERMISSION_GRANT_FAILED:${error?.message ?? 'UNKNOWN'}`);
+      grant = data;
+    } else {
+      const { data, error } = await service
+        .from('personal_capability_grants')
+        .insert({ user_id: user.id, capability_id: capabilityId, ...grantPayload })
+        .select('id,capability_id,scope,autonomy,confirmation_required,status,granted_at,revoked_at,created_at,updated_at')
+        .single();
+      if (error || !data) {
+        // A concurrent grant may have won the partial unique index between the
+        // lookup and insert. Re-read the active row and update it instead of
+        // creating a duplicate or returning a false permanent failure.
+        const { data: racedGrant, error: raceLookupError } = await service
+          .from('personal_capability_grants')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('capability_id', capabilityId)
+          .eq('status', 'GRANTED')
+          .maybeSingle();
+        if (raceLookupError || !racedGrant) throw new Error(`PERSONAL_PERMISSION_GRANT_FAILED:${error?.message ?? 'UNKNOWN'}`);
+        const { data: updated, error: updateError } = await service
+          .from('personal_capability_grants')
+          .update(grantPayload)
+          .eq('id', racedGrant.id)
+          .eq('user_id', user.id)
+          .select('id,capability_id,scope,autonomy,confirmation_required,status,granted_at,revoked_at,created_at,updated_at')
+          .single();
+        if (updateError || !updated) throw new Error(`PERSONAL_PERMISSION_GRANT_FAILED:${updateError?.message ?? 'UNKNOWN'}`);
+        grant = updated;
+      } else {
+        grant = data;
+      }
+    }
+
     const { error: auditError } = await service.from('personal_permission_audit').insert({ user_id: user.id, grant_id: grant.id, capability_id: capabilityId, action: 'GRANT', metadata: { autonomy, confirmation_required: confirmationRequired, scope } });
     if (auditError) throw new Error(`PERSONAL_PERMISSION_AUDIT_FAILED:${auditError.message}`);
     return NextResponse.json({ success: true, permission: grant }, { status: 201 });
