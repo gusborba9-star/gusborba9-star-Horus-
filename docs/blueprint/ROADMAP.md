@@ -29,7 +29,7 @@ Studio 09 and the Digital Collaborator E2E 10 platform primitive are closed at t
 | Surface | Status | Scope / evidence |
 |---|---|---|
 | Colaboradores Digitais | 🔵 PLANNED | E2E 10 platform primitive COMPLETE; commercial launch surface not closed. |
-| Hórus Personal | 🔵 PLANNED | Product architecture defined; implementation/production closure not established. |
+| Hórus Personal | 🟡 IN_PROGRESS | E2E 11 Personal core domain implemented; authenticated product/E2E/voice/actions/economics/closure remain open. |
 | Hórus Operations | 🔵 PLANNED | Cognitive-team operating model defined; no dedicated closure. |
 | Studio Hórus / Projects | 🟢 COMPLETE | 09 closure; live Vercel rollback and Studio lifecycle/economic reconciliation verified. |
 
@@ -115,46 +115,54 @@ Historical failed rollback remains immutable evidence.
 - [ ] Learning/optimization loop
 
 ### 11 — Hórus Personal
-**Status: 🔵 PLANNED — architecture defined; implementation not started/verified**
+**Status: 🟡 IN_PROGRESS — E2E11 core domain implemented; verification/closure not complete**
 
 #### Product model — mandatory
 
-- [ ] Personal is a pre-built product, not a user-created agent
-- [ ] Flow: `LOGIN → PERSONAL → SUBSCRIBE → SELECT IDENTITY → ACTIVATE → OPTIONAL PERMISSIONS → USE`
-- [ ] Six fixed official identities: Aline, Luiza, Íris, Clara, Bel, Lúcia
-- [ ] No free-form persona creation
-- [ ] Persona identity ≠ independent agent
-- [ ] All six identities share the same Personal runtime/Nexus/infrastructure
-- [ ] Persistent identity selection per authenticated user
+- [x] Personal is a pre-built product, not a user-created agent
+- [x] Flow contract: `LOGIN → PERSONAL → SUBSCRIBE → SELECT IDENTITY → ACTIVATE → OPTIONAL PERMISSIONS → USE`
+- [x] Six fixed official identities: Aline, Luiza, Íris, Clara, Bel, Lúcia
+- [x] No free-form persona creation
+- [x] Persona identity ≠ independent agent
+- [x] All six identities share the same Personal runtime/Nexus/infrastructure contract
+- [x] Persistent identity selection per authenticated user
 
 #### Subscription / activation
 
-- [ ] Personal subscription lifecycle
-- [ ] Device/session activation
-- [ ] Personal availability on supported device
+- [x] Personal subscription domain with tier/status/economic-profile fields
+- [ ] Billing-backed Personal subscription lifecycle
+- [x] Device/session activation data model
+- [ ] Device activation API and supported-device verification
 - [ ] Subscription change/cancellation lifecycle
 
 **Commercial baseline only:** R$49,90 / R$79,90 / R$159,90. These are provisional values, not frozen prices. Tier names, prices, usage policies and economic profiles require validation.
 
 #### Cognition / voice / memory
 
-- [ ] Text interaction
+- [ ] Text interaction E2E
 - [ ] STT contract
 - [ ] TTS contract
-- [ ] Primary + compatible fallback voice per persona
-- [ ] Personal Identity Profile
+- [x] Primary + compatible fallback voice profile contract per persona
+- [x] Personal Identity Profile domain
 - [ ] Personal memory semantics over shared Memory Graph
 - [ ] Context continuity
 - [ ] Proactive behavior foundation
+- [ ] Adaptive model routing for Personal
+- [ ] Cross-model orchestration / deliberation
+- [ ] Outcome-based model performance learning
+- [ ] Evidence / Truth Layer
+- [ ] Persistent Decision Memory
+- [ ] Context Fabric integration
+- [ ] Prompt Optimization routed through provider-neutral Nexus policy
 
 #### Permissions / App Actions
 
-- [ ] User-owned capability grants over canonical `capabilities`
-- [ ] Capability scope
-- [ ] Permission state and revocation
-- [ ] Confirmation policy for sensitive actions
-- [ ] Permission Center
-- [ ] Permission audit
+- [x] User-owned capability grants over canonical `capabilities`
+- [x] Capability scope
+- [x] Permission state and revocation
+- [x] Confirmation policy for sensitive actions
+- [x] Permission Center API foundation
+- [x] Permission audit
 - [ ] Initial deterministic App Actions
 - [ ] Official API integrations where available
 - [ ] Native Android integrations where appropriate
@@ -166,7 +174,7 @@ Historical failed rollback remains immutable evidence.
 #### Economics / Nexus routing
 
 - [ ] Personal subscription → internal economic profile mapping
-- [ ] Reuse canonical budgets/attempts/usage/reconciliation
+- [x] Reuse canonical budgets/attempts/usage/reconciliation architecture
 - [ ] Cost-aware internal model routing
 - [ ] STT/TTS routing policy
 - [ ] Research/tool cost routing
@@ -187,9 +195,9 @@ Historical failed rollback remains immutable evidence.
 - [x] Reuse Memory Graph foundation
 - [x] Reuse authentication/RLS/security primitives
 - [x] Reuse execution/audit correlation
-- [ ] Generalize domain-scoped primitives where required for Personal
+- [x] Generalize domain-scoped primitives where required for Personal
 
-`[x]` here means the shared primitive is established and must be consumed; it does **not** mean the Personal consumer is implemented.
+`[x]` here means the shared primitive is established and must be consumed; it does **not** mean the Personal consumer is fully verified.
 
 #### Dedicated closure gates
 
@@ -204,8 +212,8 @@ Historical failed rollback remains immutable evidence.
 - [ ] Idempotency replay E2E
 - [ ] Economic authorization/reconciliation E2E
 - [ ] Negative authorization/security E2E
-- [ ] Production deployment/runtime verification
-- [ ] CI / TypeScript / ESLint / build closure
+- [x] Production deployment/build verification for E2E11 core checkpoint
+- [ ] CI / TypeScript / ESLint / complete build closure
 - [ ] Dedicated `11` closure document
 
 ### 12 — Observability / Audit
@@ -337,8 +345,8 @@ Historical failed rollback remains immutable evidence.
 - [ ] Platform-wide tenant isolation
 - [ ] Platform-wide credential lifecycle
 - [ ] Cross-product authorization
-- [ ] Personal user-owned capability grants
-- [ ] Personal permission revocation enforcement
+- [x] Personal user-owned capability grants foundation
+- [x] Personal permission revocation enforcement at domain/API layer
 - [ ] Dedicated security closure
 
 ### 20 — Deployment / Lifecycle
@@ -396,7 +404,7 @@ Historical failed rollback remains immutable evidence.
 - [x] Capability/provider/model relationships
 - [x] Studio capability composition
 - [x] Collaborator capability binding
-- [ ] Personal capability grant domain
+- [x] Personal capability grant domain
 - [ ] Full Nexus-driven platform-wide capability composition
 - [ ] Capability governance/compatibility closure
 
@@ -420,7 +428,7 @@ Historical failed rollback remains immutable evidence.
 - [x] Production approval boundary
 - [x] Risk/approval fields
 - [x] Collaborator `READ/SUGGEST/PREPARE/EXECUTE/AUTONOMOUS` policy boundary
-- [ ] Personal confirmation/permission policy closure
+- [x] Personal confirmation/permission domain foundation
 - [ ] Platform-wide HITL policy engine
 - [ ] Cross-product approval governance
 
@@ -433,7 +441,7 @@ Historical failed rollback remains immutable evidence.
 | 03–08 | 🟢 COMPLETE | Historical closure preserved | No reopening without evidence |
 | 09 | 🟢 COMPLETE | Studio live lifecycle | None for defined 09 scope |
 | 10 | 🟢 COMPLETE | Authenticated Production E2E | Commercial surface/connectors/delegation/team remain separate |
-| 11 | 🔵 PLANNED | Architecture defined only | Personal-specific implementation + dedicated E2E |
+| 11 | 🟡 IN_PROGRESS | Personal core schema/API + production build/deployment | Authenticated E2E + cognition/voice/actions/economics |
 | 12 | 🔵 PLANNED | No platform-wide closure | Cross-product audit |
 | 13 | 🔵 PLANNED | Architecture defined | Team execution surface |
 | 14 | 🔵 PLANNED | No commercial closure | Payment + reconciliation |
@@ -475,7 +483,7 @@ Historical failed rollback remains immutable evidence.
 ## 7. Audit/reconciliation decisions — 2026-08-13
 
 1. Module 10 remains COMPLETE and is not reopened.
-2. Personal is now explicitly defined as a **pre-built product**, not a dynamic agent-creation surface.
+2. Personal is explicitly a **pre-built product**, not a dynamic agent-creation surface.
 3. Personal has exactly six official identities: Aline, Luiza, Íris, Clara, Bel and Lúcia.
 4. No free-form Personal persona builder is permitted.
 5. Personal and Collaborator share Nexus and platform primitives but have different lifecycles: Personal is selected/activated; Collaborator is designed/composed by Nexus from user intent.
@@ -486,7 +494,9 @@ Historical failed rollback remains immutable evidence.
 10. Personal commercial pricing must be validated against expected, heavy and worst-reasonable legitimate consumption before launch closure.
 11. Collaborator pricing remains a separate Nexus-driven flow using objective/task requirements and current provider/model economics.
 12. OpenRouter/model pricing is an internal Nexus input, not a user-facing model selection contract.
-13. No functional Personal implementation is claimed by this reconciliation.
+13. E2E11 core implementation began with Personal-domain schema, fixed persona catalog, authenticated identity activation boundary, capability grant/revocation/audit APIs, and production build verification.
+14. The E2E11 core checkpoint is not a Personal product closure; cognition, prompt optimization routing, voice, memory behavior, device activation, App Actions, economic authorization and authenticated production E2E remain open.
+15. No existing 03–10 functional scope was reopened or replaced by the E2E11 core implementation.
 
 ## 8. Documentation rules for future progress
 
@@ -525,7 +535,7 @@ Any shared architectural change updates the Blueprint and Roadmap in the same de
 | Surface | Status | Required closure |
 |---|---|---|
 | Colaboradores Digitais | 🔵 PLANNED | Dedicated product + platform closure; E2E 10 primitive is complete |
-| Hórus Personal | 🔵 PLANNED | Dedicated product + platform closure |
+| Hórus Personal | 🟡 IN_PROGRESS | Dedicated product + platform closure |
 | Hórus Operations | 🔵 PLANNED | Dedicated product + platform closure |
 | Studio Projects | 🟢 COMPLETE | 09 closure + applicable platform gates |
 
@@ -533,4 +543,4 @@ Any shared architectural change updates the Blueprint and Roadmap in the same de
 
 **10 — Agents / Digital Collaborators is CLOSED.** Its closure evidence is recorded in `docs/blueprint/10-AGENTS-CLOSURE.md`.
 
-**11 — Hórus Personal is now structurally defined and remains `🔵 PLANNED` / NOT_STARTED.** The next implementation work must begin with a reuse audit of the 03–10 primitives and Personal-domain contracts only; it must not rebuild shared Nexus, capabilities, economics, provider registry or memory infrastructure.
+**11 — Hórus Personal is now in `🟡 IN_PROGRESS`.** The first E2E11 core checkpoint is implemented and production-built. The next implementation work must continue from the 03–10 primitives and Personal-domain contracts only; it must not rebuild shared Nexus, capabilities, economics, provider registry or memory infrastructure.
