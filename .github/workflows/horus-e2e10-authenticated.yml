@@ -10,6 +10,7 @@ on:
       - 'app/api/collaborators/**'
       - 'lib/collaborators/**'
       - 'app/api/personal/**'
+      - 'app/dashboard/personal/**'
       - 'lib/personal/**'
       - 'lib/nexus/**'
       - 'lib/providers/**'
