@@ -115,6 +115,9 @@ try {
   const secondAuthClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } });
   const { data: secondSession, error: secondSignInError } = await secondAuthClient.auth.signInWithPassword({ email: secondEmail, password: secondPassword });
   if (secondSignInError || !secondSession.session?.access_token) throw new Error(`E2E_SECOND_AUTH_FAILED:${secondSignInError?.message ?? 'NO_SESSION'}`);
+  const secondPersonal = await request('POST', '/api/personal', secondSession.session.access_token, { persona_id: 'aline' });
+  assert.equal(secondPersonal.response.status, 200, JSON.stringify(secondPersonal.body));
+  assert.equal(secondPersonal.body.profile.persona_id, 'aline');
   const crossDevice = await request('POST', '/api/personal/execute', secondSession.session.access_token, { intent: 'Tente usar o dispositivo de outro usuário.', device_id: deviceId }, `e2e11-cross-${runId}`);
   assert.equal(crossDevice.response.status, 403, JSON.stringify(crossDevice.body));
   assert.equal(crossDevice.body.error, 'PERSONAL_DEVICE_NOT_ACTIVE');
@@ -143,7 +146,12 @@ try {
   await admin.from('personal_devices').delete().eq('user_id', userId);
   await admin.from('personal_profiles').delete().eq('user_id', userId);
   await admin.from('personal_subscriptions').delete().eq('user_id', userId);
-  if (secondSubscriptionId) await admin.from('personal_subscriptions').delete().eq('id', secondSubscriptionId).eq('user_id', secondUserId);
+  if (secondUserId) {
+    await admin.from('personal_capability_grants').delete().eq('user_id', secondUserId);
+    await admin.from('personal_devices').delete().eq('user_id', secondUserId);
+    await admin.from('personal_profiles').delete().eq('user_id', secondUserId);
+    await admin.from('personal_subscriptions').delete().eq('user_id', secondUserId);
+  }
   await admin.auth.admin.updateUserById(userId, { ban_duration: '876000h' });
   if (secondUserId) await admin.auth.admin.updateUserById(secondUserId, { ban_duration: '876000h' });
 }
