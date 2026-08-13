@@ -1,255 +1,103 @@
 'use client';
-import { 
-  Smartphone, User, CheckCircle2, AlertCircle, Clock, Calendar, 
-  Mail, MessageSquare, ListTodo, Settings, Wifi, Battery, Zap,
-  Headphones, Monitor, Shield, CreditCard, Activity, ArrowRight,
-  Mic, BrainCircuit, Play
-} from 'lucide-react';
-import Link from 'next/link';
-import { useState } from 'react';
+
+import { useEffect, useMemo, useState } from 'react';
+import { BrainCircuit, Check, Mic, Shield, Smartphone, Sparkles, Volume2, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+
+type Persona = { id: string; display_name: string };
+type Permission = { id: string; capability_id: string; autonomy: string; confirmation_required: boolean; status: string };
 
 export default function PersonalHome() {
-  const [hasPersonal, setHasPersonal] = useState(true);
+  const [token, setToken] = useState('');
+  const [data, setData] = useState<any>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [input, setInput] = useState('');
+  const [chat, setChat] = useState<{ role: 'user' | 'personal'; text: string }[]>([]);
+  const [deviceId, setDeviceId] = useState('');
+  const [notice, setNotice] = useState('');
 
-  return (
-    <div className="h-full flex flex-col bg-[#050508] relative font-sans">
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.1] mix-blend-overlay pointer-events-none"></div>
-      
-      <div className="h-24 px-6 sm:px-10 border-b border-white/5 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-20">
-         <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-              <User className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" />
-              Operações de Presença
-            </h1>
-            <p className="text-xs sm:text-sm text-white/50 mt-1 font-light">Seu membro da equipe cognitiva pessoal, disponível 24 horas por dia (Hórus Personal™).</p>
-         </div>
-         <div className="flex items-center gap-3">
-            <Link href="/dashboard/personal/setup" className="px-4 py-2 bg-white/5 border border-white/10 hover:border-blue-500/50 hover:bg-blue-500/10 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2">
-              <Settings className="w-4 h-4" /> Configurar
-            </Link>
-         </div>
-      </div>
+  const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
-      <div className="flex-1 p-6 sm:p-10 overflow-y-auto custom-scrollbar relative z-10">
-         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Main Column */}
-            <div className="lg:col-span-2 space-y-6">
-               
-               {/* Status & Smart Summary */}
-               <div className="bg-[#090A0F] border border-blue-500/30 rounded-3xl p-8 relative overflow-hidden flex flex-col md:flex-row gap-8 items-start">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-                  
-                  <div className="flex-shrink-0 flex flex-col items-center gap-4 relative z-10">
-                     <div className="w-24 h-24 rounded-full bg-blue-500/10 flex items-center justify-center border-2 border-blue-500 relative">
-                        <div className="absolute inset-0 rounded-full border border-blue-400/50 animate-ping opacity-20"></div>
-                        <BrainCircuit className="w-10 h-10 text-blue-400" />
-                        <div className="absolute bottom-0 right-0 w-6 h-6 bg-black rounded-full flex items-center justify-center">
-                           <div className="w-4 h-4 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
-                        </div>
-                     </div>
-                     <div className="text-center">
-                        <h3 className="font-bold text-white">Arthur</h3>
-                        <p className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Chief of Staff</p>
-                     </div>
-                  </div>
+  async function load() {
+    const [{ data: sessionData }, plansResponse] = await Promise.all([supabase.auth.getSession(), fetch('/api/personal/plans')]);
+    const session = sessionData.session;
+    if (!session) return;
+    setToken(session.access_token);
+    const [personalResponse, permissionResponse] = await Promise.all([
+      fetch('/api/personal', { headers: { Authorization: `Bearer ${session.access_token}` } }),
+      fetch('/api/personal/permissions', { headers: { Authorization: `Bearer ${session.access_token}` } }),
+    ]);
+    setData(await personalResponse.json());
+    setPermissions((await permissionResponse.json()).permissions ?? []);
+    setPlans((await plansResponse.json()).plans ?? []);
+    setDeviceId(localStorage.getItem('horus-personal-device-id') ?? '');
+  }
 
-                  <div className="flex-1 relative z-10">
-                     <div className="flex items-center gap-2 mb-4">
-                        <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
-                          <Activity className="w-3 h-3" /> Online & Monitorando
-                        </span>
-                        <span className="text-xs text-white/40 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Última ação: Há 2 min
-                        </span>
-                     </div>
-                     <h4 className="text-xl font-bold text-white mb-2">Resumo Inteligente</h4>
-                     <p className="text-white/60 font-light text-sm leading-relaxed mb-4">
-                        &quot;Bom dia. Sua agenda hoje está concentrada no período da tarde, com 3 reuniões seguidas. O email do cliente sobre o contrato já foi lido e deixei um rascunho preparado na sua caixa de saída. A temperatura em casa foi ajustada conforme sua preferência.&quot;
-                     </p>
-                     <div className="flex gap-2">
-                        <button className="px-4 py-2 bg-blue-500 text-black font-bold rounded-lg text-xs hover:bg-blue-400 transition-colors flex items-center gap-2">
-                           <Mic className="w-4 h-4" /> Falar com Arthur
-                        </button>
-                        <button className="px-4 py-2 bg-white/5 text-white font-bold rounded-lg text-xs hover:bg-white/10 transition-colors flex items-center gap-2 border border-white/10">
-                           <MessageSquare className="w-4 h-4" /> Abrir Chat
-                        </button>
-                     </div>
-                  </div>
-               </div>
+  useEffect(() => { void load(); }, []);
 
-               {/* Agenda & Tasks */}
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Agenda */}
-                  <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6">
-                     <div className="flex justify-between items-center mb-6">
-                        <h4 className="font-bold text-white flex items-center gap-2"><Calendar className="w-5 h-5 text-blue-400" /> Agenda do Dia</h4>
-                        <button className="text-xs text-blue-400 hover:text-blue-300">Ver tudo</button>
-                     </div>
-                     <div className="space-y-4">
-                        {[
-                           { time: '14:00', title: 'Reunião de Alinhamento', type: 'Meet' },
-                           { time: '15:30', title: 'Apresentação Cliente', type: 'Zoom' },
-                           { time: '17:00', title: 'Revisão Semanal', type: 'Presencial' }
-                        ].map((item, i) => (
-                           <div key={i} className="flex gap-4 items-start p-3 bg-white/5 rounded-xl border border-white/5 hover:border-blue-500/30 transition-colors">
-                              <div className="text-xs font-bold text-white/40 mt-0.5 w-10">{item.time}</div>
-                              <div>
-                                 <div className="text-sm font-bold text-white">{item.title}</div>
-                                 <div className="text-[10px] text-white/50">{item.type}</div>
-                              </div>
-                           </div>
-                        ))}
-                     </div>
-                  </div>
+  async function subscribe(tier: string) {
+    const response = await fetch('/api/personal/subscriptions', { method: 'POST', headers: authHeaders, body: JSON.stringify({ tier }) });
+    const body = await response.json();
+    if (!response.ok) return setNotice(body.error ?? 'Falha ao registrar assinatura.');
+    setData((current: any) => ({ ...(current ?? {}), subscription: body.subscription }));
+  }
 
-                  {/* Tasks */}
-                  <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6">
-                     <div className="flex justify-between items-center mb-6">
-                        <h4 className="font-bold text-white flex items-center gap-2"><ListTodo className="w-5 h-5 text-emerald-400" /> Pendências (Aprovação)</h4>
-                     </div>
-                     <div className="space-y-3">
-                        {[
-                           { title: 'Aprovar rascunho de email', desc: 'Contrato XYZ', icon: Mail, color: 'blue' },
-                           { title: 'Confirmar reagendamento', desc: 'Reunião com Pedro', icon: Calendar, color: 'amber' },
-                           { title: 'Autorizar pagamento mensal', desc: 'Hospedagem AWS', icon: CreditCard, color: 'rose' }
-                        ].map((item, i) => {
-                           const Icon = item.icon;
-                           return (
-                              <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:border-emerald-500/30 transition-colors">
-                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 bg-${item.color}-500/10 rounded-lg text-${item.color}-400`}>
-                                       <Icon className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                       <div className="text-xs font-bold text-white">{item.title}</div>
-                                       <div className="text-[10px] text-white/50">{item.desc}</div>
-                                    </div>
-                                 </div>
-                                 <div className="flex gap-1">
-                                    <button className="w-7 h-7 rounded bg-white/5 hover:bg-emerald-500/20 text-white/50 hover:text-emerald-400 flex items-center justify-center transition-colors">
-                                       <CheckCircle2 className="w-4 h-4" />
-                                    </button>
-                                 </div>
-                              </div>
-                           )
-                        })}
-                     </div>
-                  </div>
-               </div>
+  async function activatePersona(personaId: string) {
+    const response = await fetch('/api/personal', { method: 'POST', headers: authHeaders, body: JSON.stringify({ persona_id: personaId }) });
+    const body = await response.json();
+    if (!response.ok) return setNotice(body.error ?? 'Falha ao ativar persona.');
+    setData((current: any) => ({ ...current, profile: body.profile }));
+    setNotice(`Identidade ${body.profile?.display_name ?? personaId} ativada.`);
+  }
 
-               {/* Communications */}
-               <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6">
-                  <h4 className="font-bold text-white flex items-center gap-2 mb-6"><AlertCircle className="w-5 h-5 text-rose-400" /> Radar de Comunicações</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                        <div className="flex items-center justify-between mb-2">
-                           <div className="text-xs font-bold text-white/50 flex items-center gap-2"><Mail className="w-4 h-4" /> Emails Importantes</div>
-                           <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-[10px] font-bold">2</span>
-                        </div>
-                        <div className="space-y-2 mt-4">
-                           <div className="text-xs text-white/70 truncate"><span className="text-blue-400 font-bold">•</span> [Urgente] Fechamento da proposta</div>
-                           <div className="text-xs text-white/70 truncate"><span className="text-blue-400 font-bold">•</span> NFE emitida com sucesso</div>
-                        </div>
-                     </div>
-                     <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                        <div className="flex items-center justify-between mb-2">
-                           <div className="text-xs font-bold text-white/50 flex items-center gap-2"><MessageSquare className="w-4 h-4" /> WhatsApp (Filtro Nexus)</div>
-                           <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-[10px] font-bold">1</span>
-                        </div>
-                        <div className="space-y-2 mt-4">
-                           <div className="text-xs text-white/70 truncate"><span className="text-emerald-400 font-bold">•</span> Sócio: &quot;Preciso dos relatórios de DRE&quot;</div>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-               
-            </div>
+  async function registerDevice() {
+    const deviceKey = crypto.randomUUID();
+    const response = await fetch('/api/personal/devices', { method: 'POST', headers: authHeaders, body: JSON.stringify({ device_key: deviceKey, platform: 'WEB', app_version: 'personal-1.0' }) });
+    const body = await response.json();
+    if (!response.ok) return setNotice(body.error ?? 'Falha ao vincular dispositivo.');
+    setDeviceId(body.device?.id ?? '');
+    localStorage.setItem('horus-personal-device-id', body.device?.id ?? '');
+    setNotice('Dispositivo vinculado.');
+  }
 
-            {/* Side Column */}
-            <div className="space-y-6">
-               
-               {/* Connected Devices */}
-               <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6">
-                  <h4 className="font-bold text-white text-sm mb-4">Presença & Dispositivos</h4>
-                  <div className="space-y-3">
-                     {[
-                        { name: 'Desktop Companion', status: 'Ativo', icon: Monitor, color: 'emerald', link: '/dashboard/personal/companion' },
-                        { name: 'Aplicativo iOS', status: 'Sincronizado', icon: Smartphone, color: 'emerald', link: '#' },
-                        { name: 'Hórus Voice Runtime', status: 'Pronto', icon: Headphones, color: 'blue-400', link: '/dashboard/personal/voice' },
-                        { name: 'WhatsApp Business', status: 'Ativo', icon: MessageSquare, color: 'emerald', link: '#' },
-                        { name: 'Integração Alexa', status: 'Ativo', icon: Wifi, color: 'emerald', link: '#' }
-                     ].map((dev, i) => {
-                        const Icon = dev.icon;
-                        return (
-                           <Link href={dev.link} key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:border-white/20 transition-colors">
-                              <div className="flex items-center gap-3">
-                                 <Icon className={`w-4 h-4 text-${dev.color.split('-')[0]}-400`} />
-                                 <span className="text-xs font-bold text-white/70">{dev.name}</span>
-                              </div>
-                              <div className={`w-2 h-2 rounded-full bg-${dev.color.split('-')[0]}-500`}></div>
-                           </Link>
-                        )
-                     })}
-                  </div>
-               </div>
+  async function send() {
+    const intent = input.trim();
+    if (!intent) return;
+    setInput('');
+    setChat((items) => [...items, { role: 'user', text: intent }]);
+    const response = await fetch('/api/personal/execute', { method: 'POST', headers: { ...authHeaders, 'idempotency-key': crypto.randomUUID(), 'x-horus-device-id': deviceId }, body: JSON.stringify({ intent, device_id: deviceId }) });
+    const body = await response.json();
+    setChat((items) => [...items, { role: 'personal', text: body.execution?.result?.text ?? body.error ?? 'Não foi possível concluir a solicitação.' }]);
+  }
 
-               {/* Permissions */}
-               <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                     <h4 className="font-bold text-white text-sm flex items-center gap-2"><Shield className="w-4 h-4 text-purple-400"/> Permissões Ativas</h4>
-                     <Link href="/dashboard/personal/setup" className="text-[10px] text-purple-400 hover:underline">Editar</Link>
-                  </div>
-                  <div className="space-y-2">
-                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-white/60">Leitura de Emails</span>
-                        <span className="text-emerald-400 font-bold">Autorizado</span>
-                     </div>
-                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-white/60">Escrita de Rascunhos</span>
-                        <span className="text-emerald-400 font-bold">Autorizado</span>
-                     </div>
-                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-white/60">Envio Automático (Email)</span>
-                        <span className="text-rose-400 font-bold">Bloqueado</span>
-                     </div>
-                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-white/60">Gestão de Agenda</span>
-                        <span className="text-emerald-400 font-bold">Autônomo</span>
-                     </div>
-                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-white/60">Pagamentos & PIX</span>
-                        <span className="text-amber-400 font-bold">Sugerir (Aprovar)</span>
-                     </div>
-                  </div>
-               </div>
+  async function grantReminder() {
+    const response = await fetch('/api/personal/permissions', { method: 'POST', headers: authHeaders, body: JSON.stringify({ capability_id: 'REMINDERS_CREATE', autonomy: 'EXECUTE', confirmation_required: true }) });
+    const body = await response.json();
+    if (!response.ok) return setNotice(body.error ?? 'Falha ao conceder permissão.');
+    setPermissions((items) => [...items.filter((item) => item.capability_id !== 'REMINDERS_CREATE'), body.permission]);
+  }
 
-               {/* Consumption & Plan */}
-               <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6">
-                  <div className="p-4 bg-white/5 rounded-2xl border border-white/5 mb-4">
-                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-white">Chief of Staff (24/7)</span>
-                     </div>
-                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs text-white/50">Curadoria Técnica</span>
-                        <span className="text-[10px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded uppercase tracking-widest font-bold">Concluída</span>
-                     </div>
-                  </div>
-                  <div className="space-y-2">
-                     <div className="flex justify-between text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">
-                        <span>Consumo de Inferência</span>
-                        <span>45%</span>
-                     </div>
-                     <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 w-[45%]"></div>
-                     </div>
-                     <div className="text-[10px] text-white/40 text-right mt-1">~120k créditos restantes hoje</div>
-                  </div>
-               </div>
+  async function revokeReminder() {
+    const permission = permissions.find((item) => item.capability_id === 'REMINDERS_CREATE' && item.status === 'GRANTED');
+    if (!permission) return;
+    const response = await fetch('/api/personal/permissions', { method: 'DELETE', headers: authHeaders, body: JSON.stringify({ grant_id: permission.id }) });
+    if (response.ok) setPermissions((items) => items.map((item) => item.id === permission.id ? { ...item, status: 'REVOKED' } : item));
+  }
 
-            </div>
-         </div>
-      </div>
-    </div>
-  );
+  if (!token) return <div className="flex h-full items-center justify-center bg-[#080808] text-sm text-white/50">Faça login para acessar o Hórus Personal.</div>;
+  const activeSubscription = ['ACTIVE', 'PAST_DUE', 'PAUSED'].includes(data?.subscription?.status);
+  const activePersona = data?.profile?.persona_id;
+  const reminderGrant = permissions.find((item) => item.capability_id === 'REMINDERS_CREATE');
+
+  return <div className="h-full overflow-y-auto bg-[#080808] p-5 md:p-8 text-white"><div className="mx-auto max-w-6xl space-y-6">
+    <header className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#101010] p-6 md:flex-row md:items-center md:justify-between"><div className="flex items-center gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10"><BrainCircuit className="h-6 w-6 text-amber-400" /></div><div><p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-400">Hórus Personal</p><h1 className="text-2xl font-black">Seu Personal cognitivo</h1></div></div><button onClick={() => void registerDevice()} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold hover:bg-white/10"><Smartphone className="h-4 w-4" /> Vincular dispositivo</button></header>
+
+    {!activeSubscription ? <><section className="grid gap-4 md:grid-cols-3">{plans.map((plan) => <div key={plan.id} className="rounded-2xl border border-white/10 bg-[#101010] p-5"><p className="text-xs font-bold text-amber-400">{plan.name}</p><p className="mt-2 text-3xl font-black">R$ {Number(plan.price_brl).toFixed(2).replace('.', ',')}</p><p className="mt-2 text-xs text-white/40">{plan.positioning}</p><button onClick={() => void subscribe(plan.id)} className="mt-5 w-full rounded-xl bg-amber-500 px-4 py-3 text-xs font-black text-black">Selecionar plano</button></div>)}</section><p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">A assinatura é criada como PENDING e só é ativada pelo domínio de Billing. O Personal não autoautoriza acesso pago.</p></> : <>
+      <section className="rounded-3xl border border-white/10 bg-[#101010] p-6"><div className="mb-4 flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-400" /><h2 className="text-sm font-black uppercase tracking-widest">Escolha sua identidade</h2></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(data?.personas ?? []).map((persona: Persona) => <button key={persona.id} onClick={() => void activatePersona(persona.id)} className={`rounded-2xl border p-4 text-left ${activePersona === persona.id ? 'border-amber-500/40 bg-amber-500/10' : 'border-white/10 bg-white/[0.02]'}`}><div className="flex items-center justify-between"><span className="text-lg font-bold">{persona.display_name}</span>{activePersona === persona.id && <Check className="h-4 w-4 text-amber-400" />}</div><p className="mt-2 text-xs text-white/40">PT-BR · voz feminina · identidade persistente</p></button>)}</div></section>
+      <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr]"><div className="flex min-h-[520px] flex-col rounded-3xl border border-white/10 bg-[#101010]"><div className="border-b border-white/10 p-5"><p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">{data?.personas?.find((p: Persona) => p.id === activePersona)?.display_name ?? 'Personal'}</p><h2 className="text-lg font-bold">Conversa</h2></div><div className="flex-1 space-y-3 overflow-y-auto p-5">{chat.length === 0 && <div className="flex h-full items-center justify-center text-center text-sm text-white/30">Prompt Optimization → Task Profile → Nexus → routing adaptativo → memória → provider → resultado.</div>}{chat.map((item, index) => <div key={index} className={`max-w-[85%] rounded-2xl p-4 text-sm ${item.role === 'user' ? 'ml-auto bg-amber-500 text-black' : 'border border-white/10 bg-white/[0.03] text-white/80'}`}>{item.text}</div>)}</div><div className="border-t border-white/10 p-4"><div className="flex gap-2"><button title="Voz" className="rounded-xl border border-white/10 px-3 text-white/50"><Mic className="h-4 w-4" /></button><input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void send(); }} placeholder="Fale com seu Personal…" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none" /><button onClick={() => void send()} className="rounded-xl bg-amber-500 px-5 text-xs font-black text-black">Enviar</button></div></div></div>
+      <aside className="space-y-6"><div className="rounded-3xl border border-white/10 bg-[#101010] p-5"><div className="flex items-center gap-2"><Shield className="h-4 w-4 text-amber-400" /><h2 className="text-sm font-black">Permission Center</h2></div><p className="mt-2 text-xs text-white/40">Cada capability possui escopo, autonomia, confirmação, revogação e auditoria.</p><div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-3"><div className="flex items-center justify-between"><span className="text-xs">Lembretes</span><span className={`text-[10px] font-bold ${reminderGrant?.status === 'GRANTED' ? 'text-emerald-400' : 'text-white/30'}`}>{reminderGrant?.status === 'GRANTED' ? 'PERMITIDO' : 'NÃO PERMITIDO'}</span></div><div className="mt-3">{reminderGrant?.status === 'GRANTED' ? <button onClick={() => void revokeReminder()} className="rounded-lg bg-red-500/10 px-3 py-2 text-[10px] font-bold text-red-300">Revogar</button> : <button onClick={() => void grantReminder()} className="rounded-lg bg-white/10 px-3 py-2 text-[10px] font-bold">Conceder</button>}</div></div></div><div className="rounded-3xl border border-white/10 bg-[#101010] p-5"><div className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-amber-400" /><h2 className="text-sm font-black">Voice Runtime</h2></div><p className="mt-2 text-xs text-white/40">STT/TTS provider-neutral, voz primária e fallback compatível, sem trocar a identidade da persona.</p></div></aside></section>
+    </>}
+    {notice && <button onClick={() => setNotice('')} className="fixed bottom-6 right-6 flex items-center gap-2 rounded-xl border border-white/10 bg-[#141414] px-4 py-3 text-xs shadow-2xl">{notice}<X className="h-3 w-3" /></button>}
+  </div></div>;
 }
