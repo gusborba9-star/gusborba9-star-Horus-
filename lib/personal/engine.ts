@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceSupabase } from '@/lib/supabase';
-import { optimizePrompt } from '@/lib/nexus/prompt-optimizer';
-import { resolveAdaptiveModel, type RoutedModel } from '@/lib/nexus/model-router';
+import { resolveNexusPlan, buildNexusExecutionMetadata } from '@/lib/nexus/core';
 import { getLiveOpenRouterCatalog } from '@/lib/providers/openrouter-catalog';
 import { getTextInferenceProvider } from '@/lib/providers/inference';
 import { PERSONAL_TIERS, isPersonalPersonaId, type PersonalPersonaId, type PersonalTier } from '@/lib/personal/catalog';
@@ -149,12 +148,23 @@ export async function executePersonalText(input: {
   }
 
   const memory = await getMemory(service, input.userId);
-  const optimized = optimizePrompt(input.intent, memory.map((item) => item.content));
   const tier = context.subscription.tier;
   const budgetPreview = PERSONAL_TIERS[tier];
   const liveCatalog = await getLiveOpenRouterCatalog();
-  const model = await resolveAdaptiveModel(service, optimized.profile, budgetPreview.maxProviderCostBrl, liveCatalog);
-  const policyDecision = { persona_id: context.profile.persona_id, capability_id: 'PERSONAL_TEXT', autonomy: 'EXECUTE', provider_id: model.providerId, model_id: model.modelId, economic_profile: context.subscription.economic_profile ?? budgetPreview.economicProfile, prompt_optimization: true, bounded_memory: memory.length, routing_source: model.source };
+  const plan = await resolveNexusPlan(service, {
+    intent: input.intent,
+    context: memory.map((item) => item.content),
+    budgetBrl: budgetPreview.maxProviderCostBrl,
+    liveCatalog,
+  });
+  const { optimized, model } = plan;
+  const policyDecision = {
+    persona_id: context.profile.persona_id,
+    capability_id: 'PERSONAL_TEXT',
+    autonomy: 'EXECUTE',
+    economic_profile: context.subscription.economic_profile ?? budgetPreview.economicProfile,
+    ...buildNexusExecutionMetadata(plan),
+  };
 
   const { data: execution, error: executionError } = await service.from('personal_executions').insert({
     user_id: input.userId,
