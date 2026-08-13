@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { TaskProfile } from '@/lib/nexus/task-profile';
+import type { TaskProfile } from './task-profile';
 
 export type RoutedModel = {
   providerId: string;
@@ -19,14 +19,11 @@ export type RoutedModel = {
 
 export type ModelCatalogEntry = Omit<RoutedModel, 'score' | 'source'> & { source: RoutedModel['source'] };
 
-function clamp(value: number) {
-  return Math.max(0, Math.min(1, value));
-}
+function clamp(value: number) { return Math.max(0, Math.min(1, value)); }
 
 function costScore(inputPrice: number, outputPrice: number, budgetBrl: number) {
-  const normalized = inputPrice * 0.35 + outputPrice * 0.65;
-  const ceiling = Math.max(0.01, budgetBrl * 1_000_000);
-  return clamp(1 - normalized / ceiling);
+  const estimatedTaskCost = (inputPrice * 0.35 + outputPrice * 0.65) / 1000;
+  return clamp(1 - estimatedTaskCost / Math.max(0.001, budgetBrl));
 }
 
 function contextScore(contextWindow: number | null, required: TaskProfile['contextRequirement']) {
@@ -58,44 +55,28 @@ export function rankModels(entries: ModelCatalogEntry[], task: TaskProfile, budg
     .sort((a, b) => b.score - a.score);
 }
 
-export async function resolveAdaptiveModel(
-  service: SupabaseClient,
-  task: TaskProfile,
-  budgetBrl: number,
-  liveCatalog: ModelCatalogEntry[] = [],
-): Promise<RoutedModel> {
-  const { data: models, error } = await service
-    .from('models')
-    .select('id,provider_id,capability,input_price_per_million,output_price_per_million,quality_score,latency_score,reliability_score,context_window,enabled,input_modalities,output_modalities,expiration_date')
-    .eq('enabled', true);
+export async function resolveAdaptiveModel(service: SupabaseClient, task: TaskProfile, budgetBrl: number, liveCatalog: ModelCatalogEntry[] = []): Promise<RoutedModel> {
+  const { data: models, error } = await service.from('models').select('id,provider_id,capability,input_price_per_million,output_price_per_million,quality_score,latency_score,reliability_score,context_window,enabled,input_modalities,output_modalities,expiration_date').eq('enabled', true);
   if (error) throw new Error(`MODEL_ROUTING_LOOKUP_FAILED:${error.message}`);
-
   const { data: providers, error: providerError } = await service.from('providers').select('id,status,health_score');
   if (providerError) throw new Error(`PROVIDER_ROUTING_LOOKUP_FAILED:${providerError.message}`);
   const activeProviders = new Map((providers ?? []).filter((provider) => provider.status === 'ACTIVE').map((provider) => [provider.id, Number(provider.health_score ?? 0)]));
-
-  const registry: ModelCatalogEntry[] = (models ?? [])
-    .filter((model) => activeProviders.has(model.provider_id))
-    .filter((model) => !model.expiration_date || new Date(model.expiration_date).getTime() > Date.now())
-    .map((model) => ({
-      providerId: model.provider_id,
-      modelId: model.id,
-      capability: model.capability,
-      inputPricePerMillion: Number(model.input_price_per_million ?? 0),
-      outputPricePerMillion: Number(model.output_price_per_million ?? 0),
-      qualityScore: Number(model.quality_score ?? 0),
-      latencyScore: Number(model.latency_score ?? 0),
-      reliabilityScore: Number(model.reliability_score ?? activeProviders.get(model.provider_id) ?? 0),
-      contextWindow: model.context_window ? Number(model.context_window) : null,
-      inputModalities: Array.isArray(model.input_modalities) ? model.input_modalities : ['text'],
-      outputModalities: Array.isArray(model.output_modalities) ? model.output_modalities : ['text'],
-      source: 'REGISTRY',
-    }));
-
-  const live = liveCatalog.filter((entry) => activeProviders.has(entry.providerId));
+  const registry: ModelCatalogEntry[] = (models ?? []).filter((model) => activeProviders.has(model.provider_id)).filter((model) => !model.expiration_date || new Date(model.expiration_date).getTime() > Date.now()).map((model) => ({
+    providerId: model.provider_id,
+    modelId: model.id,
+    capability: model.capability,
+    inputPricePerMillion: Number(model.input_price_per_million ?? 0),
+    outputPricePerMillion: Number(model.output_price_per_million ?? 0),
+    qualityScore: Number(model.quality_score ?? 0),
+    latencyScore: Number(model.latency_score ?? 0),
+    reliabilityScore: Number(model.reliability_score ?? activeProviders.get(model.provider_id) ?? 0),
+    contextWindow: model.context_window ? Number(model.context_window) : null,
+    inputModalities: Array.isArray(model.input_modalities) ? model.input_modalities : ['text'],
+    outputModalities: Array.isArray(model.output_modalities) ? model.output_modalities : ['text'],
+    source: 'REGISTRY',
+  }));
   const merged = new Map(registry.map((entry) => [`${entry.providerId}:${entry.modelId}:${entry.capability}`, entry]));
-  for (const entry of live) merged.set(`${entry.providerId}:${entry.modelId}:${entry.capability}`, entry);
-
+  for (const entry of liveCatalog.filter((entry) => activeProviders.has(entry.providerId))) merged.set(`${entry.providerId}:${entry.modelId}:${entry.capability}`, entry);
   const ranked = rankModels([...merged.values()], task, budgetBrl);
   if (!ranked.length) throw new Error('MODEL_ROUTING_NO_COMPATIBLE_MODEL');
   return ranked[0];
