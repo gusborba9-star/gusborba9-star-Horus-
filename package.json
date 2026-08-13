@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "test": "node --experimental-strip-types --test tests/studio-contracts.test.mjs tests/collaborators-contracts.test.mjs tests/prompt-optimizer.test.mjs tests/personal-contracts.test.mjs",
     "test:e2e10": "node tests/e2e10-authenticated-collaborator.mjs",
-    "test:e2e11": "node tests/e2e11-authenticated-personal.mjs",
+    "test:e2e11": "node tests/e2e11-authenticated-personal.mjs && node tests/e2e11-memory-context.mjs",
     "typecheck": "tsc --noEmit",
     "clean": "next clean"
   },
@@ -22,7 +22,7 @@
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "glob": "^13.0.6",
+    "glob": "^13.0.0",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
     "next": "^15.4.9",
