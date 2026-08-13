@@ -6,6 +6,7 @@ export type NexusCoreInput = {
   intent: string;
   context: string[];
   budgetBrl: number;
+  capability?: string;
   liveCatalog?: ModelCatalogEntry[];
 };
 
@@ -27,7 +28,7 @@ export type NexusCorePlan = {
 export async function resolveNexusPlan(service: SupabaseClient, input: NexusCoreInput): Promise<NexusCorePlan> {
   const context = input.context.filter(Boolean).slice(0, 8).map((item) => item.slice(0, 1200));
   const optimized = optimizePrompt(input.intent, context);
-  const model = await resolveAdaptiveModel(service, optimized.profile, input.budgetBrl, input.liveCatalog ?? []);
+  const model = await resolveAdaptiveModel(service, optimized.profile, input.budgetBrl, input.liveCatalog ?? [], input.capability);
   return {
     optimized,
     model,
