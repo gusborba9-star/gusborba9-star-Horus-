@@ -116,6 +116,13 @@ function voiceForModel(modelId: string, preferred: unknown): string {
   return 'nova';
 }
 
+function normalizeSttLanguage(language?: string): string | undefined {
+  if (!language) return undefined;
+  const normalized = language.trim().toLowerCase().replace('_', '-');
+  const [iso639] = normalized.split('-');
+  return iso639 && /^[a-z]{2}$/.test(iso639) ? iso639 : undefined;
+}
+
 export async function resolveVoiceIdentity(characteristics: VoiceCharacteristics, preferredVoice?: unknown): Promise<VoiceIdentity> {
   const [ttsModels] = await Promise.all([discoverVoiceModels('speech')]);
   const ranked = rankVoiceModels(ttsModels, characteristics);
@@ -145,7 +152,7 @@ export class OpenRouterSpeechProvider implements SpeechToTextProvider {
     const response = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({ model: selected, input_audio: { data: input.audioBase64, format: input.format }, language: input.language || 'pt' }),
+      body: JSON.stringify({ model: selected, input_audio: { data: input.audioBase64, format: input.format }, language: normalizeSttLanguage(input.language) }),
       cache: 'no-store',
       signal: timeoutSignal(),
     });
