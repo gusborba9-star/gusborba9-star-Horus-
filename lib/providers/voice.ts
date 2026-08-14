@@ -34,6 +34,12 @@ type LiveVoiceModel = {
   outputPrice: number;
   contextLength: number;
   architecture?: { input_modalities?: string[]; output_modalities?: string[] };
+  supportedParameters?: string[];
+};
+
+type RankedVoiceModel = {
+  model: LiveVoiceModel;
+  score: number;
 };
 
 export interface SpeechToTextProvider {
@@ -73,7 +79,48 @@ function timeoutSignal() {
 
 function numericPrice(value: unknown) {
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : Number.POSITIVE_INFINITY;
+}
+
+function normalizeModality(value: unknown) {
+  return typeof value === 'string' ? value.toLowerCase().trim() : '';
+}
+
+function modelSupports(model: LiveVoiceModel, input: InputModality, output: 'transcription' | 'speech') {
+  const inputs = (model.architecture?.input_modalities ?? []).map(normalizeModality);
+  const outputs = (model.architecture?.output_modalities ?? []).map(normalizeModality);
+  if (output === 'transcription') {
+    return (!inputs.length || inputs.includes(input)) && (!outputs.length || outputs.includes('text'));
+  }
+  return (!inputs.length || inputs.includes('text')) && (!outputs.length || outputs.includes('audio'));
+}
+
+function economicEligibility(model: LiveVoiceModel) {
+  // The catalog is the only provider/model authority. A model with unknown/non-finite
+  // pricing is not eligible for automatic economic routing; it must not silently become
+  // the default because it happens to sort first.
+  return Number.isFinite(model.inputPrice) && Number.isFinite(model.outputPrice);
+}
+
+function localeScore(characteristics: VoiceCharacteristics) {
+  return characteristics.locale.toLowerCase().startsWith('pt') ? 1 : 0.55;
+}
+
+function rankVoiceModels(models: LiveVoiceModel[], characteristics: VoiceCharacteristics, requiredInputModality: InputModality, output: 'transcription' | 'speech'): RankedVoiceModel[] {
+  const locale = localeScore(characteristics);
+  return models
+    .filter((model) => modelSupports(model, requiredInputModality, output))
+    .filter(economicEligibility)
+    .map((model) => {
+      const cost = model.inputPrice + model.outputPrice;
+      const costScore = 1 / (1 + cost * 10_000);
+      const contextScore = Math.min(1, Math.max(0, model.contextLength / 32_000));
+      const capabilityScore = modelSupports(model, requiredInputModality, output) ? 1 : 0;
+      const reliabilityScore = model.supportedParameters?.length ? 0.7 + Math.min(0.3, model.supportedParameters.length / 100) : 0.7;
+      const score = capabilityScore * 0.30 + costScore * 0.30 + contextScore * 0.10 + locale * 0.15 + reliabilityScore * 0.15;
+      return { model, score };
+    })
+    .sort((a, b) => b.score - a.score || a.model.id.localeCompare(b.model.id));
 }
 
 async function discoverVoiceModels(outputModality: 'transcription' | 'speech'): Promise<LiveVoiceModel[]> {
@@ -93,28 +140,15 @@ async function discoverVoiceModels(outputModality: 'transcription' | 'speech'): 
       outputPrice: numericPrice(model?.pricing?.completion),
       contextLength: Number(model?.context_length ?? 0),
       architecture: model.architecture,
+      supportedParameters: Array.isArray(model?.supported_parameters) ? model.supported_parameters : undefined,
     }));
-}
-
-function rankVoiceModels(models: LiveVoiceModel[], characteristics: VoiceCharacteristics, requiredInputModality: InputModality) {
-  const localeBonus = characteristics.locale.toLowerCase().startsWith('pt') ? 1 : 0.5;
-  return [...models]
-    .filter((model) => {
-      const inputs = model.architecture?.input_modalities;
-      return !inputs || inputs.length === 0 || inputs.some((modality) => modality.toLowerCase() === requiredInputModality);
-    })
-    .map((model) => {
-      const price = model.inputPrice + model.outputPrice;
-      const costScore = 1 / (1 + price * 10_000);
-      const contextScore = Math.min(1, model.contextLength / 32_000);
-      return { model, score: costScore * 0.55 + contextScore * 0.15 + localeBonus * 0.30 };
-    })
-    .sort((a, b) => b.score - a.score)
-    .map(({ model }) => model);
 }
 
 function voiceForModel(modelId: string, preferred: unknown): string {
   if (typeof preferred === 'string' && preferred.trim()) return preferred.trim();
+  // Voice names are an adapter concern, not a model selection rule. If a model exposes
+  // its own default voice, the provider adapter can accept it; otherwise use a neutral
+  // provider-compatible default without pinning the routing layer to a model.
   const id = modelId.toLowerCase();
   if (id.includes('grok')) return 'Eve';
   if (id.includes('gemini')) return 'Kore';
@@ -144,10 +178,10 @@ async function parseSttResponse(response: Response, selected: string): Promise<S
 }
 
 export async function resolveVoiceIdentity(characteristics: VoiceCharacteristics, preferredVoice?: unknown): Promise<VoiceIdentity> {
-  const [ttsModels] = await Promise.all([discoverVoiceModels('speech')]);
-  const ranked = rankVoiceModels(ttsModels, characteristics, 'text');
-  const primary = ranked[0];
-  const fallback = ranked.find((model) => model.id !== primary.id) ?? ranked[0];
+  const ttsModels = await discoverVoiceModels('speech');
+  const ranked = rankVoiceModels(ttsModels, characteristics, 'text', 'speech');
+  const primary = ranked[0]?.model;
+  const fallback = ranked.find((entry) => entry.model.id !== primary?.id)?.model ?? primary;
   if (!primary) throw new Error('TTS_CATALOG_NO_COMPATIBLE_MODEL');
   return {
     ...characteristics,
@@ -158,9 +192,9 @@ export async function resolveVoiceIdentity(characteristics: VoiceCharacteristics
 
 export async function resolveSpeechToTextModel(characteristics: VoiceCharacteristics): Promise<{ primary: string; fallback: string }> {
   const models = await discoverVoiceModels('transcription');
-  const ranked = rankVoiceModels(models, characteristics, 'audio');
+  const ranked = rankVoiceModels(models, characteristics, 'audio', 'transcription');
   if (!ranked[0]) throw new Error('STT_CATALOG_NO_COMPATIBLE_MODEL');
-  return { primary: ranked[0].id, fallback: ranked.find((model) => model.id !== ranked[0].id)?.id ?? ranked[0].id };
+  return { primary: ranked[0].model.id, fallback: ranked.find((entry) => entry.model.id !== ranked[0].model.id)?.model.id ?? ranked[0].model.id };
 }
 
 export class OpenRouterSpeechProvider implements SpeechToTextProvider {
@@ -179,6 +213,9 @@ export class OpenRouterSpeechProvider implements SpeechToTextProvider {
     });
     if (jsonResponse.ok) return parseSttResponse(jsonResponse, selected);
 
+    // Multipart is the compatibility fallback for OpenRouter audio endpoints. A 402,
+    // 429, 5xx or provider-specific error is intentionally surfaced to the caller so
+    // the orchestration layer can move to the next catalog candidate.
     const form = new FormData();
     const bytes = Buffer.from(input.audioBase64, 'base64');
     form.append('file', new Blob([bytes], { type: `audio/${input.format}` }), `voice.${input.format}`);
@@ -203,30 +240,17 @@ export class OpenRouterSpeechSynthesisProvider implements TextToSpeechProvider {
     const response = await fetch(`${OPENROUTER_URL}/audio/speech`, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({
-        model: input.modelId,
-        input: input.text,
-        voice: input.voice,
-        response_format: 'mp3',
-        instructions: input.instructions,
-      }),
+      body: JSON.stringify({ model: input.modelId, input: input.text, voice: input.voice, response_format: 'mp3', instructions: input.instructions }),
       cache: 'no-store',
       signal: timeoutSignal(),
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
-      throw new Error(`TTS_PROVIDER_FAILED:${response.status}:${payload?.error?.message || 'UNKNOWN'}`);
+      throw new Error(`TTS_PROVIDER_FAILED:${response.status}:${payload?.error?.message || 'UNKNOWN'}:${input.modelId}`);
     }
     const audio = new Uint8Array(await response.arrayBuffer());
     if (!audio.length) throw new Error('TTS_EMPTY_RESULT');
-    return {
-      audio,
-      contentType: response.headers.get('content-type') || 'audio/mpeg',
-      providerId: this.id,
-      modelId: input.modelId,
-      requestId: response.headers.get('x-generation-id') || response.headers.get('x-request-id'),
-      usage: {},
-    };
+    return { audio, contentType: response.headers.get('content-type') || 'audio/mpeg', providerId: this.id, modelId: input.modelId, requestId: response.headers.get('x-generation-id') || response.headers.get('x-request-id'), usage: {} };
   }
 }
 
