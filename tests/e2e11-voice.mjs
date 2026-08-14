@@ -7,8 +7,22 @@ const BASE_URL = process.env.E2E_BASE_URL?.replace(/\/$/, '');
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const VERCEL_TRUSTED_OIDC_TOKEN = process.env.VERCEL_TRUSTED_OIDC_TOKEN;
-for (const [name, value] of Object.entries({ E2E_BASE_URL: BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY, VERCEL_TRUSTED_OIDC_TOKEN })) if (!value) throw new Error(`MISSING_E2E_ENV:${name}`);
+let VERCEL_TRUSTED_OIDC_TOKEN = process.env.VERCEL_TRUSTED_OIDC_TOKEN;
+for (const [name, value] of Object.entries({ E2E_BASE_URL: BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY })) if (!value) throw new Error(`MISSING_E2E_ENV:${name}`);
+
+async function refreshVercelTrustedToken() {
+  const requestUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+  const requestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+  if (!requestUrl || !requestToken) return VERCEL_TRUSTED_OIDC_TOKEN;
+  const response = await fetch(requestUrl, { headers: { Authorization: `Bearer ${requestToken}`, Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`E2E_VERCEL_OIDC_REFRESH_FAILED:${response.status}`);
+  const payload = await response.json();
+  if (!payload?.value) throw new Error('E2E_VERCEL_OIDC_REFRESH_EMPTY');
+  VERCEL_TRUSTED_OIDC_TOKEN = payload.value;
+  return VERCEL_TRUSTED_OIDC_TOKEN;
+}
+
+if (!VERCEL_TRUSTED_OIDC_TOKEN && !process.env.ACTIONS_ID_TOKEN_REQUEST_URL) throw new Error('MISSING_E2E_ENV:VERCEL_TRUSTED_OIDC_TOKEN');
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } });
 const authClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } });
@@ -33,11 +47,8 @@ async function activateSubscription(userId) {
   return data;
 }
 function createRealSpeechFixture() {
-  try {
-    return execFileSync('espeak', ['-v', 'pt-br', '-s', '145', '--stdout', 'Crie um lembrete comprar leite'], { encoding: 'buffer' });
-  } catch (error) {
-    throw new Error(`E2E_REAL_AUDIO_FIXTURE_UNAVAILABLE:${error instanceof Error ? error.message : String(error)}`);
-  }
+  try { return execFileSync('espeak', ['-v', 'pt-br', '-s', '145', '--stdout', 'Crie um lembrete comprar leite'], { encoding: 'buffer' }); }
+  catch (error) { throw new Error(`E2E_REAL_AUDIO_FIXTURE_UNAVAILABLE:${error instanceof Error ? error.message : String(error)}`); }
 }
 
 const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { e2e: true, suite: 'e2e11-voice' } });
@@ -45,6 +56,7 @@ if (createError || !created.user) throw new Error(`E2E_USER_CREATE_FAILED:${crea
 const userId = created.user.id;
 let deviceId = null;
 try {
+  await refreshVercelTrustedToken();
   const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({ email, password });
   if (signInError || !sessionData.session?.access_token) throw new Error(`E2E_AUTH_FAILED:${signInError?.message ?? 'NO_SESSION'}`);
   const token = sessionData.session.access_token;
@@ -59,6 +71,7 @@ try {
   assert.equal(device.response.status, 200, JSON.stringify(device.body));
   deviceId = device.body.device.id;
 
+  await refreshVercelTrustedToken();
   const audio = createRealSpeechFixture();
   assert.ok(audio.length > 1000);
   const voiceHeaders = { authorization: `Bearer ${token}`, 'x-vercel-trusted-oidc-idp-token': VERCEL_TRUSTED_OIDC_TOKEN, 'x-horus-device-id': deviceId, 'idempotency-key': `e2e11-voice-${runId}-${crypto.randomUUID()}`, 'content-type': 'audio/wav', 'content-length': String(audio.length) };
@@ -67,11 +80,9 @@ try {
   assert.equal(voiceResponse.status, 200, JSON.stringify(voiceBody));
   const contentType = voiceResponse.headers.get('content-type') || '';
   assert.match(contentType, /^audio\//);
-  const outputAudio = voiceBody.raw;
-  assert.equal(outputAudio, undefined);
+  assert.equal(voiceBody.raw, undefined);
   const outputLength = Number(voiceResponse.headers.get('content-length') || 0);
-  const outputBuffer = outputLength ? outputLength : 1;
-  assert.ok(outputBuffer > 0);
+  assert.ok((outputLength || 1) > 0);
   assert.ok(voiceResponse.headers.get('x-horus-persona') === 'clara');
   assert.ok(voiceResponse.headers.get('x-horus-stt-model'));
   assert.ok(voiceResponse.headers.get('x-horus-tts-model'));
