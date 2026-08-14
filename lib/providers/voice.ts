@@ -50,6 +50,8 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1';
 const MAX_AUDIO_BASE64 = 25 * 1024 * 1024 * 4 / 3;
 const REQUEST_TIMEOUT_MS = 60_000;
 
+type InputModality = 'audio' | 'file' | 'text';
+
 function apiKey() {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error('OPENROUTER_API_KEY_MISSING');
@@ -94,12 +96,12 @@ async function discoverVoiceModels(outputModality: 'transcription' | 'speech'): 
     }));
 }
 
-function rankVoiceModels(models: LiveVoiceModel[], characteristics: VoiceCharacteristics) {
+function rankVoiceModels(models: LiveVoiceModel[], characteristics: VoiceCharacteristics, requiredInputModality: InputModality) {
   const localeBonus = characteristics.locale.toLowerCase().startsWith('pt') ? 1 : 0.5;
   return [...models]
     .filter((model) => {
       const inputs = model.architecture?.input_modalities;
-      return !inputs || inputs.some((modality) => modality.toLowerCase() === 'audio' || modality.toLowerCase() === 'file');
+      return !inputs || inputs.length === 0 || inputs.some((modality) => modality.toLowerCase() === requiredInputModality);
     })
     .map((model) => {
       const price = model.inputPrice + model.outputPrice;
@@ -143,7 +145,7 @@ async function parseSttResponse(response: Response, selected: string): Promise<S
 
 export async function resolveVoiceIdentity(characteristics: VoiceCharacteristics, preferredVoice?: unknown): Promise<VoiceIdentity> {
   const [ttsModels] = await Promise.all([discoverVoiceModels('speech')]);
-  const ranked = rankVoiceModels(ttsModels, characteristics);
+  const ranked = rankVoiceModels(ttsModels, characteristics, 'text');
   const primary = ranked[0];
   const fallback = ranked.find((model) => model.id !== primary.id) ?? ranked[0];
   if (!primary) throw new Error('TTS_CATALOG_NO_COMPATIBLE_MODEL');
@@ -156,7 +158,7 @@ export async function resolveVoiceIdentity(characteristics: VoiceCharacteristics
 
 export async function resolveSpeechToTextModel(characteristics: VoiceCharacteristics): Promise<{ primary: string; fallback: string }> {
   const models = await discoverVoiceModels('transcription');
-  const ranked = rankVoiceModels(models, characteristics);
+  const ranked = rankVoiceModels(models, characteristics, 'audio');
   if (!ranked[0]) throw new Error('STT_CATALOG_NO_COMPATIBLE_MODEL');
   return { primary: ranked[0].id, fallback: ranked.find((model) => model.id !== ranked[0].id)?.id ?? ranked[0].id };
 }
