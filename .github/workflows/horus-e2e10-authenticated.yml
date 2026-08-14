@@ -3,7 +3,7 @@ name: horus-e2e10-authenticated
 # Live authenticated E2E is isolated from deterministic horus-ci.
 # Only SUPABASE_SERVICE_ROLE_KEY is sensitive; public Supabase/Vercel configuration is stable.
 # Voice routing hardening requires a fresh authenticated production run after each provider-layer change.
-# Trigger marker: latest provider capability-filter correction.
+# Trigger marker: dashboard Personal navigation coverage.
 on:
   workflow_dispatch:
   push:
@@ -13,6 +13,7 @@ on:
       - 'lib/collaborators/**'
       - 'app/api/personal/**'
       - 'app/dashboard/personal/**'
+      - 'app/dashboard/layout.tsx'
       - 'lib/personal/**'
       - 'lib/nexus/**'
       - 'lib/providers/**'
