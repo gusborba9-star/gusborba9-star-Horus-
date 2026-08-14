@@ -24,9 +24,7 @@ export async function GET(request: Request) {
     const { data, error } = await service.from('personal_executions').select('id,persona_id,kind,intent,task_profile,provider_id,model_id,status,result,error_code,error_message,created_at,completed_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30);
     if (error) throw new Error(`PERSONAL_EXECUTION_HISTORY_FAILED:${error.message}`);
     return NextResponse.json({ success: true, executions: data ?? [] });
-  } catch (error) {
-    return errorResponse(error);
-  }
+  } catch (error) { return errorResponse(error); }
 }
 
 export async function POST(request: Request) {
@@ -45,27 +43,25 @@ export async function POST(request: Request) {
     await assertActiveDevice(service, user.id, deviceId);
     const actionPlan = parsePersonalAction(intent);
     if (actionPlan) {
-      const existing = await service.from('personal_executions').select('*').eq('user_id', user.id).eq('idempotency_key', idempotencyKey).maybeSingle();
-      if (existing.data) return NextResponse.json({ success: true, replay: true, execution: existing.data });
+      const requestHash = `${actionPlan.capabilityId}:${actionPlan.title}`;
       const grant = await assertPersonalCapabilityGrant(service, user.id, actionPlan.capabilityId, confirmed);
       const { data: execution, error: executionError } = await service.from('personal_executions').insert({
-        user_id: user.id,
-        device_id: deviceId,
-        persona_id: context.profile.persona_id,
-        kind: 'ACTION',
-        intent,
-        task_profile: { expectedFormat: 'ACTION', action: actionPlan.action },
-        prompt_original: intent,
-        prompt_optimized: intent,
-        capability_id: actionPlan.capabilityId,
-        autonomy: grant.autonomy,
+        user_id: user.id, device_id: deviceId, persona_id: context.profile.persona_id, kind: 'ACTION', intent,
+        task_profile: { expectedFormat: 'ACTION', action: actionPlan.action }, prompt_original: intent, prompt_optimized: intent,
+        capability_id: actionPlan.capabilityId, autonomy: grant.autonomy,
         policy_decision: { permission_grant_id: grant.id, scope: grant.scope, confirmation_required: grant.confirmation_required, autonomy: grant.autonomy },
-        memory_context: [],
-        idempotency_key: idempotencyKey,
-        request_hash: `${actionPlan.capabilityId}:${actionPlan.title}`,
-        status: 'RUNNING',
+        memory_context: [], idempotency_key: idempotencyKey, request_hash, status: 'RUNNING',
       }).select('*').single();
-      if (executionError || !execution) throw new Error(`PERSONAL_ACTION_EXECUTION_CREATE_FAILED:${executionError?.message ?? 'UNKNOWN'}`);
+
+      if (executionError) {
+        if (executionError.code !== '23505') throw new Error(`PERSONAL_ACTION_EXECUTION_CREATE_FAILED:${executionError.message}`);
+        const { data: existing, error: existingError } = await service.from('personal_executions').select('*').eq('user_id', user.id).eq('idempotency_key', idempotencyKey).single();
+        if (existingError || !existing) throw new Error(`PERSONAL_ACTION_IDEMPOTENCY_RECOVERY_FAILED:${existingError?.message ?? 'NOT_FOUND'}`);
+        if (existing.request_hash !== requestHash) throw new Error('IDEMPOTENCY_KEY_REUSE_MISMATCH');
+        return NextResponse.json({ success: true, replay: true, execution: existing, reminder: existing.result?.reminder_id ? { id: existing.result.reminder_id } : undefined });
+      }
+      if (!execution) throw new Error('PERSONAL_ACTION_EXECUTION_CREATE_FAILED:EMPTY');
+
       const { data: log, error: logError } = await service.from('horus_execution_logs').insert({ request_id: execution.id, event_type: 'PERSONAL_ACTION', source: 'personal', action: actionPlan.action, status: 'RUNNING', confidence: 1, requires_human_review: false, memory_matches: 0, error_message: null, metadata: { capability_id: actionPlan.capabilityId, permission_grant_id: grant.id } }).select('id').single();
       if (logError || !log) throw new Error(`PERSONAL_ACTION_LOG_CREATE_FAILED:${logError?.message ?? 'UNKNOWN'}`);
       const reminder = await createReminder(service, user.id, deviceId, actionPlan, execution.id);
@@ -77,7 +73,5 @@ export async function POST(request: Request) {
 
     const result = await executePersonalText({ userId: user.id, deviceId, intent, idempotencyKey });
     return NextResponse.json({ success: true, ...result });
-  } catch (error) {
-    return errorResponse(error);
-  }
+  } catch (error) { return errorResponse(error); }
 }
