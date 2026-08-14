@@ -68,6 +68,16 @@ try {
   assert.equal(voice.body.primary.locale, 'pt-BR');
   assert.equal(voice.body.fallback.locale, 'pt-BR');
 
+  const dashboardResponse = await fetch(`${BASE_URL}/dashboard/personal`, { headers: { authorization: `Bearer ${token}`, 'x-vercel-trusted-oidc-idp-token': VERCEL_TRUSTED_OIDC_TOKEN } });
+  assert.equal(dashboardResponse.status, 200);
+  const dashboardHtml = await dashboardResponse.text();
+  assert.match(dashboardHtml, /Minha Operação Pessoal/);
+  assert.match(dashboardHtml, /href="\/dashboard\/personal"/);
+  assert.match(dashboardHtml, /Hórus Operations™/);
+  assert.match(dashboardHtml, /Studio Hórus™/);
+  assert.match(dashboardHtml, /Equipes Cognitivas™/);
+  assert.match(dashboardHtml, /Memory Graph™/);
+
   const grant = await request('POST', '/api/personal/permissions', token, { capability_id: 'REMINDERS_CREATE', autonomy: 'EXECUTE', confirmation_required: false, scope: { device_id: deviceId } });
   assert.equal(grant.response.status, 201, JSON.stringify(grant.body));
   assert.equal(grant.body.permission.status, 'GRANTED');
@@ -140,7 +150,7 @@ try {
   assert.equal(log.status, 'COMPLETED');
   assert.ok(log.completed_at);
 
-  console.log(JSON.stringify({ suite: 'e2e11-authenticated-personal', authenticated: true, user_id: userId, persona_id: 'clara', subscription_status: activatedSubscription.status, device_id: deviceId, execution_id: executionId, attempt_id: attempt.id, usage_present: true, budget_id: budget.id, budget_status: budget.status, execution_log_id: log.id, execution_status: dbExecution.status, provider_id: dbExecution.provider_id, model_id: dbExecution.model_id, actual_cost_brl: usage.actual_total_cost_brl ?? usage.actual_provider_cost_brl ?? null, idempotency_replay: true, permission_grant: true, permission_revocation: true, action_execution: true, unauthenticated_denied: true, cross_user_denied: true, cleanup: 'evidence preserved; test identities isolated and banned after run' }));
+  console.log(JSON.stringify({ suite: 'e2e11-authenticated-personal', authenticated: true, user_id: userId, persona_id: 'clara', subscription_status: activatedSubscription.status, device_id: deviceId, execution_id: executionId, attempt_id: attempt.id, usage_present: true, budget_id: budget.id, budget_status: budget.status, execution_log_id: log.id, execution_status: dbExecution.status, provider_id: dbExecution.provider_id, model_id: dbExecution.model_id, actual_cost_brl: usage.actual_total_cost_brl ?? usage.actual_provider_cost_brl ?? null, idempotency_replay: true, permission_grant: true, permission_revocation: true, action_execution: true, ui_personal_navigation: true, unauthenticated_denied: true, cross_user_denied: true, cleanup: 'evidence preserved; test identities isolated and banned after run' }));
 } finally {
   await admin.from('personal_capability_grants').delete().eq('user_id', userId);
   await admin.from('personal_devices').delete().eq('user_id', userId);
