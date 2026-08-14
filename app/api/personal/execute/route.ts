@@ -15,6 +15,19 @@ function errorResponse(error: unknown) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
+async function recoverIdempotentAction(service: ReturnType<typeof getServiceSupabase>, userId: string, idempotencyKey: string, requestHash: string) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const { data: existing, error } = await service.from('personal_executions').select('*').eq('user_id', userId).eq('idempotency_key', idempotencyKey).single();
+    if (error || !existing) throw new Error(`PERSONAL_ACTION_IDEMPOTENCY_RECOVERY_FAILED:${error?.message ?? 'NOT_FOUND'}`);
+    if (existing.request_hash !== requestHash) throw new Error('IDEMPOTENCY_KEY_REUSE_MISMATCH');
+    if (existing.status === 'SUCCEEDED' || existing.status === 'FAILED') {
+      return NextResponse.json({ success: existing.status === 'SUCCEEDED', replay: true, execution: existing, reminder: existing.result?.reminder_id ? { id: existing.result.reminder_id } : undefined }, { status: existing.status === 'SUCCEEDED' ? 200 : 500 });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error('PERSONAL_ACTION_IDEMPOTENCY_IN_PROGRESS');
+}
+
 export async function GET(request: Request) {
   try {
     const { user } = await requireStudioUser(request);
@@ -45,20 +58,10 @@ export async function POST(request: Request) {
     if (actionPlan) {
       const requestHash = `${actionPlan.capabilityId}:${actionPlan.title}`;
       const grant = await assertPersonalCapabilityGrant(service, user.id, actionPlan.capabilityId, confirmed);
-      const { data: execution, error: executionError } = await service.from('personal_executions').insert({
-        user_id: user.id, device_id: deviceId, persona_id: context.profile.persona_id, kind: 'ACTION', intent,
-        task_profile: { expectedFormat: 'ACTION', action: actionPlan.action }, prompt_original: intent, prompt_optimized: intent,
-        capability_id: actionPlan.capabilityId, autonomy: grant.autonomy,
-        policy_decision: { permission_grant_id: grant.id, scope: grant.scope, confirmation_required: grant.confirmation_required, autonomy: grant.autonomy },
-        memory_context: [], idempotency_key: idempotencyKey, request_hash, status: 'RUNNING',
-      }).select('*').single();
-
+      const { data: execution, error: executionError } = await service.from('personal_executions').insert({ user_id: user.id, device_id: deviceId, persona_id: context.profile.persona_id, kind: 'ACTION', intent, task_profile: { expectedFormat: 'ACTION', action: actionPlan.action }, prompt_original: intent, prompt_optimized: intent, capability_id: actionPlan.capabilityId, autonomy: grant.autonomy, policy_decision: { permission_grant_id: grant.id, scope: grant.scope, confirmation_required: grant.confirmation_required, autonomy: grant.autonomy }, memory_context: [], idempotency_key: idempotencyKey, request_hash: requestHash, status: 'RUNNING' }).select('*').single();
       if (executionError) {
         if (executionError.code !== '23505') throw new Error(`PERSONAL_ACTION_EXECUTION_CREATE_FAILED:${executionError.message}`);
-        const { data: existing, error: existingError } = await service.from('personal_executions').select('*').eq('user_id', user.id).eq('idempotency_key', idempotencyKey).single();
-        if (existingError || !existing) throw new Error(`PERSONAL_ACTION_IDEMPOTENCY_RECOVERY_FAILED:${existingError?.message ?? 'NOT_FOUND'}`);
-        if (existing.request_hash !== requestHash) throw new Error('IDEMPOTENCY_KEY_REUSE_MISMATCH');
-        return NextResponse.json({ success: true, replay: true, execution: existing, reminder: existing.result?.reminder_id ? { id: existing.result.reminder_id } : undefined });
+        return recoverIdempotentAction(service, user.id, idempotencyKey, requestHash);
       }
       if (!execution) throw new Error('PERSONAL_ACTION_EXECUTION_CREATE_FAILED:EMPTY');
 
