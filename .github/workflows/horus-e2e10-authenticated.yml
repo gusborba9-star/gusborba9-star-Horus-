@@ -19,6 +19,7 @@ on:
       - 'tests/e2e11-memory-context.mjs'
       - 'tests/e2e11-voice.mjs'
       - 'package.json'
+      - '.github/workflows/horus-ci.yml'
       - '.github/workflows/horus-e2e10-authenticated.yml'
 
 permissions:
