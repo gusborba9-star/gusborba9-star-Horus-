@@ -2,7 +2,7 @@
 
 **Status:** 🟢 VERIFIED — authenticated Personal core E2E and production checkpoint verified; full Personal product closure remains open.
 
-**Final validated SHA:** `b45c95a89b6f3019b9a98b26d6940f85197c3c59`
+**Final validated SHA:** `f2606ad25ca8dbca9240a9eb2673e0ec9afe8a2a`
 
 ## 1. Evidence scope
 
@@ -72,7 +72,7 @@ This is reuse of the existing execution/economic architecture, not a Personal-sp
 
 The E2E crosses the existing provider boundary and persists provider/model identity for the terminal execution. The Personal product does not expose provider/model selection to the user.
 
-This evidence verifies the Personal consumer of the existing provider abstraction. It does **not** by itself close the broader adaptive-routing, dynamic catalog/pricing, multi-provider, STT or TTS closure gates.
+The current Voice implementation also exposes a dynamic runtime contract sourced from the OpenRouter catalog, with primary/fallback STT/TTS model identities surfaced from the runtime rather than from UI constants.
 
 ## 7. Security / RLS
 
@@ -88,24 +88,54 @@ The production endpoint's Personal-before-device validation order was preserved.
 
 Final source SHA:
 
-`b45c95a89b6f3019b9a98b26d6940f85197c3c59`
+`f2606ad25ca8dbca9240a9eb2673e0ec9afe8a2a`
 
 Canonical CI:
 
 - workflow: `horus-ci`
-- run: `31714568438`
+- run: `31824462432`
 - conclusion: `SUCCESS`
 - TypeScript: `SUCCESS`
 - ESLint: `SUCCESS`
-- build: `SUCCESS`
+- tests: `SUCCESS`
+- production build: `SUCCESS`
 
-The E2E11 authenticated fixture is exposed as `npm run test:e2e11` in `package.json` and the successful terminal E2E11 execution is the evidence for the core Personal checkpoint.
+Authenticated E2E:
 
-Production deployment/runtime evidence for this SHA was established during the E2E11 validation cycle; no schema migration was required by the final fixture correction.
+- workflow: `horus-e2e10-authenticated`
+- run: `31824462431`
+- E2E 10: `SUCCESS`
+- E2E 11: `SUCCESS`
 
-## 9. Cleanup
+Production deployment:
 
-The fixture cleanup removes Personal-domain records for both temporary users from:
+- Vercel project: `velor-api`
+- deployment: `dpl_HH5mSSsjLSkwML4atJBotQ9mw87g`
+- target: `production`
+- state: `READY`
+- deployment SHA: `f2606ad25ca8dbca9240a9eb2673e0ec9afe8a2a`
+- Production `/dashboard/personal`: HTTP `200`
+
+## 9. UI / runtime reconciliation — 2026-08-14
+
+The dashboard surface was reconciled with the already-validated Personal runtime on the same final SHA:
+
+- `app/dashboard/layout.tsx`: **Minha Operação Pessoal** is now a real `Link` to `/dashboard/personal`, with active-state behavior for the Personal subtree.
+- `app/dashboard/personal/page.tsx`: subscription, persona, device, permissions and execution state are read from the real Personal APIs; non-`ACTIVE` subscriptions are not presented as operationally active.
+- Non-`ACTIVE` Personal users receive the real Efí checkout through `POST /api/personal/billing/checkout`; the UI does not mutate subscription status to `ACTIVE`.
+- Persona activation continues through `POST /api/personal` and therefore remains subject to backend subscription authority.
+- Device binding continues through the canonical `/api/personal/devices` endpoint and the returned device ID is used for execution.
+- Text execution continues through `/api/personal/execute` with the real JWT, device binding and idempotency boundary.
+- Permission Center uses the existing grant/revoke APIs; no UI-only permission state was introduced.
+- `app/dashboard/personal/voice/page.tsx` now invokes the real `/api/personal/voice` endpoint for microphone/file audio and displays the effective persona, STT model, TTS model and execution correlation returned by the runtime.
+- `app/dashboard/personal/setup/page.tsx` was converted from a simulated timer/curation flow to a runtime-state view; it does not fabricate activation or billing.
+- Existing Personal subroutes remain reachable: `/dashboard/personal`, `/dashboard/personal/setup`, `/dashboard/personal/voice`, `/dashboard/personal/companion`.
+
+No parallel Personal runtime, mock billing path, frontend-only activation, or replacement Nexus implementation was introduced.
+
+## 10. Cleanup
+
+The authenticated E2E11 fixture cleanup removes Personal-domain records for both temporary users from:
 
 - `personal_capability_grants`
 - `personal_devices`
@@ -114,31 +144,25 @@ The fixture cleanup removes Personal-domain records for both temporary users fro
 
 Preserved execution evidence is not deleted to fabricate cleanup. Temporary Auth identities are disabled after the run.
 
-## 10. Evidence boundary — not claimed complete
+## 11. Evidence boundary — not claimed complete
 
-The following remain open because the available E2E11 evidence does not prove their complete production contracts:
+The following remain open because the available evidence does not prove their complete production contracts:
 
-- billing-backed subscription lifecycle;
+- billing-backed subscription lifecycle and real payment confirmation;
 - subscription change/cancellation lifecycle;
 - full supported-device verification lifecycle;
-- STT/TTS execution contracts and provider fallback E2E;
-- Personal memory semantics and context continuity;
-- proactive behavior foundation with event-driven evidence;
-- adaptive model routing and dynamic OpenRouter catalog/pricing verification for Personal;
-- cross-model orchestration/deliberation;
-- outcome-based model learning;
-- Evidence/Truth Layer and Persistent Decision Memory;
-- provider-backed external App Actions and external side-effect evidence;
-- idempotent external App Action execution;
+- proactive behavior as a production event-driven lifecycle;
+- external App Action side-effect evidence beyond the validated Personal action/concurrency boundary;
 - expected/heavy/worst-reasonable economic simulations and final commercial pricing validation;
+- broader platform-wide inference/routing closure outside the validated Personal runtime;
 - complete Personal-specific closure across all Roadmap gates.
 
-These items remain unchecked in the canonical Roadmap and are not reclassified by this evidence document.
+These items remain unchecked in the canonical Roadmap and are not reclassified by this UI reconciliation.
 
-## 11. Closure decision
+## 12. Closure decision
 
-**Módulo 11 is VERIFIED at the Personal core E2E checkpoint, not COMPLETE.**
+**Módulo 11 remains VERIFIED at the Personal core/runtime checkpoint, not COMPLETE.**
 
-Promoting the module itself to `COMPLETE` would contradict the canonical Roadmap's explicit closure gates and the evidence boundary above. No unsupported completion claim is recorded.
+The UI/runtime reconciliation is complete and production-validated, but the module is not promoted to `COMPLETE` while its remaining closure gates are still open.
 
 Module 12 is not started by this consolidation.
