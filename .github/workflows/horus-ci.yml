@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Install real speech fixture dependency
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends espeak
       - run: npm ci
       - run: npm test
       - run: npm run typecheck
