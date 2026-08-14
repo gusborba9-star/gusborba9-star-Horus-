@@ -112,6 +112,29 @@ try {
 
   const grant = await request('POST', '/api/personal/permissions', token, { capability_id: 'REMINDERS_CREATE', autonomy: 'EXECUTE', confirmation_required: false, scope: { device_id: deviceId } });
   assert.equal(grant.response.status, 201, JSON.stringify(grant.body));
+
+  const intentionDescription = `E2E proactivity ${runId} lembrete água`;
+  const dueAt = new Date(Date.now() - 1000).toISOString();
+  const { data: intention, error: intentionError } = await admin.from('personal_intentions').insert({ user_id: userId, description: intentionDescription, trigger_type: 'TIME', trigger_config: { source: 'E2E11', run_id: runId }, status: 'ACTIVE', next_evaluation_at: dueAt }).select('id').single();
+  if (intentionError || !intention) throw new Error(`E2E_PROACTIVITY_INTENTION_CREATE_FAILED:${intentionError?.message ?? 'UNKNOWN'}`);
+  const [claimA, claimB] = await Promise.all([admin.rpc('process_personal_time_intentions'), admin.rpc('process_personal_time_intentions')]);
+  if (claimA.error || claimB.error) throw new Error(`E2E_PROACTIVITY_CLAIM_FAILED:${claimA.error?.message ?? claimB.error?.message ?? 'UNKNOWN'}`);
+  const { data: finalIntention, error: finalIntentionError } = await admin.from('personal_intentions').select('id,status').eq('id', intention.id).single();
+  if (finalIntentionError || !finalIntention) throw new Error(`E2E_PROACTIVITY_INTENTION_READ_FAILED:${finalIntentionError?.message ?? 'UNKNOWN'}`);
+  assert.equal(finalIntention.status, 'COMPLETED');
+  const { data: proactivityExecutions, error: proactivityExecutionError } = await admin.from('personal_executions').select('id,status,result').eq('user_id', userId).eq('idempotency_key', `intention:${intention.id}:${dueAt.replace(/[-:TZ.]/g, '').slice(0, 17)}`);
+  if (proactivityExecutionError) throw new Error(`E2E_PROACTIVITY_EXECUTION_READ_FAILED:${proactivityExecutionError.message}`);
+  assert.equal(proactivityExecutions.length, 1);
+  assert.equal(proactivityExecutions[0].status, 'SUCCEEDED');
+  const proactivityReminderId = proactivityExecutions[0].result?.reminder_id;
+  assert.ok(proactivityReminderId);
+  const { data: proactivityReminders, error: proactivityReminderError } = await admin.from('personal_reminders').select('id').eq('id', proactivityReminderId).eq('user_id', userId);
+  if (proactivityReminderError) throw new Error(`E2E_PROACTIVITY_REMINDER_READ_FAILED:${proactivityReminderError.message}`);
+  assert.equal(proactivityReminders.length, 1);
+  const { data: proactivityAudit, error: proactivityAuditError } = await admin.from('personal_permission_audit').select('id,metadata').eq('user_id', userId).eq('capability_id', 'REMINDERS_CREATE').contains('metadata', { intention_id: intention.id, execution_id: proactivityExecutions[0].id, reminder_id: proactivityReminderId });
+  if (proactivityAuditError) throw new Error(`E2E_PROACTIVITY_AUDIT_READ_FAILED:${proactivityAuditError.message}`);
+  assert.equal(proactivityAudit.length, 1);
+
   const concurrentKey = `e2e11-reminder-race-${runId}-${crypto.randomUUID()}`;
   const concurrentBody = { intent: 'Crie um lembrete comprar leite', device_id: deviceId };
   const [first, second] = await Promise.all([
@@ -139,8 +162,9 @@ try {
   assert.equal(denied.response.status, 403, JSON.stringify(denied.body));
   assert.equal(denied.body.error, 'PERSONAL_PERMISSION_REQUIRED');
 
-  console.log(JSON.stringify({ suite: 'e2e11-voice', authenticated: true, subscription: activated.status, persona: 'clara', stt_model: voiceResponse.headers.get('x-horus-stt-model'), tts_model: voiceResponse.headers.get('x-horus-tts-model'), execution_id: executionId, execution_provider: execution.provider_id, execution_model: execution.model_id, transcript_semantic_match: true, usage_recorded: true, budget_status: budget.status, execution_log_status: log.status, voice_audio_bytes: audio.length, voice_output_audio_bytes: outputAudio.length, voice_response_content_type: contentType, concurrent_execution_count: raceExecutions.length, reminder_id: reminderId, revoke_denied: true }));
+  console.log(JSON.stringify({ suite: 'e2e11-voice', authenticated: true, subscription: activated.status, persona: 'clara', stt_model: voiceResponse.headers.get('x-horus-stt-model'), tts_model: voiceResponse.headers.get('x-horus-tts-model'), execution_id: executionId, execution_provider: execution.provider_id, execution_model: execution.model_id, transcript_semantic_match: true, usage_recorded: true, budget_status: budget.status, execution_log_status: log.status, voice_audio_bytes: audio.length, voice_output_audio_bytes: outputAudio.length, voice_response_content_type: contentType, proactivity_claims: [claimA.data, claimB.data], proactivity_execution_count: proactivityExecutions.length, proactivity_audit_count: proactivityAudit.length, concurrent_execution_count: raceExecutions.length, reminder_id: reminderId, revoke_denied: true }));
 } finally {
+  await admin.from('personal_intentions').delete().eq('user_id', userId);
   await admin.from('personal_capability_grants').delete().eq('user_id', userId);
   await admin.from('personal_devices').delete().eq('user_id', userId);
   await admin.from('personal_profiles').delete().eq('user_id', userId);
