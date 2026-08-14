@@ -21,7 +21,6 @@ async function refreshVercelTrustedToken() {
   VERCEL_TRUSTED_OIDC_TOKEN = payload.value;
   return VERCEL_TRUSTED_OIDC_TOKEN;
 }
-
 if (!VERCEL_TRUSTED_OIDC_TOKEN && !process.env.ACTIONS_ID_TOKEN_REQUEST_URL) throw new Error('MISSING_E2E_ENV:VERCEL_TRUSTED_OIDC_TOKEN');
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } });
@@ -76,13 +75,13 @@ try {
   assert.ok(audio.length > 1000);
   const voiceHeaders = { authorization: `Bearer ${token}`, 'x-vercel-trusted-oidc-idp-token': VERCEL_TRUSTED_OIDC_TOKEN, 'x-horus-device-id': deviceId, 'idempotency-key': `e2e11-voice-${runId}-${crypto.randomUUID()}`, 'content-type': 'audio/wav', 'content-length': String(audio.length) };
   const voiceResponse = await fetch(`${BASE_URL}/api/personal/voice`, { method: 'POST', headers: voiceHeaders, body: audio });
-  const voiceBody = await json(voiceResponse);
+  const errorBody = voiceResponse.clone();
+  const voiceBody = await json(errorBody);
   assert.equal(voiceResponse.status, 200, JSON.stringify(voiceBody));
   const contentType = voiceResponse.headers.get('content-type') || '';
   assert.match(contentType, /^audio\//);
-  assert.equal(voiceBody.raw, undefined);
-  const outputLength = Number(voiceResponse.headers.get('content-length') || 0);
-  assert.ok((outputLength || 1) > 0);
+  const outputAudio = new Uint8Array(await voiceResponse.arrayBuffer());
+  assert.ok(outputAudio.length > 1000);
   assert.ok(voiceResponse.headers.get('x-horus-persona') === 'clara');
   assert.ok(voiceResponse.headers.get('x-horus-stt-model'));
   assert.ok(voiceResponse.headers.get('x-horus-tts-model'));
@@ -98,6 +97,8 @@ try {
   assert.ok(execution.task_profile);
   assert.ok(execution.prompt_original);
   assert.ok(execution.prompt_optimized);
+  assert.match(execution.intent.toLowerCase(), /lembrete/);
+  assert.match(execution.intent.toLowerCase(), /leite/);
   assert.ok(execution.attempt_id && execution.budget_id && execution.execution_log_id);
 
   const { data: usage, error: usageError } = await admin.from('execution_usage').select('*').eq('attempt_id', execution.attempt_id).order('recorded_at', { ascending: false }).limit(1).maybeSingle();
@@ -138,7 +139,7 @@ try {
   assert.equal(denied.response.status, 403, JSON.stringify(denied.body));
   assert.equal(denied.body.error, 'PERSONAL_PERMISSION_REQUIRED');
 
-  console.log(JSON.stringify({ suite: 'e2e11-voice', authenticated: true, subscription: activated.status, persona: 'clara', stt_model: voiceResponse.headers.get('x-horus-stt-model'), tts_model: voiceResponse.headers.get('x-horus-tts-model'), execution_id: executionId, execution_provider: execution.provider_id, execution_model: execution.model_id, usage_recorded: true, budget_status: budget.status, execution_log_status: log.status, voice_audio_bytes: audio.length, voice_response_content_type: contentType, concurrent_execution_count: raceExecutions.length, reminder_id: reminderId, revoke_denied: true }));
+  console.log(JSON.stringify({ suite: 'e2e11-voice', authenticated: true, subscription: activated.status, persona: 'clara', stt_model: voiceResponse.headers.get('x-horus-stt-model'), tts_model: voiceResponse.headers.get('x-horus-tts-model'), execution_id: executionId, execution_provider: execution.provider_id, execution_model: execution.model_id, transcript_semantic_match: true, usage_recorded: true, budget_status: budget.status, execution_log_status: log.status, voice_audio_bytes: audio.length, voice_output_audio_bytes: outputAudio.length, voice_response_content_type: contentType, concurrent_execution_count: raceExecutions.length, reminder_id: reminderId, revoke_denied: true }));
 } finally {
   await admin.from('personal_capability_grants').delete().eq('user_id', userId);
   await admin.from('personal_devices').delete().eq('user_id', userId);
