@@ -1,5 +1,5 @@
 'use client';
-import { BrainCircuit, Sparkles, Database, Users, X, Menu, ArrowLeft, Settings, Target, Smartphone } from 'lucide-react';
+import { BrainCircuit, Sparkles, Database, Users, X, Menu, ArrowLeft, Settings, Target, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -11,6 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = [
     { name: 'Nexus', href: '/nexus', icon: BrainCircuit },
     { name: 'Hórus Operations™', href: '/dashboard', icon: Target },
+    { name: 'Minha Operação Pessoal', href: '/dashboard/personal', icon: UserRound },
     { name: 'Studio Hórus™', href: '/dashboard/studio', icon: Sparkles },
     { name: 'Equipes Cognitivas™', href: '/dashboard/agents', icon: Users },
     { name: 'Memory Graph™', href: '/dashboard/memory', icon: Database },
