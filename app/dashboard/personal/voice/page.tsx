@@ -1,49 +1,14 @@
 'use client';
-import { Headphones, Mic, Play, Settings, ArrowLeft, Volume2, Radio } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Headphones, Mic, Square, ArrowLeft, Volume2, Loader2, ShieldCheck, Radio } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export default function VoiceRuntime() {
-  return (
-    <div className="h-full flex flex-col bg-[#050508] relative font-sans">
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.1] mix-blend-overlay pointer-events-none"></div>
-      
-      <div className="h-16 md:h-20 border-b border-white/5 shrink-0 flex items-center justify-between px-4 sm:px-10 relative z-20">
-         <div className="flex items-center gap-4">
-            <Link href="/dashboard/personal" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-               <ArrowLeft className="w-4 h-4 text-white/50" />
-            </Link>
-            <h1 className="font-bold text-white text-sm flex items-center gap-2"><Headphones className="w-4 h-4 text-blue-400"/> Hórus Voice Runtime™</h1>
-         </div>
-      </div>
-
-      <div className="flex-1 p-6 sm:p-10 overflow-y-auto custom-scrollbar relative z-10 flex flex-col items-center justify-center">
-         <div className="w-full max-w-2xl text-center space-y-8">
-            <div className="w-32 h-32 rounded-full bg-blue-500/10 border-2 border-blue-500 mx-auto flex items-center justify-center relative shadow-[0_0_50px_rgba(59,130,246,0.3)]">
-               <div className="absolute inset-0 rounded-full border border-blue-400/50 animate-ping opacity-20"></div>
-               <Mic className="w-12 h-12 text-blue-400" />
-            </div>
-            
-            <div>
-               <h2 className="text-3xl font-black text-white mb-2">Voice Runtime Ativo</h2>
-               <p className="text-white/50 font-light max-w-md mx-auto">Comunicação natural habilitada. Seu membro está ouvindo e processando em tempo real.</p>
-            </div>
-
-            <div className="bg-[#090A0F] border border-white/10 rounded-3xl p-6 flex items-center justify-between">
-               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                     <Volume2 className="w-5 h-5 text-white/50" />
-                  </div>
-                  <div className="text-left">
-                     <div className="text-sm font-bold text-white">Voz: Masculino (Elegante PT-BR)</div>
-                     <div className="text-[10px] text-white/40">Latência: 120ms • Modo: Contínuo</div>
-                  </div>
-               </div>
-               <button className="px-4 py-2 bg-blue-500/20 text-blue-400 font-bold rounded-lg text-xs hover:bg-blue-500/30 transition-colors">
-                  Ajustar Voz
-               </button>
-            </div>
-         </div>
-      </div>
-    </div>
-  );
+  const [token,setToken]=useState(''); const [deviceId,setDeviceId]=useState(''); const [contract,setContract]=useState<any>(null); const [recording,setRecording]=useState(false); const [processing,setProcessing]=useState(false); const [notice,setNotice]=useState(''); const [meta,setMeta]=useState<Record<string,string>>({}); const recorder=useRef<MediaRecorder|null>(null); const chunks=useRef<Blob[]>([]);
+  useEffect(()=>{void (async()=>{const {data}=await supabase.auth.getSession(); if(!data.session)return; const t=data.session.access_token; setToken(t); setDeviceId(localStorage.getItem('horus-personal-device-id')??''); const r=await fetch('/api/personal/voice',{headers:{Authorization:`Bearer ${t}`}}); const b=await r.json(); if(r.ok)setContract(b); else setNotice(b.error??'Voice indisponível.');})();},[]);
+  async function executeVoice(blob:Blob){if(!deviceId)return setNotice('Vincule um dispositivo no Personal antes de usar Voice.'); setProcessing(true); setNotice('Executando STT → Nexus → LLM → TTS…'); const r=await fetch('/api/personal/voice',{method:'POST',headers:{Authorization:`Bearer ${token}`,'x-horus-device-id':deviceId,'idempotency-key':crypto.randomUUID(),'content-type':blob.type||'audio/wav'},body:blob}); setProcessing(false); if(!r.ok){const b=await r.json().catch(()=>({}));return setNotice(b.error??'Voice foi recusado pelo runtime.');} const output=await r.blob(); const url=URL.createObjectURL(output); const audio=new Audio(url); await audio.play().catch(()=>undefined); setMeta({persona:r.headers.get('x-horus-persona')??'',stt:r.headers.get('x-horus-stt-model')??'',tts:r.headers.get('x-horus-tts-model')??'',execution:r.headers.get('x-horus-execution-id')??''}); setNotice('Voice concluído. Áudio real recebido do runtime.');}
+  function start(){if(!navigator.mediaDevices?.getUserMedia)return setNotice('Microfone indisponível neste navegador.'); void navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{chunks.current=[];const r=new MediaRecorder(stream);recorder.current=r;r.ondataavailable=e=>{if(e.data.size)chunks.current.push(e.data)};r.onstop=()=>{stream.getTracks().forEach(t=>t.stop());void executeVoice(new Blob(chunks.current,{type:r.mimeType||'audio/webm'}))};r.start();setRecording(true);setNotice('Gravando… toque novamente para enviar.');}).catch(()=>setNotice('Não foi possível acessar o microfone.'));}
+  function stop(){recorder.current?.stop();setRecording(false)}
+  return <div className="h-full flex flex-col bg-[#050508] text-white"><div className="h-16 border-b border-white/5 flex items-center justify-between px-4 sm:px-10"><div className="flex items-center gap-4"><Link href="/dashboard/personal" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><ArrowLeft className="w-4 h-4 text-white/50"/></Link><h1 className="font-bold text-sm flex items-center gap-2"><Headphones className="w-4 h-4 text-blue-400"/>Hórus Voice Runtime</h1></div></div><div className="flex-1 overflow-y-auto p-6 sm:p-10 flex justify-center"><div className="w-full max-w-3xl space-y-6 py-6"><section className="rounded-3xl border border-white/10 bg-[#090A0F] p-6"><p className="text-[10px] font-bold uppercase tracking-[.25em] text-blue-400">Runtime real</p><h2 className="mt-2 text-3xl font-black">Fale com seu Personal</h2><p className="mt-2 text-sm text-white/45">O áudio passa pelo endpoint autenticado e pelo Nexus/Adaptive Routing reais.</p><div className="mt-8 flex flex-col items-center gap-4"><button disabled={processing} onClick={()=>recording?stop():start()} className={`h-32 w-32 rounded-full border-2 flex items-center justify-center ${recording?'border-red-400 bg-red-500/10':'border-blue-500 bg-blue-500/10'} disabled:opacity-50`}>{processing?<Loader2 className="h-10 w-10 animate-spin text-blue-400"/>:recording?<Square className="h-9 w-9 text-red-400"/>:<Mic className="h-10 w-10 text-blue-400"/>}</button><span className="text-xs text-white/45">{recording?'Toque para parar e enviar':processing?'Processando áudio…':'Toque para gravar'}</span><label className="cursor-pointer rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold">Enviar arquivo de áudio<input type="file" accept="audio/*" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)void executeVoice(f)}}/></label></div></section><section className="grid gap-4 md:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-[#090A0F] p-5"><div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-400"/><h3 className="text-sm font-bold">Catálogo dinâmico</h3></div><div className="mt-4 space-y-2 text-xs text-white/45"><p>STT: <span className="text-white/80">{contract?.stt?.primary_model??'—'}</span></p><p>STT fallback: <span className="text-white/80">{contract?.stt?.fallback_model??'—'}</span></p><p>TTS primary: <span className="text-white/80">{contract?.primary?.model??'—'}</span></p><p>TTS fallback: <span className="text-white/80">{contract?.fallback?.model??'—'}</span></p></div></div><div className="rounded-2xl border border-white/10 bg-[#090A0F] p-5"><div className="flex items-center gap-2"><Volume2 className="h-4 w-4 text-blue-400"/><h3 className="text-sm font-bold">Última execução</h3></div><div className="mt-4 space-y-2 text-xs text-white/45"><p>Persona: <span className="text-white/80">{meta.persona||contract?.persona_id||'—'}</span></p><p>STT efetivo: <span className="text-white/80">{meta.stt||'—'}</span></p><p>TTS efetivo: <span className="text-white/80">{meta.tts||'—'}</span></p><p>Execution: <span className="text-white/80 break-all">{meta.execution||'—'}</span></p></div></div></section>{notice&&<div className="rounded-xl border border-white/10 bg-white/[.03] px-4 py-3 text-xs text-white/60 flex items-center gap-2"><Radio className="h-3 w-3"/>{notice}</div>}</div></div></div>;
 }
