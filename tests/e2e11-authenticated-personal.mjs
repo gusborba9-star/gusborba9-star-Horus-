@@ -64,7 +64,7 @@ try {
   const voice = await request('GET', '/api/personal/voice', token);
   assert.equal(voice.response.status, 200, JSON.stringify(voice.body));
   assert.equal(voice.body.identity_lock, true);
-  assert.equal(voice.body.mode, 'BROWSER_NATIVE_WITH_PROVIDER_FALLBACK');
+  assert.equal(voice.body.mode, 'OPENROUTER_DYNAMIC_STT_NEXUS_TTS');
   assert.equal(voice.body.primary.locale, 'pt-BR');
   assert.equal(voice.body.fallback.locale, 'pt-BR');
 
