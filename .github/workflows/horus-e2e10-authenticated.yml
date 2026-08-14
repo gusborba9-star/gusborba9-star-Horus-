@@ -16,6 +16,8 @@ on:
       - 'lib/providers/**'
       - 'tests/e2e10-authenticated-collaborator.mjs'
       - 'tests/e2e11-authenticated-personal.mjs'
+      - 'tests/e2e11-memory-context.mjs'
+      - 'tests/e2e11-voice.mjs'
       - 'package.json'
       - '.github/workflows/horus-e2e10-authenticated.yml'
 
@@ -79,6 +81,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Install real speech fixture generator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends espeak
+          espeak --version
       - name: Validate required E2E configuration
         run: |
           test -n "$NEXT_PUBLIC_SUPABASE_URL" || { echo 'Missing Supabase URL'; exit 1; }
