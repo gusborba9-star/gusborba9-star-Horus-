@@ -53,7 +53,8 @@ export async function POST(request: Request) {
     try { speech = await tts.synthesize({ text, voice: identity.primary.voice, modelId: identity.primary.model, locale: characteristics.locale }); }
     catch (error) { if (identity.fallback.model === identity.primary.model) throw error; speech = await tts.synthesize({ text, voice: identity.fallback.voice, modelId: identity.fallback.model, locale: characteristics.locale }); }
 
-    return new NextResponse(speech.audio, { status: 200, headers: { 'content-type': speech.contentType, 'cache-control': 'no-store, private', 'x-horus-persona': context.profile.persona_id, 'x-horus-stt-model': transcript.modelId, 'x-horus-tts-model': speech.modelId, 'x-horus-execution-id': String(execution.execution?.id || ''), 'x-horus-stt-request-id': transcript.requestId || '', 'x-horus-tts-request-id': speech.requestId || '' } });
+    const audioBody = new Uint8Array(speech.audio);
+    return new NextResponse(audioBody as BodyInit, { status: 200, headers: { 'content-type': speech.contentType, 'cache-control': 'no-store, private', 'x-horus-persona': context.profile.persona_id, 'x-horus-stt-model': transcript.modelId, 'x-horus-tts-model': speech.modelId, 'x-horus-execution-id': String(execution.execution?.id || ''), 'x-horus-stt-request-id': transcript.requestId || '', 'x-horus-tts-request-id': speech.requestId || '' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'PERSONAL_VOICE_REQUEST_FAILED';
     const status = message === 'AUTHENTICATION_REQUIRED' ? 401 : message === 'PERSONAL_PERMISSION_REQUIRED' ? 403 : message === 'PERSONAL_DEVICE_NOT_ACTIVE' ? 403 : 400;
