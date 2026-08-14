@@ -97,6 +97,10 @@ async function discoverVoiceModels(outputModality: 'transcription' | 'speech'): 
 function rankVoiceModels(models: LiveVoiceModel[], characteristics: VoiceCharacteristics) {
   const localeBonus = characteristics.locale.toLowerCase().startsWith('pt') ? 1 : 0.5;
   return [...models]
+    .filter((model) => {
+      const inputs = model.architecture?.input_modalities;
+      return !inputs || inputs.some((modality) => modality.toLowerCase() === 'audio' || modality.toLowerCase() === 'file');
+    })
     .map((model) => {
       const price = model.inputPrice + model.outputPrice;
       const costScore = 1 / (1 + price * 10_000);
@@ -121,6 +125,20 @@ function normalizeSttLanguage(language?: string): string | undefined {
   const normalized = language.trim().toLowerCase().replace('_', '-');
   const [iso639] = normalized.split('-');
   return iso639 && /^[a-z]{2}$/.test(iso639) ? iso639 : undefined;
+}
+
+async function parseSttResponse(response: Response, selected: string): Promise<SpeechToTextResult> {
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(`STT_PROVIDER_FAILED:${response.status}:${payload?.error?.message || payload?.error?.code || 'UNKNOWN'}:${selected}`);
+  const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
+  if (!text) throw new Error('STT_EMPTY_RESULT');
+  return {
+    text,
+    providerId: 'openrouter',
+    modelId: selected,
+    requestId: response.headers.get('x-generation-id') || response.headers.get('x-request-id'),
+    usage: payload?.usage && typeof payload.usage === 'object' ? payload.usage : {},
+  };
 }
 
 export async function resolveVoiceIdentity(characteristics: VoiceCharacteristics, preferredVoice?: unknown): Promise<VoiceIdentity> {
@@ -149,24 +167,29 @@ export class OpenRouterSpeechProvider implements SpeechToTextProvider {
   async transcribe(input: { audioBase64: string; format: string; language?: string; modelId?: string }): Promise<SpeechToTextResult> {
     if (!input.audioBase64 || input.audioBase64.length > MAX_AUDIO_BASE64) throw new Error('VOICE_AUDIO_TOO_LARGE');
     const selected = input.modelId ?? (await resolveSpeechToTextModel({ locale: input.language || 'pt-BR', gender: 'neutral' })).primary;
-    const response = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, {
+    const language = normalizeSttLanguage(input.language);
+    const jsonResponse = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({ model: selected, input_audio: { data: input.audioBase64, format: input.format }, language: normalizeSttLanguage(input.language) }),
+      body: JSON.stringify({ model: selected, input_audio: { data: input.audioBase64, format: input.format }, ...(language ? { language } : {}) }),
       cache: 'no-store',
       signal: timeoutSignal(),
     });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(`STT_PROVIDER_FAILED:${response.status}:${payload?.error?.message || 'UNKNOWN'}`);
-    const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
-    if (!text) throw new Error('STT_EMPTY_RESULT');
-    return {
-      text,
-      providerId: this.id,
-      modelId: selected,
-      requestId: response.headers.get('x-generation-id') || response.headers.get('x-request-id'),
-      usage: payload?.usage && typeof payload.usage === 'object' ? payload.usage : {},
-    };
+    if (jsonResponse.ok) return parseSttResponse(jsonResponse, selected);
+
+    const form = new FormData();
+    const bytes = Buffer.from(input.audioBase64, 'base64');
+    form.append('file', new Blob([bytes], { type: `audio/${input.format}` }), `voice.${input.format}`);
+    form.append('model', selected);
+    if (language) form.append('language', language);
+    const multipartResponse = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey()}`, 'HTTP-Referer': process.env.APP_URL || 'https://horus-os.com', 'X-Title': 'Hórus Cognitive OS' },
+      body: form,
+      cache: 'no-store',
+      signal: timeoutSignal(),
+    });
+    return parseSttResponse(multipartResponse, selected);
   }
 }
 
