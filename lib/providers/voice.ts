@@ -37,10 +37,7 @@ type LiveVoiceModel = {
   supportedParameters?: string[];
 };
 
-type RankedVoiceModel = {
-  model: LiveVoiceModel;
-  score: number;
-};
+type RankedVoiceModel = { model: LiveVoiceModel; score: number };
 
 export interface SpeechToTextProvider {
   readonly id: string;
@@ -57,6 +54,8 @@ const MAX_AUDIO_BASE64 = 25 * 1024 * 1024 * 4 / 3;
 const REQUEST_TIMEOUT_MS = 60_000;
 
 type InputModality = 'audio' | 'file' | 'text';
+
+type VoiceOutput = 'transcription' | 'speech';
 
 function apiKey() {
   const key = process.env.OPENROUTER_API_KEY;
@@ -86,19 +85,22 @@ function normalizeModality(value: unknown) {
   return typeof value === 'string' ? value.toLowerCase().trim() : '';
 }
 
-function modelSupports(model: LiveVoiceModel, input: InputModality, output: 'transcription' | 'speech') {
+function modelSupports(model: LiveVoiceModel, input: InputModality, output: VoiceOutput) {
   const inputs = (model.architecture?.input_modalities ?? []).map(normalizeModality);
   const outputs = (model.architecture?.output_modalities ?? []).map(normalizeModality);
-  if (output === 'transcription') {
-    return (!inputs.length || inputs.includes(input)) && (!outputs.length || outputs.includes('text'));
-  }
-  return (!inputs.length || inputs.includes('text')) && (!outputs.length || outputs.includes('audio'));
+  const inputAliases = input === 'audio' ? ['audio', 'file'] : [input];
+  // OpenRouter exposes dedicated Speech/Transcription capability labels in the live
+  // catalog. Some model records also expose the underlying audio/text modality. Both
+  // representations are accepted because the catalog is provider-owned and dynamic.
+  const outputAliases = output === 'speech' ? ['speech', 'audio'] : ['transcription', 'text'];
+  const inputCompatible = !inputs.length || inputAliases.some((candidate) => inputs.includes(candidate));
+  const outputCompatible = !outputs.length || outputAliases.some((candidate) => outputs.includes(candidate));
+  return inputCompatible && outputCompatible;
 }
 
 function economicEligibility(model: LiveVoiceModel) {
-  // The catalog is the only provider/model authority. A model with unknown/non-finite
-  // pricing is not eligible for automatic economic routing; it must not silently become
-  // the default because it happens to sort first.
+  // Unknown pricing is never silently selected by automatic routing. Known zero-cost
+  // entries remain eligible, while finite live catalog prices participate in ranking.
   return Number.isFinite(model.inputPrice) && Number.isFinite(model.outputPrice);
 }
 
@@ -106,7 +108,7 @@ function localeScore(characteristics: VoiceCharacteristics) {
   return characteristics.locale.toLowerCase().startsWith('pt') ? 1 : 0.55;
 }
 
-function rankVoiceModels(models: LiveVoiceModel[], characteristics: VoiceCharacteristics, requiredInputModality: InputModality, output: 'transcription' | 'speech'): RankedVoiceModel[] {
+function rankVoiceModels(models: LiveVoiceModel[], characteristics: VoiceCharacteristics, requiredInputModality: InputModality, output: VoiceOutput): RankedVoiceModel[] {
   const locale = localeScore(characteristics);
   return models
     .filter((model) => modelSupports(model, requiredInputModality, output))
@@ -123,7 +125,7 @@ function rankVoiceModels(models: LiveVoiceModel[], characteristics: VoiceCharact
     .sort((a, b) => b.score - a.score || a.model.id.localeCompare(b.model.id));
 }
 
-async function discoverVoiceModels(outputModality: 'transcription' | 'speech'): Promise<LiveVoiceModel[]> {
+async function discoverVoiceModels(outputModality: VoiceOutput): Promise<LiveVoiceModel[]> {
   const response = await fetch(`${OPENROUTER_URL}/models?output_modalities=${outputModality}`, {
     headers: { Authorization: `Bearer ${apiKey()}` },
     cache: 'no-store',
@@ -146,9 +148,6 @@ async function discoverVoiceModels(outputModality: 'transcription' | 'speech'): 
 
 function voiceForModel(modelId: string, preferred: unknown): string {
   if (typeof preferred === 'string' && preferred.trim()) return preferred.trim();
-  // Voice names are an adapter concern, not a model selection rule. If a model exposes
-  // its own default voice, the provider adapter can accept it; otherwise use a neutral
-  // provider-compatible default without pinning the routing layer to a model.
   const id = modelId.toLowerCase();
   if (id.includes('grok')) return 'Eve';
   if (id.includes('gemini')) return 'Kore';
@@ -168,13 +167,7 @@ async function parseSttResponse(response: Response, selected: string): Promise<S
   if (!response.ok) throw new Error(`STT_PROVIDER_FAILED:${response.status}:${payload?.error?.message || payload?.error?.code || 'UNKNOWN'}:${selected}`);
   const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
   if (!text) throw new Error('STT_EMPTY_RESULT');
-  return {
-    text,
-    providerId: 'openrouter',
-    modelId: selected,
-    requestId: response.headers.get('x-generation-id') || response.headers.get('x-request-id'),
-    usage: payload?.usage && typeof payload.usage === 'object' ? payload.usage : {},
-  };
+  return { text, providerId: 'openrouter', modelId: selected, requestId: response.headers.get('x-generation-id') || response.headers.get('x-request-id'), usage: payload?.usage && typeof payload.usage === 'object' ? payload.usage : {} };
 }
 
 export async function resolveVoiceIdentity(characteristics: VoiceCharacteristics, preferredVoice?: unknown): Promise<VoiceIdentity> {
@@ -183,11 +176,7 @@ export async function resolveVoiceIdentity(characteristics: VoiceCharacteristics
   const primary = ranked[0]?.model;
   const fallback = ranked.find((entry) => entry.model.id !== primary?.id)?.model ?? primary;
   if (!primary) throw new Error('TTS_CATALOG_NO_COMPATIBLE_MODEL');
-  return {
-    ...characteristics,
-    primary: { model: primary.id, voice: voiceForModel(primary.id, preferredVoice) },
-    fallback: { model: fallback.id, voice: voiceForModel(fallback.id, preferredVoice) },
-  };
+  return { ...characteristics, primary: { model: primary.id, voice: voiceForModel(primary.id, preferredVoice) }, fallback: { model: fallback.id, voice: voiceForModel(fallback.id, preferredVoice) } };
 }
 
 export async function resolveSpeechToTextModel(characteristics: VoiceCharacteristics): Promise<{ primary: string; fallback: string }> {
@@ -204,30 +193,14 @@ export class OpenRouterSpeechProvider implements SpeechToTextProvider {
     if (!input.audioBase64 || input.audioBase64.length > MAX_AUDIO_BASE64) throw new Error('VOICE_AUDIO_TOO_LARGE');
     const selected = input.modelId ?? (await resolveSpeechToTextModel({ locale: input.language || 'pt-BR', gender: 'neutral' })).primary;
     const language = normalizeSttLanguage(input.language);
-    const jsonResponse = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ model: selected, input_audio: { data: input.audioBase64, format: input.format }, ...(language ? { language } : {}) }),
-      cache: 'no-store',
-      signal: timeoutSignal(),
-    });
+    const jsonResponse = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, { method: 'POST', headers: headers(), body: JSON.stringify({ model: selected, input_audio: { data: input.audioBase64, format: input.format }, ...(language ? { language } : {}) }), cache: 'no-store', signal: timeoutSignal() });
     if (jsonResponse.ok) return parseSttResponse(jsonResponse, selected);
-
-    // Multipart is the compatibility fallback for OpenRouter audio endpoints. A 402,
-    // 429, 5xx or provider-specific error is intentionally surfaced to the caller so
-    // the orchestration layer can move to the next catalog candidate.
     const form = new FormData();
     const bytes = Buffer.from(input.audioBase64, 'base64');
     form.append('file', new Blob([bytes], { type: `audio/${input.format}` }), `voice.${input.format}`);
     form.append('model', selected);
     if (language) form.append('language', language);
-    const multipartResponse = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey()}`, 'HTTP-Referer': process.env.APP_URL || 'https://horus-os.com', 'X-Title': 'Hórus Cognitive OS' },
-      body: form,
-      cache: 'no-store',
-      signal: timeoutSignal(),
-    });
+    const multipartResponse = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, { method: 'POST', headers: { Authorization: `Bearer ${apiKey()}`, 'HTTP-Referer': process.env.APP_URL || 'https://horus-os.com', 'X-Title': 'Hórus Cognitive OS' }, body: form, cache: 'no-store', signal: timeoutSignal() });
     return parseSttResponse(multipartResponse, selected);
   }
 }
@@ -237,13 +210,7 @@ export class OpenRouterSpeechSynthesisProvider implements TextToSpeechProvider {
 
   async synthesize(input: { text: string; voice: string; modelId: string; locale: string; instructions?: string }): Promise<TextToSpeechResult> {
     if (!input.text.trim()) throw new Error('TTS_EMPTY_INPUT');
-    const response = await fetch(`${OPENROUTER_URL}/audio/speech`, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ model: input.modelId, input: input.text, voice: input.voice, response_format: 'mp3', instructions: input.instructions }),
-      cache: 'no-store',
-      signal: timeoutSignal(),
-    });
+    const response = await fetch(`${OPENROUTER_URL}/audio/speech`, { method: 'POST', headers: headers(), body: JSON.stringify({ model: input.modelId, input: input.text, voice: input.voice, response_format: 'mp3', instructions: input.instructions }), cache: 'no-store', signal: timeoutSignal() });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(`TTS_PROVIDER_FAILED:${response.status}:${payload?.error?.message || 'UNKNOWN'}:${input.modelId}`);
