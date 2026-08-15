@@ -2,16 +2,17 @@ import { NextResponse } from 'next/server';
 import { requireStudioUser } from '@/lib/studio/auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { PERSONAL_TIERS, isPersonalTier } from '@/lib/personal/catalog';
-import { paymentService } from '@/lib/payment';
+import { EfiApiError, paymentService } from '@/lib/payment';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
+  const correlationId = request.headers.get('x-correlation-id') ?? crypto.randomUUID();
   try {
     const { user } = await requireStudioUser(request);
     const body = await request.json();
     const tier = typeof body.tier === 'string' ? body.tier : '';
-    if (!isPersonalTier(tier)) return NextResponse.json({ success: false, error: 'PERSONAL_TIER_INVALID' }, { status: 400 });
+    if (!isPersonalTier(tier)) return NextResponse.json({ success: false, error: 'PERSONAL_TIER_INVALID', correlation_id: correlationId }, { status: 400 });
 
     const service = getServiceSupabase();
     const plan = PERSONAL_TIERS[tier];
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
       customId: `horus_personal:${subscription.id}`,
       notificationUrl: `${origin}/api/personal/billing/webhook`,
       email: user.email ?? undefined,
+      correlationId,
     });
 
     const updated = await service
@@ -51,9 +53,26 @@ export async function POST(request: Request) {
       .single();
     if (updated.error || !updated.data) throw new Error(`PERSONAL_SUBSCRIPTION_EXTERNAL_LINK_FAILED:${updated.error?.message ?? 'UNKNOWN'}`);
 
-    return NextResponse.json({ success: true, subscription: updated.data, checkout: { payment_url: checkout.paymentUrl, status: checkout.status, charge_id: checkout.chargeId } });
+    return NextResponse.json({ success: true, subscription: updated.data, checkout: { payment_url: checkout.paymentUrl, status: checkout.status, charge_id: checkout.chargeId }, correlation_id: correlationId });
   } catch (error) {
+    if (error instanceof EfiApiError) {
+      console.error('[PERSONAL_CHECKOUT_EFI_FAILED]', error.details);
+      return NextResponse.json({
+        success: false,
+        error: 'EFI_API_FAILED',
+        provider: error.details.provider,
+        status: error.details.status,
+        code: error.details.code,
+        error_code: error.details.error,
+        error_description: error.details.error_description,
+        message: error.details.message,
+        request_id: error.details.request_id,
+        correlation_id: error.details.correlation_id,
+      }, { status: 502 });
+    }
+
     const message = error instanceof Error ? error.message : 'PERSONAL_BILLING_CHECKOUT_FAILED';
-    return NextResponse.json({ success: false, error: message }, { status: 400 });
+    console.error('[PERSONAL_CHECKOUT_FAILED]', { message, correlation_id: correlationId });
+    return NextResponse.json({ success: false, error: message, correlation_id: correlationId }, { status: 400 });
   }
 }
