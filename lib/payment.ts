@@ -83,6 +83,11 @@ function providerRequestId(headers: Headers): string | undefined {
   return headers.get('x-request-id') ?? headers.get('x-correlation-id') ?? headers.get('trace-id') ?? undefined;
 }
 
+function paymentLinkExpireAt(): string {
+  const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  return date.toISOString().slice(0, 10);
+}
+
 export class PaymentService {
   private readonly config: EfiConfig;
   private token?: { value: string; expiresAt: number };
@@ -216,7 +221,11 @@ export class PaymentService {
         items: [{ amount: 1, name: PLAN_NAMES[input.tier] ?? `Hórus ${input.tier}`, value: input.amountCents }],
         metadata: { custom_id: input.customId, notification_url: input.notificationUrl },
         ...(input.email ? { customer: { email: input.email } } : {}),
-        settings: { payment_method: 'all', request_delivery_address: false },
+        settings: {
+          payment_method: 'all',
+          request_delivery_address: false,
+          expire_at: paymentLinkExpireAt(),
+        },
       }),
     }, correlationId);
 
