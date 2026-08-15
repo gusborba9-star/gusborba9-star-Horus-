@@ -1,9 +1,11 @@
-'use client';
 import { 
   BarChart3, Users, Zap, BrainCircuit, Activity,
   ArrowRight, Shield, Database, Network, Search, ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function DashboardOverview() {
   return (
@@ -29,9 +31,7 @@ export default function DashboardOverview() {
                </div>
             </div>
 
-            {/* Quick Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-               {/* Ativos */}
                <div className="glass-panel border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors group">
                   <div className="flex justify-between items-start mb-4">
                      <div className="p-2.5 bg-[#D4AF37]/10 rounded-xl text-[#D4AF37] group-hover:scale-110 transition-transform">
@@ -43,7 +43,6 @@ export default function DashboardOverview() {
                   <p className="text-xs text-white/40 font-medium">Equipes Cognitivas Operacionais</p>
                </div>
 
-               {/* Ações */}
                <div className="glass-panel border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors group">
                   <div className="flex justify-between items-start mb-4">
                      <div className="p-2.5 bg-white/5 rounded-xl text-[#FAFAFA]/70 group-hover:scale-110 transition-transform">
@@ -55,7 +54,6 @@ export default function DashboardOverview() {
                   <p className="text-xs text-white/40 font-medium">Tarefas Executadas</p>
                </div>
 
-               {/* Custo */}
                <div className="glass-panel border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors group">
                   <div className="flex justify-between items-start mb-4">
                      <div className="p-2.5 bg-[#D4AF37]/10 rounded-xl text-[#E5D2A0] group-hover:scale-110 transition-transform">
@@ -67,7 +65,6 @@ export default function DashboardOverview() {
                   <p className="text-xs text-white/40 font-medium">Nexus Cost Intelligence™</p>
                </div>
 
-               {/* Créditos */}
                <div className="glass-panel border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors group">
                   <div className="flex justify-between items-start mb-4">
                      <div className="p-2.5 bg-white/5 rounded-xl text-[#FAFAFA]/70 group-hover:scale-110 transition-transform">
@@ -84,10 +81,7 @@ export default function DashboardOverview() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-               {/* Main Activity & Nexus Status */}
                <div className="lg:col-span-2 space-y-8">
-                  
-                  {/* Smart Resumo */}
                   <div className="glass-panel border-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-3xl p-8 relative overflow-hidden">
                      <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4AF37]/10 rounded-full blur-[80px] pointer-events-none"></div>
                      <div className="relative z-10">
@@ -109,7 +103,6 @@ export default function DashboardOverview() {
                      </div>
                   </div>
 
-                  {/* Atividades Recentes */}
                   <div className="glass-panel border border-white/5 rounded-3xl p-6">
                      <div className="flex justify-between items-center mb-6">
                         <h2 className="font-bold text-white">Memory Graph • Registro de Eventos</h2>
@@ -134,10 +127,7 @@ export default function DashboardOverview() {
                   </div>
                </div>
 
-               {/* Right Sidebar */}
                <div className="space-y-8">
-                  
-                  {/* Status Infra */}
                   <div className="glass-panel border border-white/5 rounded-3xl p-6">
                      <h2 className="font-bold text-white mb-4">Saúde do Ecossistema</h2>
                      <div className="space-y-3">
@@ -156,7 +146,6 @@ export default function DashboardOverview() {
                      </div>
                   </div>
 
-                  {/* Studio Shortcuts */}
                   <div className="glass-panel border border-white/5 rounded-3xl p-6">
                      <h2 className="font-bold text-white mb-4">Atalhos Rápidos</h2>
                      <div className="grid grid-cols-2 gap-3">
