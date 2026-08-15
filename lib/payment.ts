@@ -1,9 +1,6 @@
 /**
  * Efí Cobranças adapter.
  * Provider boundary only: billing lifecycle remains owned by the Hórus domain.
- *
- * Efí's Cobranças API uses OAuth2 client credentials and exposes recurring
- * subscriptions through /v1/plan and /v1/plan/:id/subscription/one-step/link.
  */
 
 type EfiConfig = {
@@ -94,9 +91,7 @@ export class PaymentService {
   }
 
   private assertConfigured() {
-    if (!this.config.clientId || !this.config.clientSecret) {
-      throw new Error('EFI_NOT_CONFIGURED');
-    }
+    if (!this.config.clientId || !this.config.clientSecret) throw new Error('EFI_NOT_CONFIGURED');
   }
 
   private async authorize(correlationId = crypto.randomUUID()): Promise<string> {
@@ -240,9 +235,8 @@ export class PaymentService {
     await this.request(`/v1/subscription/${encodeURIComponent(subscriptionId)}/cancel`, { method: 'PUT', body: JSON.stringify({}) });
   }
 
-  /** Legacy charge boundary retained, now backed by Efí instead of a mock. */
   async generatePix(amount: number, description: string, customerName?: string): Promise<{ brCode: string; txid: string }> {
-    const data = await this.request<{ txid: string; loc?: { id: number }; pixCopiaECola?: string }(
+    const data = await this.request<{ txid: string; loc?: { id: number }; pixCopiaECola?: string }>(
       '/v2/cob',
       { method: 'POST', body: JSON.stringify({ calendario: { expiracao: 3600 }, valor: { original: amount.toFixed(2) }, chave: process.env.PIX_CHAVE, solicitacaoPagador: `${description}${customerName ? ` - ${customerName}` : ''}` }) },
     );
