@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const checkout = await paymentService.createSubscriptionLink({
       tier: plan.id,
       amountCents: Math.round(plan.priceBrl * 100),
-      customId: `horus_personal:${subscription.id}`,
+      customId: `horus_personal_${subscription.id}`,
       notificationUrl: `${origin}/api/personal/billing/webhook`,
       email: user.email ?? undefined,
       correlationId,
