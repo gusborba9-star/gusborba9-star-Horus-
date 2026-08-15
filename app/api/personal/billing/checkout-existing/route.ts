@@ -1,0 +1,113 @@
+import { NextResponse } from 'next/server';
+import { requireStudioUser } from '@/lib/studio/auth';
+import { getServiceSupabase } from '@/lib/supabase';
+import { EfiApiError, paymentService } from '@/lib/payment';
+
+export const runtime = 'nodejs';
+
+const EXISTING_CHARGE_ID = '1050230429';
+const EXISTING_SUBSCRIPTION_ID = '1528967';
+const EXISTING_PLAN_ID = 136181;
+
+type SafeCheckout = {
+  payment_url: string | null;
+  charge_id: string;
+  subscription_id: string | null;
+  plan_id: number | null;
+  value: number | null;
+  status: string | null;
+  expire_at: string | null;
+  periodicity: unknown;
+  payment_methods: unknown;
+};
+
+function safePeriodicity(settings: Record<string, unknown> | undefined): unknown {
+  if (!settings) return null;
+  return settings.recurrence ?? settings.periodicity ?? settings.interval ?? null;
+}
+
+function safePaymentMethods(settings: Record<string, unknown> | undefined): unknown {
+  if (!settings) return null;
+  return settings.payment_method ?? settings.payment_methods ?? settings.payment_methods_allowed ?? null;
+}
+
+function sanitizeCharge(charge: Awaited<ReturnType<typeof paymentService.getCharge>>): SafeCheckout {
+  return {
+    payment_url: typeof charge.payment_url === 'string' ? charge.payment_url : null,
+    charge_id: String(charge.id),
+    subscription_id: charge.subscription_id == null ? null : String(charge.subscription_id),
+    plan_id: charge.plan_id == null ? null : Number(charge.plan_id),
+    value: charge.total == null ? null : Number(charge.total),
+    status: typeof charge.status === 'string' ? charge.status : null,
+    expire_at: typeof charge.expire_at === 'string' ? charge.expire_at : null,
+    periodicity: safePeriodicity(charge.settings),
+    payment_methods: safePaymentMethods(charge.settings),
+  };
+}
+
+export async function GET(request: Request) {
+  const correlationId = request.headers.get('x-correlation-id') ?? crypto.randomUUID();
+  try {
+    const { user } = await requireStudioUser(request);
+    const service = getServiceSupabase();
+
+    const { data: subscription, error } = await service
+      .from('personal_subscriptions')
+      .select('id,tier,status,external_subscription_id')
+      .eq('user_id', user.id)
+      .eq('external_subscription_id', EXISTING_SUBSCRIPTION_ID)
+      .maybeSingle();
+
+    if (error) throw new Error(`PERSONAL_EXISTING_CHECKOUT_LOOKUP_FAILED:${error.message}`);
+    if (!subscription) {
+      return NextResponse.json({ success: false, error: 'EFI_EXISTING_CHECKOUT_NOT_AUTHORIZED', correlation_id: correlationId }, { status: 403 });
+    }
+
+    const charge = await paymentService.getCharge(EXISTING_CHARGE_ID, correlationId);
+    const safe = sanitizeCharge(charge);
+
+    if (safe.charge_id !== EXISTING_CHARGE_ID) throw new Error('EFI_EXISTING_CHARGE_ID_MISMATCH');
+    if (safe.subscription_id && safe.subscription_id !== EXISTING_SUBSCRIPTION_ID) throw new Error('EFI_EXISTING_SUBSCRIPTION_ID_MISMATCH');
+    if (safe.plan_id != null && safe.plan_id !== EXISTING_PLAN_ID) throw new Error('EFI_EXISTING_PLAN_ID_MISMATCH');
+
+    console.info('[PERSONAL_EXISTING_CHECKOUT_READ]', {
+      correlation_id: correlationId,
+      user_id: user.id,
+      charge_id: safe.charge_id,
+      subscription_id: safe.subscription_id,
+      plan_id: safe.plan_id,
+      payment_url_present: Boolean(safe.payment_url),
+    });
+
+    return NextResponse.json({ success: true, checkout: safe, correlation_id: correlationId });
+  } catch (error) {
+    if (error instanceof EfiApiError) {
+      console.error('[PERSONAL_EXISTING_CHECKOUT_EFI_FAILED]', {
+        status: error.details.status,
+        provider: error.details.provider,
+        code: error.details.code,
+        error: error.details.error,
+        error_description: error.details.error_description,
+        message: error.details.message,
+        request_id: error.details.request_id,
+        correlation_id: error.details.correlation_id,
+      });
+      return NextResponse.json({
+        success: false,
+        error: 'EFI_EXISTING_CHECKOUT_READ_FAILED',
+        provider: error.details.provider,
+        status: error.details.status,
+        code: error.details.code,
+        error_code: error.details.error,
+        error_description: error.details.error_description,
+        message: error.details.message,
+        request_id: error.details.request_id,
+        correlation_id: correlationId,
+      }, { status: 502 });
+    }
+
+    const message = error instanceof Error ? error.message : 'PERSONAL_EXISTING_CHECKOUT_READ_FAILED';
+    console.error('[PERSONAL_EXISTING_CHECKOUT_FAILED]', { message, correlation_id: correlationId });
+    return NextResponse.json({ success: false, error: message, correlation_id: correlationId }, { status: 400 });
+  }
+}
