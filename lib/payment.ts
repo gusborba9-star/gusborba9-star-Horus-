@@ -14,9 +14,32 @@ type EfiConfig = {
 
 type EfiResponse<T> = {
   code?: number;
-  data: T;
-  message?: string;
+  data?: T;
+  message?: unknown;
+  error?: unknown;
+  error_description?: unknown;
 };
+
+export type EfiProviderError = {
+  status: number;
+  provider: 'efi';
+  code?: number | string;
+  error?: string;
+  error_description?: string;
+  message?: string;
+  request_id?: string;
+  correlation_id: string;
+};
+
+export class EfiApiError extends Error {
+  readonly details: EfiProviderError;
+
+  constructor(details: EfiProviderError) {
+    super(`EFI_API_FAILED:${details.status}:${details.error_description ?? details.message ?? details.error ?? details.code ?? 'UNKNOWN'}`);
+    this.name = 'EfiApiError';
+    this.details = details;
+  }
+}
 
 export type EfiSubscriptionLink = {
   subscriptionId: string;
@@ -31,6 +54,26 @@ const PLAN_NAMES: Record<string, string> = {
   personal_pro: 'Hórus Personal Pro',
   personal_prime: 'Hórus Personal Prime',
 };
+
+function scalar(value: unknown): string | undefined {
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  return undefined;
+}
+
+function diagnosticMessage(value: unknown): string | undefined {
+  const direct = scalar(value);
+  if (direct) return direct;
+  if (!value || typeof value !== 'object') return undefined;
+  const object = value as Record<string, unknown>;
+  const property = scalar(object.property);
+  const message = scalar(object.message);
+  if (property && message) return `${message} (${property})`;
+  return message ?? property;
+}
+
+function providerRequestId(headers: Headers): string | undefined {
+  return headers.get('x-request-id') ?? headers.get('x-correlation-id') ?? headers.get('trace-id') ?? undefined;
+}
 
 export class PaymentService {
   private readonly config: EfiConfig;
@@ -56,7 +99,7 @@ export class PaymentService {
     }
   }
 
-  private async authorize(): Promise<string> {
+  private async authorize(correlationId = crypto.randomUUID()): Promise<string> {
     this.assertConfigured();
     if (this.token && this.token.expiresAt > Date.now() + 30_000) return this.token.value;
 
@@ -66,37 +109,65 @@ export class PaymentService {
       headers: {
         Authorization: `Basic ${basic}`,
         'Content-Type': 'application/json',
+        'X-Request-ID': correlationId,
       },
       body: JSON.stringify({ grant_type: 'client_credentials' }),
       cache: 'no-store',
     });
 
-    const payload = (await response.json().catch(() => ({}))) as { access_token?: string; expires_in?: number; error?: string; error_description?: string };
-    if (!response.ok || !payload.access_token) {
-      throw new Error(`EFI_AUTH_FAILED:${payload.error_description ?? payload.error ?? response.status}`);
+    const payload = (await response.json().catch(() => ({}))) as EfiResponse<{ access_token?: string; expires_in?: number }>;
+    if (!response.ok || !payload.data?.access_token) {
+      const details: EfiProviderError = {
+        status: response.status,
+        provider: 'efi',
+        code: payload.code,
+        error: scalar(payload.error),
+        error_description: diagnosticMessage(payload.error_description),
+        message: diagnosticMessage(payload.message),
+        request_id: providerRequestId(response.headers),
+        correlation_id: correlationId,
+      };
+      console.error('[EFI_AUTH_FAILED]', details);
+      throw new EfiApiError(details);
     }
 
-    const expiresIn = Math.max(60, Number(payload.expires_in ?? 300));
-    this.token = { value: payload.access_token, expiresAt: Date.now() + expiresIn * 1000 };
-    return payload.access_token;
+    const expiresIn = Math.max(60, Number(payload.data.expires_in ?? 300));
+    this.token = { value: payload.data.access_token, expiresAt: Date.now() + expiresIn * 1000 };
+    return payload.data.access_token;
   }
 
-  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const token = await this.authorize();
+  private async request<T>(path: string, init: RequestInit = {}, correlationId = crypto.randomUUID()): Promise<T> {
+    const token = await this.authorize(correlationId);
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'X-Request-ID': correlationId,
         ...(init.headers ?? {}),
       },
       cache: 'no-store',
     });
-    const payload = (await response.json().catch(() => ({}))) as EfiResponse<T> & { error?: string; error_description?: string };
+    const payload = (await response.json().catch(() => ({}))) as EfiResponse<T>;
     if (!response.ok) {
-      throw new Error(`EFI_API_FAILED:${response.status}:${payload.message ?? payload.error_description ?? payload.error ?? 'UNKNOWN'}`);
+      const details: EfiProviderError = {
+        status: response.status,
+        provider: 'efi',
+        code: payload.code,
+        error: scalar(payload.error),
+        error_description: diagnosticMessage(payload.error_description),
+        message: diagnosticMessage(payload.message),
+        request_id: providerRequestId(response.headers),
+        correlation_id: correlationId,
+      };
+      console.error('[EFI_API_FAILED]', {
+        ...details,
+        endpoint: path,
+        environment: this.config.production ? 'production' : 'sandbox',
+      });
+      throw new EfiApiError(details);
     }
-    return payload.data;
+    return payload.data as T;
   }
 
   async listPlans(): Promise<Array<{ plan_id: number; name: string; interval: number; repeats: number | null }>> {
@@ -104,16 +175,16 @@ export class PaymentService {
     return Array.isArray(data) ? data : [];
   }
 
-  async ensureMonthlyPlan(tier: string): Promise<number> {
+  async ensureMonthlyPlan(tier: string, correlationId = crypto.randomUUID()): Promise<number> {
     const name = PLAN_NAMES[tier] ?? `Hórus Personal ${tier}`;
-    const plans = await this.listPlans();
+    const plans = await this.request<Array<{ plan_id: number; name: string; interval: number; repeats: number | null }>>('/v1/plans', {}, correlationId);
     const existing = plans.find((plan) => plan.name === name && plan.interval === 1 && plan.repeats === null);
     if (existing) return existing.plan_id;
 
     const data = await this.request<{ plan_id: number }>('/v1/plan', {
       method: 'POST',
       body: JSON.stringify({ name, interval: 1, repeats: null }),
-    });
+    }, correlationId);
     if (!data?.plan_id) throw new Error('EFI_PLAN_CREATE_FAILED');
     return data.plan_id;
   }
@@ -124,8 +195,10 @@ export class PaymentService {
     customId: string;
     notificationUrl: string;
     email?: string;
+    correlationId?: string;
   }): Promise<EfiSubscriptionLink> {
-    const planId = await this.ensureMonthlyPlan(input.tier);
+    const correlationId = input.correlationId ?? crypto.randomUUID();
+    const planId = await this.ensureMonthlyPlan(input.tier, correlationId);
     const data = await this.request<{
       subscription_id: number;
       status: string;
@@ -139,7 +212,7 @@ export class PaymentService {
         ...(input.email ? { customer: { email: input.email } } : {}),
         settings: { payment_method: 'all', request_delivery_address: false },
       }),
-    });
+    }, correlationId);
 
     if (!data?.subscription_id || !data?.payment_url) throw new Error('EFI_SUBSCRIPTION_LINK_FAILED');
     return {
@@ -169,7 +242,7 @@ export class PaymentService {
 
   /** Legacy charge boundary retained, now backed by Efí instead of a mock. */
   async generatePix(amount: number, description: string, customerName?: string): Promise<{ brCode: string; txid: string }> {
-    const data = await this.request<{ txid: string; loc?: { id: number }; pixCopiaECola?: string }>(
+    const data = await this.request<{ txid: string; loc?: { id: number }; pixCopiaECola?: string }(
       '/v2/cob',
       { method: 'POST', body: JSON.stringify({ calendario: { expiracao: 3600 }, valor: { original: amount.toFixed(2) }, chave: process.env.PIX_CHAVE, solicitacaoPagador: `${description}${customerName ? ` - ${customerName}` : ''}` }) },
     );
