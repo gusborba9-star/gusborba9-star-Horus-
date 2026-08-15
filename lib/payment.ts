@@ -17,6 +17,17 @@ type EfiResponse<T> = {
   error_description?: unknown;
 };
 
+type EfiAuthorizationResponse = {
+  access_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  scope?: string;
+  code?: number;
+  message?: unknown;
+  error?: unknown;
+  error_description?: unknown;
+};
+
 export type EfiProviderError = {
   status: number;
   provider: 'efi';
@@ -110,8 +121,8 @@ export class PaymentService {
       cache: 'no-store',
     });
 
-    const payload = (await response.json().catch(() => ({}))) as EfiResponse<{ access_token?: string; expires_in?: number }>;
-    if (!response.ok || !payload.data?.access_token) {
+    const payload = (await response.json().catch(() => ({}))) as EfiAuthorizationResponse;
+    if (!response.ok || !payload.access_token) {
       const details: EfiProviderError = {
         status: response.status,
         provider: 'efi',
@@ -126,9 +137,9 @@ export class PaymentService {
       throw new EfiApiError(details);
     }
 
-    const expiresIn = Math.max(60, Number(payload.data.expires_in ?? 300));
-    this.token = { value: payload.data.access_token, expiresAt: Date.now() + expiresIn * 1000 };
-    return payload.data.access_token;
+    const expiresIn = Math.max(60, Number(payload.expires_in ?? 300));
+    this.token = { value: payload.access_token, expiresAt: Date.now() + expiresIn * 1000 };
+    return payload.access_token;
   }
 
   private async request<T>(path: string, init: RequestInit = {}, correlationId = crypto.randomUUID()): Promise<T> {
