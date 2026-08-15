@@ -57,6 +57,29 @@ export type EfiSubscriptionLink = {
   total: number;
 };
 
+export type EfiCharge = {
+  id: number;
+  status?: string;
+  total?: number;
+  payment_url?: string;
+  expire_at?: string;
+  subscription_id?: number;
+  plan_id?: number;
+  metadata?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
+  items?: Array<Record<string, unknown>>;
+  customer?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+export type EfiSubscription = {
+  id: number;
+  status?: string;
+  plan_id?: number;
+  charge?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
 const PLAN_NAMES: Record<string, string> = {
   personal: 'Hórus Personal',
   personal_pro: 'Hórus Personal Pro',
@@ -179,6 +202,22 @@ export class PaymentService {
       throw new EfiApiError(details);
     }
     return payload.data as T;
+  }
+
+  /** Read-only lookup of an existing Efí charge. No financial mutation. */
+  async getCharge(chargeId: string, correlationId = crypto.randomUUID()): Promise<EfiCharge> {
+    if (!/^[0-9]+$/.test(chargeId)) throw new Error('EFI_CHARGE_ID_INVALID');
+    const data = await this.request<EfiCharge>(`/v1/charge/${encodeURIComponent(chargeId)}`, { method: 'GET' }, correlationId);
+    if (!data?.id || String(data.id) !== chargeId) throw new Error('EFI_CHARGE_ID_MISMATCH');
+    return data;
+  }
+
+  /** Read-only lookup of an existing Efí subscription. No financial mutation. */
+  async getSubscription(subscriptionId: string, correlationId = crypto.randomUUID()): Promise<EfiSubscription> {
+    if (!/^[0-9]+$/.test(subscriptionId)) throw new Error('EFI_SUBSCRIPTION_ID_INVALID');
+    const data = await this.request<EfiSubscription>(`/v1/subscription/${encodeURIComponent(subscriptionId)}`, { method: 'GET' }, correlationId);
+    if (!data?.id || String(data.id) !== subscriptionId) throw new Error('EFI_SUBSCRIPTION_ID_MISMATCH');
+    return data;
   }
 
   async listPlans(): Promise<Array<{ plan_id: number; name: string; interval: number; repeats: number | null }>> {
