@@ -80,18 +80,20 @@ function selectCharge(subscription: Awaited<ReturnType<typeof paymentService.get
         ? String(entry.charge_id)
         : null;
       const status = typeof entry?.status === 'string' ? entry.status.toLowerCase() : '';
+      const createdAt = typeof entry?.created_at === 'string' ? entry.created_at : null;
       return {
         chargeId: chargeId && /^[0-9]+$/.test(chargeId) ? chargeId : null,
         status,
         priority: PENDING_CHARGE_STATUS_PRIORITY[status] ?? 0,
-        createdAt: historyTimestamp(entry?.created_at),
+        createdAt,
+        createdAtTimestamp: historyTimestamp(createdAt),
         index,
       };
     })
     .filter((entry) => entry.chargeId !== null && entry.priority > 0)
     .sort((a, b) =>
       b.priority - a.priority ||
-      b.createdAt - a.createdAt ||
+      b.createdAtTimestamp - a.createdAtTimestamp ||
       Number(a.chargeId) - Number(b.chargeId) ||
       a.index - b.index,
     );
@@ -138,7 +140,16 @@ export async function GET(request: Request) {
     const safeHistory = sanitizeHistory(efiSubscription);
 
     if (returnedSubscriptionId !== requestedSubscriptionId) {
-      throw new Error(`EFI_EXISTING_SUBSCRIPTION_ID_MISMATCH:${requestedSubscriptionId}:${returnedSubscriptionId}`);
+      return NextResponse.json({
+        success: false,
+        error: 'EFI_EXISTING_SUBSCRIPTION_ID_MISMATCH',
+        requested_subscription_id: requestedSubscriptionId,
+        returned_subscription_id: returnedSubscriptionId,
+        history: safeHistory,
+        selected_charge_id: null,
+        charge: null,
+        correlation_id: correlationId,
+      }, { status: 409 });
     }
 
     const selected = selectCharge(efiSubscription);
@@ -168,7 +179,7 @@ export async function GET(request: Request) {
         selected_charge_id: selected.chargeId,
         selected_history_index: selected.index,
         selected_history_status: selected.status,
-        selected_history_created_at: historyTimestamp(selected.createdAt) === Number.NEGATIVE_INFINITY ? null : selected.createdAt,
+        selected_history_created_at: selected.createdAt,
         charge_http_status: 200,
         charge_id: safe.charge_id,
         charge_subscription_id: safe.subscription_id,
@@ -185,6 +196,8 @@ export async function GET(request: Request) {
         history: safeHistory,
         selected_charge_id: selected.chargeId,
         selected_history_index: selected.index,
+        selected_history_status: selected.status,
+        selected_history_created_at: selected.createdAt,
         charge: {
           http_status: 200,
           charge_id: safe.charge_id,
@@ -192,6 +205,11 @@ export async function GET(request: Request) {
           plan_id: safe.plan_id,
           status: safe.status,
           payment_url_present: Boolean(safe.payment_url),
+        },
+        comparison: {
+          left_charge_subscription_id: safe.subscription_id,
+          right_requested_subscription_id: requestedSubscriptionId,
+          matches: safe.subscription_id === requestedSubscriptionId,
         },
         correlation_id: correlationId,
       }, { status: 409 });
