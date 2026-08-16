@@ -42,7 +42,9 @@ function sanitizeCharge(charge: Awaited<ReturnType<typeof paymentService.getChar
 }
 
 function extractChargeId(subscription: Awaited<ReturnType<typeof paymentService.getSubscription>>): string | null {
-  const candidate = subscription.charge?.id ?? subscription.charge?.charge_id ?? (subscription as Record<string, unknown>).charge_id;
+  const history = Array.isArray(subscription.history) ? subscription.history : [];
+  const historyChargeId = history.length > 0 ? history[history.length - 1]?.charge_id : undefined;
+  const candidate = subscription.charge?.id ?? subscription.charge?.charge_id ?? historyChargeId ?? (subscription as Record<string, unknown>).charge_id;
   if (typeof candidate === 'number' || typeof candidate === 'string') {
     const value = String(candidate);
     return /^[0-9]+$/.test(value) ? value : null;
