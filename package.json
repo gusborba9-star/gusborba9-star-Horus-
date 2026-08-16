@@ -7,7 +7,7 @@
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test tests/studio-contracts.test.mjs tests/collaborators-contracts.test.mjs tests/prompt-optimizer.test.mjs tests/personal-contracts.test.mjs tests/personal-billing-identity.test.mjs tests/nexus-core.test.mjs",
+    "test": "node --experimental-strip-types --test tests/studio-contracts.test.mjs tests/studio-efi-payment.test.mjs tests/collaborators-contracts.test.mjs tests/prompt-optimizer.test.mjs tests/personal-contracts.test.mjs tests/personal-billing-identity.test.mjs tests/nexus-core.test.mjs",
     "test:e2e10": "node tests/e2e10-authenticated-collaborator.mjs",
     "test:e2e11:voice": "node tests/e2e11-voice.mjs",
     "test:e2e11:billing": "node tests/efi-checkout-production.mjs",
