@@ -51,8 +51,8 @@ test('existing checkout is tier-agnostic and strictly read-only', () => {
   assert.match(page, /fetch\('\/api\/personal\/billing\/checkout-existing',\{method:'GET'/);
   assert.doesNotMatch(page, /canInspectExistingCheckout=data\?\.subscription\?\.tier===['"]PERSONAL_PRO/);
   assert.doesNotMatch(route, /1050230429|1528967|136181/);
-  assert.match(route, /paymentService\.getSubscription\(requestedSubscriptionId/);
-  assert.match(route, /paymentService\.getCharge\(chargeId/);
+  assert.match(route, /paymentService\.getSubscription\(persisted\.external_subscription_id/);
+  assert.match(route, /paymentService\.getCharge\(persisted\.external_charge_id/);
   assert.doesNotMatch(route, /method:\s*['"]POST['"]/);
 });
 
@@ -64,19 +64,22 @@ test('Efí adapter uses canonical provider identifiers only', () => {
   assert.doesNotMatch(adapter, /const returnedId/);
 });
 
-test('existing checkout selects a pending charge from subscription history deterministically', () => {
+test('existing checkout validates the persisted charge through subscription history', () => {
   const route = fs.readFileSync(new URL('../app/api/personal/billing/checkout-existing/route.ts', import.meta.url), 'utf8');
-  assert.match(route, /PENDING_CHARGE_STATUS_PRIORITY/);
-  assert.match(route, /link:\s*4/);
-  assert.match(route, /createdAt:\s*historyTimestamp/);
-  assert.match(route, /b\.createdAt - a\.createdAt/);
-  assert.match(route, /b\.priority - a\.priority/);
+  assert.match(route, /persisted\.external_charge_id/);
+  assert.match(route, /history\.find\(\(entry\) => String\(entry\?\.charge_id/);
+  assert.match(route, /linkedHistory\.status/);
+  assert.doesNotMatch(route, /PENDING_CHARGE_STATUS_PRIORITY/);
   assert.doesNotMatch(route, /history\[history\.length - 1\]/);
 });
 
-test('existing checkout requires strict charge/subscription association and payment URL', () => {
+test('existing checkout requires persisted financial identity and rejects only real provider mismatches', () => {
   const route = fs.readFileSync(new URL('../app/api/personal/billing/checkout-existing/route.ts', import.meta.url), 'utf8');
-  assert.match(route, /safe\.charge_id !== chargeId/);
-  assert.match(route, /safe\.subscription_id !== requestedSubscriptionId/);
-  assert.match(route, /if \(!safe\.payment_url\)/);
+  assert.match(route, /validId\(persisted\.external_subscription_id\)/);
+  assert.match(route, /validId\(persisted\.external_charge_id\)/);
+  assert.match(route, /if \(!validId\(persisted\.external_charge_id\) \|\| !persisted\.payment_url\)/);
+  assert.match(route, /efiSubscription\.subscription_id\) !== persisted\.external_subscription_id/);
+  assert.match(route, /charge\.charge_id\) !== persisted\.external_charge_id/);
+  assert.doesNotMatch(route, /charge\.subscription_id\) !== persisted\.external_subscription_id/);
+  assert.doesNotMatch(route, /safe\.subscription_id !== requestedSubscriptionId/);
 });

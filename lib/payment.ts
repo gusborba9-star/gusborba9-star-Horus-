@@ -57,6 +57,14 @@ export type EfiSubscriptionLink = {
   total: number;
 };
 
+export type EfiOneTimePaymentLink = {
+  chargeId: string;
+  paymentUrl: string;
+  status: string;
+  total: number;
+  customId: string;
+};
+
 export type EfiCharge = {
   charge_id: number;
   status?: string;
@@ -65,6 +73,7 @@ export type EfiCharge = {
   expire_at?: string;
   subscription_id?: number;
   plan_id?: number;
+  custom_id?: string | null;
   metadata?: Record<string, unknown>;
   settings?: Record<string, unknown>;
   items?: Array<Record<string, unknown>>;
@@ -282,6 +291,48 @@ export class PaymentService {
       paymentUrl: data.payment_url,
       status: data.status,
       total: Number(data.charge?.total ?? input.amountCents),
+    };
+  }
+
+  async createOneTimePaymentLink(input: {
+    amountCents: number;
+    itemName: string;
+    customId: string;
+    notificationUrl: string;
+    email?: string;
+    correlationId?: string;
+  }): Promise<EfiOneTimePaymentLink> {
+    if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) throw new Error('EFI_ONE_TIME_AMOUNT_INVALID');
+    if (!input.customId.trim()) throw new Error('EFI_ONE_TIME_CUSTOM_ID_REQUIRED');
+    const correlationId = input.correlationId ?? crypto.randomUUID();
+    const data = await this.request<{
+      charge_id: number;
+      status: string;
+      total: number;
+      custom_id?: string | null;
+      payment_url: string;
+    }>('/v1/charge/one-step/link', {
+      method: 'POST',
+      body: JSON.stringify({
+        items: [{ amount: 1, name: input.itemName.trim(), value: input.amountCents }],
+        metadata: { custom_id: input.customId, notification_url: input.notificationUrl },
+        ...(input.email ? { customer: { email: input.email } } : {}),
+        settings: {
+          payment_method: 'all',
+          request_delivery_address: false,
+          expire_at: paymentLinkExpireAt(),
+        },
+      }),
+    }, correlationId);
+    if (!data?.charge_id || !data?.payment_url) throw new Error('EFI_ONE_TIME_PAYMENT_LINK_FAILED');
+    if (data.status !== 'link') throw new Error('EFI_ONE_TIME_PAYMENT_LINK_STATUS_INVALID');
+    if (data.custom_id && data.custom_id !== input.customId) throw new Error('EFI_ONE_TIME_CUSTOM_ID_MISMATCH');
+    return {
+      chargeId: String(data.charge_id),
+      paymentUrl: data.payment_url,
+      status: data.status,
+      total: Number(data.total ?? input.amountCents),
+      customId: input.customId,
     };
   }
 
