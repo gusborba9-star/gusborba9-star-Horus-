@@ -5,10 +5,6 @@ import { EfiApiError, paymentService } from '@/lib/payment';
 
 export const runtime = 'nodejs';
 
-const EXISTING_CHARGE_ID = '1050230429';
-const EXISTING_SUBSCRIPTION_ID = '1528967';
-const EXISTING_PLAN_ID = 136181;
-
 type SafeCheckout = {
   payment_url: string | null;
   charge_id: string;
@@ -45,30 +41,54 @@ function sanitizeCharge(charge: Awaited<ReturnType<typeof paymentService.getChar
   };
 }
 
+function extractChargeId(subscription: Awaited<ReturnType<typeof paymentService.getSubscription>>): string | null {
+  const candidate = subscription.charge?.id ?? subscription.charge?.charge_id ?? (subscription as Record<string, unknown>).charge_id;
+  if (typeof candidate === 'number' || typeof candidate === 'string') {
+    const value = String(candidate);
+    return /^[0-9]+$/.test(value) ? value : null;
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
   const correlationId = request.headers.get('x-correlation-id') ?? crypto.randomUUID();
   try {
     const { user } = await requireStudioUser(request);
     const service = getServiceSupabase();
 
-    const { data: subscription, error } = await service
+    const { data: subscriptions, error } = await service
       .from('personal_subscriptions')
       .select('id,tier,status,external_subscription_id')
       .eq('user_id', user.id)
-      .eq('external_subscription_id', EXISTING_SUBSCRIPTION_ID)
-      .maybeSingle();
+      .eq('status', 'PENDING')
+      .not('external_subscription_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(10);
 
     if (error) throw new Error(`PERSONAL_EXISTING_CHECKOUT_LOOKUP_FAILED:${error.message}`);
-    if (!subscription) {
-      return NextResponse.json({ success: false, error: 'EFI_EXISTING_CHECKOUT_NOT_AUTHORIZED', correlation_id: correlationId }, { status: 403 });
+    const subscription = (subscriptions ?? []).find((item) => Boolean(item.external_subscription_id));
+    if (!subscription?.external_subscription_id) {
+      return NextResponse.json({ success: false, error: 'EFI_EXISTING_CHECKOUT_NOT_FOUND', correlation_id: correlationId }, { status: 404 });
     }
 
-    const charge = await paymentService.getCharge(EXISTING_CHARGE_ID, correlationId);
+    const efiSubscription = await paymentService.getSubscription(subscription.external_subscription_id, correlationId);
+    const chargeId = extractChargeId(efiSubscription);
+    if (!chargeId) {
+      return NextResponse.json({
+        success: false,
+        error: 'EFI_EXISTING_CHECKOUT_PAYMENT_URL_UNAVAILABLE',
+        reason: 'EFI_SUBSCRIPTION_HAS_NO_READABLE_CHARGE_ID',
+        subscription_id: String(efiSubscription.id),
+        correlation_id: correlationId,
+      }, { status: 200 });
+    }
+
+    const charge = await paymentService.getCharge(chargeId, correlationId);
     const safe = sanitizeCharge(charge);
 
-    if (safe.charge_id !== EXISTING_CHARGE_ID) throw new Error('EFI_EXISTING_CHARGE_ID_MISMATCH');
-    if (safe.subscription_id && safe.subscription_id !== EXISTING_SUBSCRIPTION_ID) throw new Error('EFI_EXISTING_SUBSCRIPTION_ID_MISMATCH');
-    if (safe.plan_id != null && safe.plan_id !== EXISTING_PLAN_ID) throw new Error('EFI_EXISTING_PLAN_ID_MISMATCH');
+    if (String(efiSubscription.id) !== String(subscription.external_subscription_id)) throw new Error('EFI_EXISTING_SUBSCRIPTION_ID_MISMATCH');
+    if (safe.charge_id !== chargeId) throw new Error('EFI_EXISTING_CHARGE_ID_MISMATCH');
+    if (safe.subscription_id && safe.subscription_id !== String(subscription.external_subscription_id)) throw new Error('EFI_EXISTING_CHARGE_SUBSCRIPTION_ID_MISMATCH');
 
     console.info('[PERSONAL_EXISTING_CHECKOUT_READ]', {
       correlation_id: correlationId,
