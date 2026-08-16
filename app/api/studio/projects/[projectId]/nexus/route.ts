@@ -79,8 +79,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       created_by: project.owner_user_id,
       change_class: spec.changeClass,
       optimized_spec: { ...spec, nexusPlan: plan },
-      approval_state: 'NOT_REQUIRED',
-    }).select('id,version').single();
+      approval_state: 'PENDING',
+    }).select('id,version,approval_state').single();
     if (revisionError || !revision) throw new Error(`NEXUS_REVISION_CREATE_FAILED:${revisionError?.message ?? 'UNKNOWN'}`);
 
     const provider = getInferenceProvider(plan.model.providerId);
