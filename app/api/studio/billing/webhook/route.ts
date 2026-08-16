@@ -64,10 +64,6 @@ export async function POST(request: Request) {
       };
       const updated = await service.from('studio_project_payments').update(update).eq('id', payment.id);
       if (updated.error) throw new Error(`STUDIO_PAYMENT_UPDATE_FAILED:${updated.error.message}`);
-      if (nextStatus === 'PAID') {
-        const projectUpdated = await service.from('studio_projects').update({ status: 'PAID', updated_at: new Date().toISOString() }).eq('id', payment.project_id);
-        if (projectUpdated.error) throw new Error(`STUDIO_PROJECT_PAYMENT_STATE_FAILED:${projectUpdated.error.message}`);
-      }
     }
 
     const completed = await service.from('horus_webhook_events').update({ status: 'PROCESSED', processed_at: new Date().toISOString() }).eq('provider', 'efi').eq('event_id', eventId);

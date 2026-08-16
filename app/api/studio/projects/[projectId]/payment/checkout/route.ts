@@ -19,7 +19,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
 
   const { data: project, error: projectError } = await service
     .from('studio_projects')
-    .select('id, owner_user_id, name, objective, context, requirements, status')
+    .select('id, owner_user_id, name, objective, context, requirements')
     .eq('id', projectId)
     .eq('owner_user_id', user.id)
     .maybeSingle();
@@ -110,7 +110,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       final_price_brl: finalPrice,
       estimated_cost_brl: estimatedCost,
       pricing_breakdown: pricing.breakdown,
-      status: 'AWAITING_PAYMENT',
       updated_at: new Date().toISOString(),
     }).eq('id', projectId).eq('owner_user_id', user.id);
 
