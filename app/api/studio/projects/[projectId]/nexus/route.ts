@@ -86,8 +86,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const provider = getInferenceProvider(plan.model.providerId);
     const result = await provider.execute({
       modelId: plan.model.modelId,
-      systemPrompt: plan.optimized.systemPrompt,
-      userPrompt: plan.optimized.userPrompt,
+      systemPrompt: 'You are the Hórus Nexus execution provider. Follow the optimized task exactly and return the requested result.',
+      userPrompt: plan.optimized.optimized,
       maxOutputTokens: 2048,
       capability,
     });
@@ -106,7 +106,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       provider_metadata: {
         ...result.providerMetadata,
         user_prompt: message,
-        optimized_prompt: plan.optimized.userPrompt,
+        optimized_prompt: plan.optimized.optimized,
         task_profile: plan.optimized.profile,
         usage: result.usage,
         request_id: result.requestId,
@@ -115,10 +115,11 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     }).select('*').single();
     if (resultError || !storedResult) throw new Error(`NEXUS_RESULT_PERSIST_FAILED:${resultError?.message ?? 'UNKNOWN'}`);
 
-    await client.from('studio_project_revisions').update({ preview: { status: 'READY', resultId: storedResult.id, resultType: result.resultType } }).eq('id', revision.id);
+    const resultPreview = { status: 'READY', resultId: storedResult.id, resultType: result.resultType, url: `/dashboard/studio/result/${storedResult.id}` };
+    await client.from('studio_project_revisions').update({ preview: resultPreview }).eq('id', revision.id);
     await client.from('studio_projects').update({ status: 'PLANNING', capabilities: spec.capabilities, intelligence_snapshot: { ...spec, nexusPlan: plan } }).eq('id', projectId);
 
-    return NextResponse.json({ success: true, revision, result: storedResult, nexus: { capability, providerId: plan.model.providerId, modelId: plan.model.modelId, source: plan.model.source } }, { status: 201 });
+    return NextResponse.json({ success: true, revision, result: storedResult, preview: resultPreview, nexus: { capability, providerId: plan.model.providerId, modelId: plan.model.modelId, source: plan.model.source } }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'NEXUS_RESULT_FAILED';
     return NextResponse.json({ success: false, error: message }, { status: message === 'AUTHENTICATION_REQUIRED' ? 401 : 400 });
