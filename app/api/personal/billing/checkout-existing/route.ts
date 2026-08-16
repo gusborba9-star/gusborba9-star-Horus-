@@ -52,10 +52,22 @@ function extractChargeId(subscription: Awaited<ReturnType<typeof paymentService.
   return null;
 }
 
+function authMeta(request: Request) {
+  const authorization = request.headers.get('authorization') ?? '';
+  return {
+    authorization_present: Boolean(authorization),
+    bearer_token_present: authorization.startsWith('Bearer ') && authorization.slice(7).trim().length > 0,
+    auth_cookie_present: Boolean(request.headers.get('cookie')),
+  };
+}
+
 export async function GET(request: Request) {
   const correlationId = request.headers.get('x-correlation-id') ?? crypto.randomUUID();
+  const meta = authMeta(request);
+  console.info('[PERSONAL_AUTH_DIAGNOSTIC]', { route: '/api/personal/billing/checkout-existing', correlation_id: correlationId, ...meta });
   try {
     const { user } = await requireStudioUser(request);
+    console.info('[PERSONAL_AUTH_DIAGNOSTIC]', { route: '/api/personal/billing/checkout-existing', correlation_id: correlationId, ...meta, require_studio_user: 'SUCCESS' });
     const service = getServiceSupabase();
 
     const { data: subscriptions, error } = await service
