@@ -65,23 +65,28 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
     const { data: previousRevision } = await client.from('studio_project_revisions').select('id,version').eq('project_id', projectId).order('version', { ascending: false }).limit(1).maybeSingle();
     const version = (previousRevision?.version ?? 0) + 1;
+    const deploymentCapability = ['WEBSITES', 'APPS', 'DEV'].includes(capability);
     const { data: revision, error: revisionError } = await client.from('studio_project_revisions').insert({
       project_id: projectId,
       version,
       parent_revision_id: previousRevision?.id ?? null,
-      state: { requestedChange: message, source: 'NEXUS_RESULT_PREVIEW' },
+      state: { requestedChange: message, source: deploymentCapability ? 'NEXUS_LIFECYCLE_PLAN' : 'NEXUS_RESULT_PREVIEW' },
       diff: { intent: message, capability },
       estimated_cost_brl: null,
       tests: { required: true, status: 'NOT_RUN' },
-      preview: { status: 'RESULT_PENDING' },
+      preview: { status: deploymentCapability ? 'NOT_CREATED' : 'RESULT_PENDING' },
       deployment: { status: 'NOT_DEPLOYED' },
-      audit: { createdVia: 'nexus_result_preview' },
+      audit: { createdVia: 'nexus', providerNeutral: true },
       created_by: project.owner_user_id,
       change_class: spec.changeClass,
       optimized_spec: { ...spec, nexusPlan: plan },
-      approval_state: 'PENDING',
+      approval_state: deploymentCapability ? 'NOT_REQUIRED' : 'PENDING',
     }).select('id,version,approval_state').single();
     if (revisionError || !revision) throw new Error(`NEXUS_REVISION_CREATE_FAILED:${revisionError?.message ?? 'UNKNOWN'}`);
+
+    if (deploymentCapability) {
+      return NextResponse.json({ success: true, revision, executionMode: 'LIFECYCLE', nexus: { capability, providerId: plan.model.providerId, modelId: plan.model.modelId, source: plan.model.source } }, { status: 201 });
+    }
 
     const provider = getInferenceProvider(plan.model.providerId);
     const result = await provider.execute({
