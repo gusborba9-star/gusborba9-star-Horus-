@@ -17,6 +17,13 @@ type SafeCheckout = {
   payment_methods: unknown;
 };
 
+type SafeHistoryEntry = {
+  index: number;
+  charge_id: string | null;
+  status: string | null;
+  created_at: string | null;
+};
+
 function safePeriodicity(settings: Record<string, unknown> | undefined): unknown {
   if (!settings) return null;
   return settings.recurrence ?? settings.periodicity ?? settings.interval ?? null;
@@ -41,6 +48,16 @@ function sanitizeCharge(charge: Awaited<ReturnType<typeof paymentService.getChar
   };
 }
 
+function sanitizeHistory(subscription: Awaited<ReturnType<typeof paymentService.getSubscription>>): SafeHistoryEntry[] {
+  const history = Array.isArray(subscription.history) ? subscription.history : [];
+  return history.map((entry, index) => ({
+    index,
+    charge_id: entry?.charge_id == null ? null : String(entry.charge_id),
+    status: typeof entry?.status === 'string' ? entry.status : null,
+    created_at: typeof entry?.created_at === 'string' ? entry.created_at : null,
+  }));
+}
+
 const PENDING_CHARGE_STATUS_PRIORITY: Record<string, number> = {
   link: 4,
   new: 3,
@@ -55,7 +72,7 @@ function historyTimestamp(value: unknown): number {
   return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
 }
 
-function extractChargeId(subscription: Awaited<ReturnType<typeof paymentService.getSubscription>>): string | null {
+function selectCharge(subscription: Awaited<ReturnType<typeof paymentService.getSubscription>>) {
   const history = Array.isArray(subscription.history) ? subscription.history : [];
   const candidates = history
     .map((entry, index) => {
@@ -79,7 +96,7 @@ function extractChargeId(subscription: Awaited<ReturnType<typeof paymentService.
       a.index - b.index,
     );
 
-  return candidates[0]?.chargeId ?? null;
+  return candidates[0] ?? null;
 }
 
 function authMeta(request: Request) {
@@ -117,33 +134,77 @@ export async function GET(request: Request) {
 
     const requestedSubscriptionId = String(subscription.external_subscription_id);
     const efiSubscription = await paymentService.getSubscription(requestedSubscriptionId, correlationId);
-    if (String(efiSubscription.subscription_id) !== requestedSubscriptionId) {
-      throw new Error('EFI_EXISTING_SUBSCRIPTION_ID_MISMATCH');
+    const returnedSubscriptionId = String(efiSubscription.subscription_id);
+    const safeHistory = sanitizeHistory(efiSubscription);
+
+    if (returnedSubscriptionId !== requestedSubscriptionId) {
+      throw new Error(`EFI_EXISTING_SUBSCRIPTION_ID_MISMATCH:${requestedSubscriptionId}:${returnedSubscriptionId}`);
     }
 
-    const chargeId = extractChargeId(efiSubscription);
-    if (!chargeId) {
+    const selected = selectCharge(efiSubscription);
+    if (!selected?.chargeId) {
       return NextResponse.json({
         success: false,
         error: 'EFI_EXISTING_CHECKOUT_PAYMENT_URL_UNAVAILABLE',
         reason: 'EFI_SUBSCRIPTION_HAS_NO_PENDING_CHARGE_ID',
-        subscription_id: requestedSubscriptionId,
+        requested_subscription_id: requestedSubscriptionId,
+        returned_subscription_id: returnedSubscriptionId,
+        history: safeHistory,
+        selected_charge_id: null,
         correlation_id: correlationId,
       }, { status: 200 });
     }
 
-    const charge = await paymentService.getCharge(chargeId, correlationId);
+    const charge = await paymentService.getCharge(selected.chargeId, correlationId);
     const safe = sanitizeCharge(charge);
 
-    if (safe.charge_id !== chargeId) throw new Error('EFI_EXISTING_CHARGE_ID_MISMATCH');
-    if (safe.subscription_id !== requestedSubscriptionId) throw new Error('EFI_EXISTING_CHARGE_SUBSCRIPTION_ID_MISMATCH');
+    if (safe.charge_id !== selected.chargeId) throw new Error('EFI_EXISTING_CHARGE_ID_MISMATCH');
+    if (safe.subscription_id !== requestedSubscriptionId) {
+      console.error('[PERSONAL_EXISTING_CHECKOUT_CONTRACT_DIAGNOSTIC]', {
+        correlation_id: correlationId,
+        requested_subscription_id: requestedSubscriptionId,
+        returned_subscription_id: returnedSubscriptionId,
+        history: safeHistory,
+        selected_charge_id: selected.chargeId,
+        selected_history_index: selected.index,
+        selected_history_status: selected.status,
+        selected_history_created_at: historyTimestamp(selected.createdAt) === Number.NEGATIVE_INFINITY ? null : selected.createdAt,
+        charge_http_status: 200,
+        charge_id: safe.charge_id,
+        charge_subscription_id: safe.subscription_id,
+        charge_plan_id: safe.plan_id,
+        charge_status: safe.status,
+        payment_url_present: Boolean(safe.payment_url),
+        comparison: `${safe.subscription_id ?? 'null'} === ${requestedSubscriptionId}`,
+      });
+      return NextResponse.json({
+        success: false,
+        error: 'EFI_EXISTING_CHARGE_SUBSCRIPTION_ID_MISMATCH',
+        requested_subscription_id: requestedSubscriptionId,
+        returned_subscription_id: returnedSubscriptionId,
+        history: safeHistory,
+        selected_charge_id: selected.chargeId,
+        selected_history_index: selected.index,
+        charge: {
+          http_status: 200,
+          charge_id: safe.charge_id,
+          subscription_id: safe.subscription_id,
+          plan_id: safe.plan_id,
+          status: safe.status,
+          payment_url_present: Boolean(safe.payment_url),
+        },
+        correlation_id: correlationId,
+      }, { status: 409 });
+    }
     if (!safe.payment_url) {
       return NextResponse.json({
         success: false,
         error: 'EFI_EXISTING_CHECKOUT_PAYMENT_URL_UNAVAILABLE',
         reason: 'EFI_CHARGE_HAS_NO_PAYMENT_URL',
-        subscription_id: requestedSubscriptionId,
-        charge_id: chargeId,
+        requested_subscription_id: requestedSubscriptionId,
+        returned_subscription_id: returnedSubscriptionId,
+        history: safeHistory,
+        selected_charge_id: selected.chargeId,
         correlation_id: correlationId,
       }, { status: 200 });
     }
