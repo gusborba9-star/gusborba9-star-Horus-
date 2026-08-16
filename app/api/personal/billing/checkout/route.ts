@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const plan = PERSONAL_TIERS[tier];
     let { data: subscription, error } = await service
       .from('personal_subscriptions')
-      .select('id,tier,status,economic_profile,external_subscription_id')
+      .select('id,tier,status,economic_profile,external_subscription_id,external_charge_id,payment_url')
       .eq('user_id', user.id)
       .in('status', ['PENDING', 'PAST_DUE', 'PAUSED'])
       .maybeSingle();
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       const created = await service
         .from('personal_subscriptions')
         .insert({ user_id: user.id, tier: plan.id, status: 'PENDING', economic_profile: plan.economicProfile })
-        .select('id,tier,status,economic_profile,external_subscription_id')
+        .select('id,tier,status,economic_profile,external_subscription_id,external_charge_id,payment_url')
         .single();
       if (created.error || !created.data) throw new Error(`PERSONAL_SUBSCRIPTION_CREATE_FAILED:${created.error?.message ?? 'UNKNOWN'}`);
       subscription = created.data;
@@ -44,16 +44,30 @@ export async function POST(request: Request) {
       correlationId,
     });
 
+    if (!checkout.subscriptionId || !checkout.chargeId || !checkout.paymentUrl) {
+      throw new Error('PERSONAL_SUBSCRIPTION_EXTERNAL_LINK_INCOMPLETE');
+    }
+
     const updated = await service
       .from('personal_subscriptions')
-      .update({ external_subscription_id: checkout.subscriptionId, updated_at: new Date().toISOString() })
+      .update({
+        external_subscription_id: checkout.subscriptionId,
+        external_charge_id: checkout.chargeId,
+        payment_url: checkout.paymentUrl,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', subscription.id)
       .eq('user_id', user.id)
-      .select('id,tier,status,economic_profile,external_subscription_id')
+      .select('id,tier,status,economic_profile,external_subscription_id,external_charge_id,payment_url')
       .single();
     if (updated.error || !updated.data) throw new Error(`PERSONAL_SUBSCRIPTION_EXTERNAL_LINK_FAILED:${updated.error?.message ?? 'UNKNOWN'}`);
 
-    return NextResponse.json({ success: true, subscription: updated.data, checkout: { payment_url: checkout.paymentUrl, status: checkout.status, charge_id: checkout.chargeId }, correlation_id: correlationId });
+    return NextResponse.json({
+      success: true,
+      subscription: updated.data,
+      checkout: { payment_url: checkout.paymentUrl, status: checkout.status, charge_id: checkout.chargeId },
+      correlation_id: correlationId,
+    });
   } catch (error) {
     if (error instanceof EfiApiError) {
       console.error('[PERSONAL_CHECKOUT_EFI_FAILED]', error.details);
@@ -67,7 +81,7 @@ export async function POST(request: Request) {
         error_description: error.details.error_description,
         message: error.details.message,
         request_id: error.details.request_id,
-        correlation_id: error.details.correlation_id,
+        correlation_id: correlationId,
       }, { status: 502 });
     }
 
