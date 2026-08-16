@@ -17,23 +17,29 @@ export function classifyChange(prompt: string): ChangeClass {
   return 'MEDIUM';
 }
 
-function inferCapabilities(prompt: string, project: ProjectState): StudioCapability[] {
-  const p = prompt.toLowerCase();
+export function inferCapabilities(prompt: string, project: ProjectState, additionalContext: string[] = []): StudioCapability[] {
+  const semanticInput = [
+    project.objective,
+    prompt,
+    ...additionalContext,
+    ...project.requirements,
+    ...project.capabilities,
+  ].filter(Boolean).join('\n').toLowerCase();
   const selected = new Set<StudioCapability>(project.capabilities.filter((capability): capability is StudioCapability => STUDIO_CAPABILITIES.includes(capability)));
-  if (/\b(site|website|landing|página|pagina|web)\b/.test(p)) selected.add('WEBSITES');
-  if (/\b(saas|app|aplicativo|aplicação|aplicacao)\b/.test(p)) selected.add('APPS');
-  if (/\b(código|codigo|software|frontend|backend|typescript|react|next)\b/.test(p)) selected.add('CODE');
-  if (/\b(api|endpoint|rest|graphql)\b/.test(p)) selected.add('APIS');
-  if (/\b(dashboard|painel|analytics)\b/.test(p)) selected.add('DASHBOARDS');
-  if (/\b(automação|automacao|workflow|integração|integracao)\b/.test(p)) selected.add('AUTOMATIONS');
-  if (/\b(música|musica|canção|cancao)\b/.test(p)) selected.add('MUSIC');
-  if (/\b(áudio|audio|podcast|voz)\b/.test(p)) selected.add('AUDIO');
-  if (/\b(vídeo|video|reels|filme)\b/.test(p)) selected.add('VIDEO');
-  if (/\b(imagem|logo|arte|visual)\b/.test(p)) selected.add('IMAGE');
-  if (/\b(campanha|marketing|anúncio|anuncio)\b/.test(p)) selected.add('CAMPAIGNS');
-  if (/\b(documento|docs|contrato|relatório|relatorio)\b/.test(p)) selected.add('DOCS');
-  if (/\b(apresentação|apresentacao|slides)\b/.test(p)) selected.add('PRESENTATIONS');
-  if (/\b(dev|engenharia|deploy|git|branch|commit|pull request)\b/.test(p)) selected.add('DEV');
+  if (/\b(site|website|landing|página|pagina|web)\b/.test(semanticInput)) selected.add('WEBSITES');
+  if (/\b(saas|app|aplicativo|aplicação|aplicacao)\b/.test(semanticInput)) selected.add('APPS');
+  if (/\b(código|codigo|software|frontend|backend|typescript|react|next)\b/.test(semanticInput)) selected.add('CODE');
+  if (/\b(api|endpoint|rest|graphql)\b/.test(semanticInput)) selected.add('APIS');
+  if (/\b(dashboard|painel|analytics)\b/.test(semanticInput)) selected.add('DASHBOARDS');
+  if (/\b(automação|automacao|workflow|integração|integracao)\b/.test(semanticInput)) selected.add('AUTOMATIONS');
+  if (/\b(música|musica|canção|cancao)\b/.test(semanticInput)) selected.add('MUSIC');
+  if (/\b(áudio|audio|podcast|voz)\b/.test(semanticInput)) selected.add('AUDIO');
+  if (/\b(vídeo|video|reels|filme)\b/.test(semanticInput)) selected.add('VIDEO');
+  if (/\b(imagem|foto|fotografia|logo|arte|visual|ilustração|ilustracao)\b/.test(semanticInput)) selected.add('IMAGE');
+  if (/\b(campanha|marketing|anúncio|anuncio)\b/.test(semanticInput)) selected.add('CAMPAIGNS');
+  if (/\b(documento|docs|contrato|relatório|relatorio)\b/.test(semanticInput)) selected.add('DOCS');
+  if (/\b(apresentação|apresentacao|slides)\b/.test(semanticInput)) selected.add('PRESENTATIONS');
+  if (/\b(dev|engenharia|deploy|git|branch|commit|pull request)\b/.test(semanticInput)) selected.add('DEV');
   if (selected.size === 0) selected.add('CODE');
   return [...selected].filter((capability) => STUDIO_CAPABILITIES.includes(capability));
 }
@@ -73,9 +79,10 @@ export function buildOptimizedSpec(args: {
   project: ProjectState;
   requirements?: unknown[];
   maxCostBrl?: number | null;
+  conversationContext?: string[];
 }): OptimizedExecutionSpec {
   const changeClass = classifyChange(args.prompt);
-  const capabilities = inferCapabilities(args.prompt, args.project);
+  const capabilities = inferCapabilities(args.prompt, args.project, args.conversationContext ?? []);
   return {
     userPrompt: args.prompt,
     optimizedExecutionPrompt: buildExecutionPrompt({ prompt: args.prompt, project: args.project, changeClass, capabilities }),
