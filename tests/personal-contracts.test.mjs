@@ -51,7 +51,32 @@ test('existing checkout is tier-agnostic and strictly read-only', () => {
   assert.match(page, /fetch\('\/api\/personal\/billing\/checkout-existing',\{method:'GET'/);
   assert.doesNotMatch(page, /canInspectExistingCheckout=data\?\.subscription\?\.tier===['"]PERSONAL_PRO/);
   assert.doesNotMatch(route, /1050230429|1528967|136181/);
-  assert.match(route, /paymentService\.getSubscription\(subscription\.external_subscription_id/);
+  assert.match(route, /paymentService\.getSubscription\(requestedSubscriptionId/);
   assert.match(route, /paymentService\.getCharge\(chargeId/);
   assert.doesNotMatch(route, /method:\s*['"]POST['"]/);
+});
+
+test('Efí adapter uses canonical provider identifiers only', () => {
+  const adapter = fs.readFileSync(new URL('../lib/payment.ts', import.meta.url), 'utf8');
+  assert.match(adapter, /data\?\.subscription_id/);
+  assert.match(adapter, /data\?\.charge_id/);
+  assert.doesNotMatch(adapter, /String\(data\.id\)/);
+  assert.doesNotMatch(adapter, /const returnedId/);
+});
+
+test('existing checkout selects a pending charge from subscription history deterministically', () => {
+  const route = fs.readFileSync(new URL('../app/api/personal/billing/checkout-existing/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /PENDING_CHARGE_STATUS_PRIORITY/);
+  assert.match(route, /link:\s*4/);
+  assert.match(route, /createdAt:\s*historyTimestamp/);
+  assert.match(route, /b\.createdAt - a\.createdAt/);
+  assert.match(route, /b\.priority - a\.priority/);
+  assert.doesNotMatch(route, /history\[history\.length - 1\]/);
+});
+
+test('existing checkout requires strict charge/subscription association and payment URL', () => {
+  const route = fs.readFileSync(new URL('../app/api/personal/billing/checkout-existing/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /safe\.charge_id !== chargeId/);
+  assert.match(route, /safe\.subscription_id !== requestedSubscriptionId/);
+  assert.match(route, /if \(!safe\.payment_url\)/);
 });
