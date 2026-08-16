@@ -1,4 +1,5 @@
 import type { ModelCatalogEntry } from '@/lib/nexus/model-router';
+import { inferCapabilityFromModalities } from '@/lib/nexus/model-router';
 
 let cache: { expiresAt: number; entries: ModelCatalogEntry[] } | null = null;
 
@@ -23,20 +24,22 @@ export async function getLiveOpenRouterCatalog(): Promise<ModelCatalogEntry[]> {
       ? payload.data.map((model: any) => {
           const pricing = model.pricing ?? {};
           const architecture = model.architecture ?? {};
+          const inputModalities = Array.isArray(architecture.input_modalities) ? architecture.input_modalities.map(String) : ['text'];
+          const outputModalities = Array.isArray(architecture.output_modalities) ? architecture.output_modalities.map(String) : ['text'];
           const input = numberOrNull(pricing.prompt);
           const output = numberOrNull(pricing.completion);
           return {
             providerId: 'openrouter',
             modelId: String(model.id),
-            capability: 'TEXT_GENERATION',
+            capability: inferCapabilityFromModalities(outputModalities, inputModalities),
             inputPricePerMillion: Math.max(0, (input ?? 0) * 1_000_000),
             outputPricePerMillion: Math.max(0, (output ?? 0) * 1_000_000),
             qualityScore: 0.6,
             latencyScore: 0.6,
             reliabilityScore: 0.6,
             contextWindow: numberOrNull(model.context_length),
-            inputModalities: Array.isArray(architecture.input_modalities) ? architecture.input_modalities : ['text'],
-            outputModalities: Array.isArray(architecture.output_modalities) ? architecture.output_modalities : ['text'],
+            inputModalities,
+            outputModalities,
             source: 'LIVE_CATALOG',
           };
         })
