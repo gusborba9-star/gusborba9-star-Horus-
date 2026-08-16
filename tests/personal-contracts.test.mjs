@@ -43,3 +43,15 @@ test('permission center is allowlisted and revocable', () => {
   assert.match(source, /REMINDERS_CREATE/);
   assert.match(source, /status: 'REVOKED'/);
 });
+
+test('existing checkout is tier-agnostic and strictly read-only', () => {
+  const page = fs.readFileSync(new URL('../app/dashboard/personal/page.tsx', import.meta.url), 'utf8');
+  const route = fs.readFileSync(new URL('../app/api/personal/billing/checkout-existing/route.ts', import.meta.url), 'utf8');
+  assert.match(page, /const canInspectExistingCheckout=hasExistingPendingSubscription/);
+  assert.match(page, /fetch\('\/api\/personal\/billing\/checkout-existing',\{method:'GET'/);
+  assert.doesNotMatch(page, /canInspectExistingCheckout=data\?\.subscription\?\.tier===['"]PERSONAL_PRO/);
+  assert.doesNotMatch(route, /1050230429|1528967|136181/);
+  assert.match(route, /paymentService\.getSubscription\(subscription\.external_subscription_id/);
+  assert.match(route, /paymentService\.getCharge\(chargeId/);
+  assert.doesNotMatch(route, /method:\s*['"]POST['"]/);
+});
