@@ -77,6 +77,7 @@ export type EfiSubscription = {
   status?: string;
   plan_id?: number;
   charge?: Record<string, unknown>;
+  history?: Array<{ charge_id?: number | string; status?: string; created_at?: string }>;
   [key: string]: unknown;
 };
 
@@ -216,8 +217,13 @@ export class PaymentService {
   async getSubscription(subscriptionId: string, correlationId = crypto.randomUUID()): Promise<EfiSubscription> {
     if (!/^[0-9]+$/.test(subscriptionId)) throw new Error('EFI_SUBSCRIPTION_ID_INVALID');
     const data = await this.request<EfiSubscription>(`/v1/subscription/${encodeURIComponent(subscriptionId)}`, { method: 'GET' }, correlationId);
-    if (!data?.id || String(data.id) !== subscriptionId) throw new Error('EFI_SUBSCRIPTION_ID_MISMATCH');
-    return data;
+    const returnedSubscriptionId = scalar((data as Record<string, unknown> | undefined)?.subscription_id);
+    const returnedId = returnedSubscriptionId ?? scalar((data as Record<string, unknown> | undefined)?.id);
+    if (!returnedId || returnedId !== subscriptionId) throw new Error('EFI_SUBSCRIPTION_ID_MISMATCH');
+    return {
+      ...data,
+      id: Number(returnedId),
+    };
   }
 
   async listPlans(): Promise<Array<{ plan_id: number; name: string; interval: number; repeats: number | null }>> {
