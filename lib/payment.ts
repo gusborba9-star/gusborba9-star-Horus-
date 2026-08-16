@@ -58,7 +58,7 @@ export type EfiSubscriptionLink = {
 };
 
 export type EfiCharge = {
-  id: number;
+  charge_id: number;
   status?: string;
   total?: number;
   payment_url?: string;
@@ -72,12 +72,18 @@ export type EfiCharge = {
   [key: string]: unknown;
 };
 
-export type EfiSubscription = {
-  id: number;
+export type EfiSubscriptionHistoryEntry = {
+  charge_id: number;
   status?: string;
-  plan_id?: number;
-  charge?: Record<string, unknown>;
-  history?: Array<{ charge_id?: number | string; status?: string; created_at?: string }>;
+  created_at?: string;
+  [key: string]: unknown;
+};
+
+export type EfiSubscription = {
+  subscription_id: number;
+  status?: string;
+  plan?: { plan_id?: number; [key: string]: unknown };
+  history?: EfiSubscriptionHistoryEntry[];
   [key: string]: unknown;
 };
 
@@ -209,7 +215,7 @@ export class PaymentService {
   async getCharge(chargeId: string, correlationId = crypto.randomUUID()): Promise<EfiCharge> {
     if (!/^[0-9]+$/.test(chargeId)) throw new Error('EFI_CHARGE_ID_INVALID');
     const data = await this.request<EfiCharge>(`/v1/charge/${encodeURIComponent(chargeId)}`, { method: 'GET' }, correlationId);
-    if (!data?.id || String(data.id) !== chargeId) throw new Error('EFI_CHARGE_ID_MISMATCH');
+    if (data?.charge_id == null || String(data.charge_id) !== chargeId) throw new Error('EFI_CHARGE_ID_MISMATCH');
     return data;
   }
 
@@ -217,13 +223,8 @@ export class PaymentService {
   async getSubscription(subscriptionId: string, correlationId = crypto.randomUUID()): Promise<EfiSubscription> {
     if (!/^[0-9]+$/.test(subscriptionId)) throw new Error('EFI_SUBSCRIPTION_ID_INVALID');
     const data = await this.request<EfiSubscription>(`/v1/subscription/${encodeURIComponent(subscriptionId)}`, { method: 'GET' }, correlationId);
-    const returnedSubscriptionId = scalar((data as Record<string, unknown> | undefined)?.subscription_id);
-    const returnedId = returnedSubscriptionId ?? scalar((data as Record<string, unknown> | undefined)?.id);
-    if (!returnedId || returnedId !== subscriptionId) throw new Error('EFI_SUBSCRIPTION_ID_MISMATCH');
-    return {
-      ...data,
-      id: Number(returnedId),
-    };
+    if (data?.subscription_id == null || String(data.subscription_id) !== subscriptionId) throw new Error('EFI_SUBSCRIPTION_ID_MISMATCH');
+    return data;
   }
 
   async listPlans(): Promise<Array<{ plan_id: number; name: string; interval: number; repeats: number | null }>> {
