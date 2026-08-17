@@ -8,6 +8,11 @@ import { ChevronRight } from 'lucide-react';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? '';
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  if (pathname === '/dashboard/studio' || pathname.startsWith('/dashboard/studio/')) {
+    return <>{children}</>;
+  }
+
   const navItems = [
     { name: 'Nexus', href: '/nexus', icon: BrainCircuit },
     { name: 'Hórus Operations™', href: '/dashboard', icon: Target },
