@@ -45,6 +45,7 @@ export type OptimizedExecutionSpec = {
   requirements: unknown[];
   projectState: Record<string, unknown>;
   capabilities: StudioCapability[];
+  requestedCapability: StudioCapability;
   connectors: string[];
   executionStrategy: {
     planningDepth: 'DETERMINISTIC' | 'ECONOMIC' | 'DEEP' | 'FULL_REBUILD';
