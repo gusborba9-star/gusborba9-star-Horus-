@@ -50,28 +50,27 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const state = projectState(project);
     const conversationContext = buildConversationContext(previousResults ?? []);
     const spec = buildOptimizedSpec({ prompt: message, project: state, conversationContext });
-    const capability = spec.capabilities.find((item) => ['IMAGE', 'AUDIO', 'VIDEO', 'MUSIC', 'DOCS', 'CODE', 'APPS', 'WEBSITES'].includes(item)) ?? spec.capabilities[0];
-    if (!capability) throw new Error('NEXUS_CAPABILITY_UNRESOLVED');
+    const requestedCapability = spec.requestedCapability;
 
     const liveCatalog = await getLiveOpenRouterCatalog();
     const budgetBrl = Number(project.intelligence_snapshot?.economicConstraints?.maxCostBrl);
     const plan = await resolveNexusPlan(client, {
-      intent: [project.objective, message, ...conversationContext].filter(Boolean).join('\n'),
+      intent: [message, project.objective, ...conversationContext].filter(Boolean).join('\n'),
       context: [JSON.stringify(project.context ?? {}), JSON.stringify(project.requirements ?? []), ...conversationContext],
       budgetBrl: Number.isFinite(budgetBrl) && budgetBrl > 0 ? budgetBrl : Number.MAX_SAFE_INTEGER,
-      capability,
+      capability: requestedCapability,
       liveCatalog,
     });
 
     const { data: previousRevision } = await client.from('studio_project_revisions').select('id,version').eq('project_id', projectId).order('version', { ascending: false }).limit(1).maybeSingle();
     const version = (previousRevision?.version ?? 0) + 1;
-    const deploymentCapability = ['WEBSITES', 'APPS', 'DEV'].includes(capability);
+    const deploymentCapability = ['WEBSITES', 'APPS', 'DEV'].includes(requestedCapability);
     const { data: revision, error: revisionError } = await client.from('studio_project_revisions').insert({
       project_id: projectId,
       version,
       parent_revision_id: previousRevision?.id ?? null,
       state: { requestedChange: message, source: deploymentCapability ? 'NEXUS_LIFECYCLE_PLAN' : 'NEXUS_RESULT_PREVIEW' },
-      diff: { intent: message, capability },
+      diff: { intent: message, capability: requestedCapability },
       estimated_cost_brl: null,
       tests: { required: true, status: 'NOT_RUN' },
       preview: { status: deploymentCapability ? 'NOT_CREATED' : 'RESULT_PENDING' },
@@ -85,7 +84,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     if (revisionError || !revision) throw new Error(`NEXUS_REVISION_CREATE_FAILED:${revisionError?.message ?? 'UNKNOWN'}`);
 
     if (deploymentCapability) {
-      return NextResponse.json({ success: true, revision, executionMode: 'LIFECYCLE', nexus: { capability, providerId: plan.model.providerId, modelId: plan.model.modelId, source: plan.model.source } }, { status: 201 });
+      return NextResponse.json({ success: true, revision, executionMode: 'LIFECYCLE', nexus: { capability: requestedCapability, providerId: plan.model.providerId, modelId: plan.model.modelId, source: plan.model.source } }, { status: 201 });
     }
 
     const provider = getInferenceProvider(plan.model.providerId);
@@ -94,13 +93,13 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       systemPrompt: 'You are the Hórus Nexus execution provider. Follow the optimized task exactly and return the requested result.',
       userPrompt: plan.optimized.optimized,
       maxOutputTokens: 2048,
-      capability,
+      capability: requestedCapability,
     });
 
     const { data: storedResult, error: resultError } = await client.from('studio_results').insert({
       project_id: projectId,
       revision_id: revision.id,
-      capability,
+      capability: requestedCapability,
       provider_id: result.providerId,
       model_id: result.modelId,
       result_type: result.resultType,
@@ -124,7 +123,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     await client.from('studio_project_revisions').update({ preview: resultPreview }).eq('id', revision.id);
     await client.from('studio_projects').update({ status: 'PLANNING', capabilities: spec.capabilities, intelligence_snapshot: { ...spec, nexusPlan: plan } }).eq('id', projectId);
 
-    return NextResponse.json({ success: true, revision, result: storedResult, preview: resultPreview, nexus: { capability, providerId: plan.model.providerId, modelId: plan.model.modelId, source: plan.model.source } }, { status: 201 });
+    return NextResponse.json({ success: true, revision, result: storedResult, preview: resultPreview, nexus: { capability: requestedCapability, providerId: plan.model.providerId, modelId: plan.model.modelId, source: plan.model.source } }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'NEXUS_RESULT_FAILED';
     return NextResponse.json({ success: false, error: message }, { status: message === 'AUTHENTICATION_REQUIRED' ? 401 : 400 });
