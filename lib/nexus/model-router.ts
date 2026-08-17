@@ -27,6 +27,15 @@ function contextScore(contextWindow: number | null, required: TaskProfile['conte
 
 function normalize(value: unknown): string[] { return Array.isArray(value) ? value.map(String).map((item) => item.toLowerCase()) : []; }
 
+export function inferCapabilityFromModalities(outputModalities: string[], inputModalities: string[] = []) {
+  const output = new Set(outputModalities.map((item) => item.toLowerCase()));
+  if (output.has('image') || output.has('image_generation')) return 'IMAGE';
+  if (output.has('video')) return 'VIDEO';
+  if (output.has('audio') || output.has('music')) return 'AUDIO';
+  if (output.has('text') || inputModalities.some((item) => ['image', 'audio', 'video', 'file'].includes(item.toLowerCase()))) return 'TEXT_GENERATION';
+  return 'TEXT_GENERATION';
+}
+
 export function executionContractFor(capability: string, outputModalities: string[], metadata?: Record<string, unknown>): ExecutionContract {
   const configured = metadata?.execution_contract;
   if (configured && typeof configured === 'object') {
