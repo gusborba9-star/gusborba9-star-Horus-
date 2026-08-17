@@ -8,7 +8,7 @@ export type TaskProfile = {
   multimodalRequired: boolean;
   contextRequirement: 'SMALL' | 'MEDIUM' | 'LARGE';
   toolRequirement: 'NONE' | 'OPTIONAL' | 'REQUIRED';
-  expectedFormat: 'TEXT' | 'STRUCTURED' | 'ACTION' | 'UNKNOWN';
+  expectedFormat: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'STRUCTURED' | 'ACTION' | 'UNKNOWN';
   criticality: 'LOW' | 'MEDIUM' | 'HIGH';
   latencyPreference: 'LOW' | 'BALANCED' | 'QUALITY';
   outputRequirements: string[];
@@ -25,6 +25,15 @@ const CRITICAL = ['jurídico', 'juridico', 'médico', 'medico', 'financeiro', 'p
 
 function includesAny(value: string, terms: string[]) {
   return terms.some((term) => value.includes(term));
+}
+
+function expectedFormat(normalized: string, actionRequired: boolean): TaskProfile['expectedFormat'] {
+  if (/\b(imagem|foto|fotografia|logo|ilustra(?:ção|cao)|visual)\b/.test(normalized)) return 'IMAGE';
+  if (/\b(vídeo|video|reels|filme|clipe)\b/.test(normalized)) return 'VIDEO';
+  if (/\b(áudio|audio|podcast|voz|narração|narracao|música|musica)\b/.test(normalized)) return 'AUDIO';
+  if (actionRequired) return 'ACTION';
+  if (includesAny(normalized, STRUCTURED)) return 'STRUCTURED';
+  return 'TEXT';
 }
 
 export function buildTaskProfile(input: string): TaskProfile {
@@ -50,7 +59,7 @@ export function buildTaskProfile(input: string): TaskProfile {
     multimodalRequired,
     contextRequirement: intent.length > 1800 ? 'LARGE' : intent.length > 600 ? 'MEDIUM' : 'SMALL',
     toolRequirement: actionRequired || researchRequired ? 'REQUIRED' : 'NONE',
-    expectedFormat: actionRequired ? 'ACTION' : includesAny(normalized, STRUCTURED) ? 'STRUCTURED' : 'TEXT',
+    expectedFormat: expectedFormat(normalized, actionRequired),
     criticality: includesAny(normalized, CRITICAL) ? 'HIGH' : complexity === 'HIGH' ? 'MEDIUM' : 'LOW',
     latencyPreference: freshnessRequired || researchRequired ? 'QUALITY' : complexity === 'HIGH' ? 'QUALITY' : 'BALANCED',
     outputRequirements: ['responder diretamente ao objetivo', 'preservar fatos fornecidos pelo usuário', 'explicitar incertezas relevantes', 'não inventar ações, dados ou fontes'],
