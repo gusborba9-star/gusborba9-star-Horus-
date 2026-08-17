@@ -1,4 +1,4 @@
-import type { ChangeClass, OptimizedExecutionSpec, ProjectState, StudioCapability } from './types';
+import type { ChangeClass, OptimizedExecutionSpec, ProjectState, StudioCapability, WorkType } from './types';
 import { STUDIO_CAPABILITIES } from './types';
 
 const MICRO = /\b(cor|cores|texto|label|copy|padding|margin|fonte|ícone|icone|spacing|espaçamento|typo|tipografia)\b/i;
@@ -19,6 +19,26 @@ const REQUESTED_CAPABILITY_RULES: Array<[StudioCapability, RegExp]> = [
   ['CAMPAIGNS', /\b(campanha|marketing|anúncio|anuncio)\b/i],
 ];
 
+const WORK_TYPE_RULES: Array<[WorkType, RegExp]> = [
+  ['LANDING_PAGE', /\b(landing page|landing)\b/i],
+  ['MOBILE_APP', /\b(app|aplicativo|aplicação|aplicacao)\b.*\b(mobile|celular|android|ios)\b|\b(mobile|android|ios)\b.*\b(app|aplicativo)\b/i],
+  ['WEB_APP', /\b(web app|aplicação web|aplicacao web)\b/i],
+  ['WEBSITE', /\b(site|website|página|pagina|web)\b/i],
+  ['CAMPAIGN', /\b(campanha|marketing|anúncio|anuncio)\b/i],
+  ['GAME', /\b(jogo|game)\b/i],
+  ['PRESENTATION', /\b(apresentação|apresentacao|slides|deck)\b/i],
+  ['DATA_ANALYSIS', /\b(analis[ae]|analytics|dados|data analysis)\b/i],
+  ['RESEARCH', /\b(pesquisa|research|investigue|investigação|investigacao)\b/i],
+  ['AUTOMATION', /\b(automação|automacao|workflow|automatize)\b/i],
+  ['DOCUMENT', /\b(documento|relatório|relatorio|contrato|pdf)\b/i],
+  ['CODE', /\b(código|codigo|software|programa|script|backend|frontend)\b/i],
+  ['IMAGE', /\b(imagem|foto|fotografia|logo|arte|visual|ilustra(?:ção|cao))\b/i],
+  ['VIDEO', /\b(vídeo|video|reels|filme|clipe)\b/i],
+  ['MUSIC', /\b(música|musica|canção|cancao|composição|composicao)\b/i],
+  ['VOICE', /\b(voz|narração|narracao|locução|locucao)\b/i],
+  ['AUDIO', /\b(áudio|audio|podcast)\b/i],
+];
+
 export function classifyChange(prompt: string): ChangeClass {
   const value = prompt.trim();
   if (REBUILD.test(value)) return 'REBUILD';
@@ -37,15 +57,15 @@ export function inferRequestedCapability(prompt: string, fallback: StudioCapabil
   return fallback;
 }
 
+export function inferWorkType(prompt: string, fallback: WorkType = 'TEXT'): WorkType {
+  const value = prompt.trim();
+  for (const [workType, rule] of WORK_TYPE_RULES) if (rule.test(value)) return workType;
+  return fallback;
+}
+
 export function inferCapabilities(prompt: string, project: ProjectState, additionalContext: string[] = []): StudioCapability[] {
-  const semanticInput = [
-    project.objective,
-    prompt,
-    ...additionalContext,
-    ...project.requirements,
-    ...project.capabilities,
-  ].filter(Boolean).join('\n').toLowerCase();
-  const selected = new Set<StudioCapability>(project.capabilities.filter((capability): capability is StudioCapability => STUDIO_CAPABILITIES.includes(capability)));
+  const semanticInput = [prompt, ...additionalContext, ...project.requirements].filter(Boolean).join('\n').toLowerCase();
+  const selected = new Set<StudioCapability>();
   if (/\b(site|website|landing|página|pagina|web)\b/.test(semanticInput)) selected.add('WEBSITES');
   if (/\b(saas|app|aplicativo|aplicação|aplicacao)\b/.test(semanticInput)) selected.add('APPS');
   if (/\b(código|codigo|software|frontend|backend|typescript|react|next)\b/.test(semanticInput)) selected.add('CODE');
@@ -60,7 +80,6 @@ export function inferCapabilities(prompt: string, project: ProjectState, additio
   if (/\b(documento|docs|contrato|relatório|relatorio)\b/.test(semanticInput)) selected.add('DOCS');
   if (/\b(apresentação|apresentacao|slides)\b/.test(semanticInput)) selected.add('PRESENTATIONS');
   if (/\b(dev|engenharia|deploy|git|branch|commit|pull request)\b/.test(semanticInput)) selected.add('DEV');
-  if (selected.size === 0) selected.add(inferRequestedCapability(prompt));
   return [...selected].filter((capability) => STUDIO_CAPABILITIES.includes(capability));
 }
 
@@ -72,68 +91,43 @@ function executionStrategy(changeClass: ChangeClass): OptimizedExecutionSpec['ex
   return { planningDepth: 'FULL_REBUILD', recomputePolicy: 'PROJECT_WIDE', requiresReplan: true };
 }
 
-function buildExecutionPrompt(args: {
-  prompt: string;
-  project: ProjectState;
-  changeClass: ChangeClass;
-  capabilities: StudioCapability[];
-  requestedCapability: StudioCapability;
-}): string {
-  const context = JSON.stringify(args.project.context);
-  const requirements = JSON.stringify(args.project.requirements);
-  const architecture = JSON.stringify(args.project.architecture);
+function buildExecutionPrompt(args: { prompt: string; project: ProjectState; changeClass: ChangeClass; capabilities: StudioCapability[]; requestedCapability: StudioCapability; workType: WorkType; }): string {
   return [
     'NEXUS OPTIMIZED EXECUTION SPECIFICATION',
     `USER INTENT: ${args.prompt}`,
     `OBJECTIVE: ${args.project.objective}`,
+    `WORK TYPE: ${args.workType}`,
     `CHANGE CLASS: ${args.changeClass}`,
     `REQUESTED CAPABILITY: ${args.requestedCapability}`,
     `PROJECT CAPABILITIES (CONTEXT): ${args.capabilities.join(', ')}`,
-    `PROJECT CONTEXT: ${context}`,
-    `REQUIREMENTS: ${requirements}`,
-    `CURRENT ARCHITECTURE: ${architecture}`,
-    'RULES: preserve existing contracts; operate only within authorized project scope; do not expose or select providers in the user-facing layer; require economic authorization before billable execution; preview before production; produce a revision and auditable execution plan.',
+    `PROJECT CONTEXT: ${JSON.stringify(args.project.context)}`,
+    `REQUIREMENTS: ${JSON.stringify(args.project.requirements)}`,
+    `CURRENT ARCHITECTURE: ${JSON.stringify(args.project.architecture)}`,
+    'RULES: preserve existing contracts; keep providers invisible to the user; require authorization before billable execution; preview before production; produce auditable revisions and real artifacts.',
   ].join('\n');
 }
 
-export function buildOptimizedSpec(args: {
-  prompt: string;
-  project: ProjectState;
-  requirements?: unknown[];
-  maxCostBrl?: number | null;
-  conversationContext?: string[];
-}): OptimizedExecutionSpec {
+export function buildOptimizedSpec(args: { prompt: string; project: ProjectState; requirements?: unknown[]; maxCostBrl?: number | null; conversationContext?: string[]; }): OptimizedExecutionSpec {
   const changeClass = classifyChange(args.prompt);
-  const requestedCapability = inferRequestedCapability(args.prompt, args.project.capabilities[0] ?? 'CODE');
+  const workType = inferWorkType(args.prompt);
+  const requestedCapability = inferRequestedCapability(args.prompt, workType === 'IMAGE' ? 'IMAGE' : args.project.capabilities[0] ?? 'CODE');
   const capabilities = inferCapabilities(args.prompt, args.project, args.conversationContext ?? []);
+  if (capabilities.length === 0) capabilities.push(requestedCapability);
   return {
     userPrompt: args.prompt,
-    optimizedExecutionPrompt: buildExecutionPrompt({ prompt: args.prompt, project: args.project, changeClass, capabilities, requestedCapability }),
+    optimizedExecutionPrompt: buildExecutionPrompt({ prompt: args.prompt, project: args.project, changeClass, capabilities, requestedCapability, workType }),
     objective: args.project.objective,
+    workType,
     changeClass,
     context: args.project.context,
     requirements: args.requirements ?? args.project.requirements,
-    projectState: {
-      identity: args.project.identity,
-      architecture: args.project.architecture,
-      executionGraph: args.project.executionGraph,
-      environment: args.project.environment,
-      environmentState: args.project.environmentState,
-      delivery: args.project.delivery,
-    },
+    projectState: { identity: args.project.identity, architecture: args.project.architecture, executionGraph: args.project.executionGraph, environment: args.project.environment, environmentState: args.project.environmentState, delivery: args.project.delivery },
     capabilities,
     requestedCapability,
     connectors: args.project.connectors,
     executionStrategy: executionStrategy(changeClass),
-    economicConstraints: {
-      maxCostBrl: args.maxCostBrl ?? null,
-      economicAuthorizationRequired: true,
-    },
-    executionPolicy: {
-      providerInvisible: true,
-      productionApprovalRequired: true,
-      previewFirst: true,
-    },
+    economicConstraints: { maxCostBrl: args.maxCostBrl ?? null, economicAuthorizationRequired: true },
+    executionPolicy: { providerInvisible: true, productionApprovalRequired: true, previewFirst: true },
   };
 }
 

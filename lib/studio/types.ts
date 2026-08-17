@@ -1,6 +1,13 @@
 export const CHANGE_CLASSES = ['MICRO', 'LOW', 'MEDIUM', 'MAJOR', 'REBUILD'] as const;
 export type ChangeClass = (typeof CHANGE_CLASSES)[number];
 
+export const WORK_TYPES = [
+  'IMAGE', 'VIDEO', 'TEXT', 'DOCUMENT', 'CODE', 'WEBSITE', 'LANDING_PAGE', 'WEB_APP',
+  'MOBILE_APP', 'GAME', 'CAMPAIGN', 'PRESENTATION', 'MUSIC', 'VOICE', 'AUDIO',
+  'DATA_ANALYSIS', 'RESEARCH', 'AUTOMATION', 'MULTIMODAL_PROJECT',
+] as const;
+export type WorkType = (typeof WORK_TYPES)[number];
+
 export const STUDIO_CAPABILITIES = [
   'APPS', 'AUDIO', 'CAMPAIGNS', 'CODE', 'DASHBOARDS', 'DEV', 'DOCS',
   'IMAGE', 'MUSIC', 'PRESENTATIONS', 'VIDEO', 'WEBSITES', 'APIS', 'AUTOMATIONS',
@@ -22,6 +29,12 @@ export type ConnectorPermission = (typeof CONNECTOR_PERMISSIONS)[number];
 
 export type ProjectEnvironment = 'PREVIEW' | 'STAGING' | 'PRODUCTION';
 
+export type ExecutionContract = {
+  kind: 'TEXT_GENERATION' | 'IMAGE_GENERATION' | 'UNKNOWN';
+  endpoint: 'CHAT_COMPLETIONS' | 'IMAGE_GENERATION' | 'UNKNOWN';
+  response: 'TEXT' | 'IMAGE' | 'UNKNOWN';
+};
+
 export type ProjectState = {
   identity: Record<string, unknown>;
   objective: string;
@@ -40,6 +53,7 @@ export type OptimizedExecutionSpec = {
   userPrompt: string;
   optimizedExecutionPrompt: string;
   objective: string;
+  workType: WorkType;
   changeClass: ChangeClass;
   context: Record<string, unknown>;
   requirements: unknown[];
