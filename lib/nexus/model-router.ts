@@ -33,20 +33,21 @@ function contextScore(contextWindow: number | null, required: TaskProfile['conte
 }
 
 function modalityScore(entry: ModelCatalogEntry, task: TaskProfile, capability?: string) {
-  if (capability === 'IMAGE') return entry.outputModalities.some((item) => ['image', 'image_generation'].includes(item)) ? 1 : 0;
-  if (capability === 'VIDEO') return entry.outputModalities.includes('video') ? 1 : 0;
-  if (capability === 'AUDIO' || capability === 'MUSIC') return entry.outputModalities.some((item) => ['audio', 'music'].includes(item)) ? 1 : 0;
+  if (capability === 'IMAGE') return entry.outputModalities.some((item) => ['image', 'image_generation'].includes(item.toLowerCase())) ? 1 : 0;
+  if (capability === 'VIDEO') return entry.outputModalities.some((item) => item.toLowerCase() === 'video') ? 1 : 0;
+  if (capability === 'AUDIO' || capability === 'MUSIC') return entry.outputModalities.some((item) => ['audio', 'music'].includes(item.toLowerCase())) ? 1 : 0;
   if (!task.multimodalRequired) return 1;
-  return entry.inputModalities.some((item) => ['image', 'audio', 'video', 'file'].includes(item)) ? 1 : 0;
+  return entry.inputModalities.some((item) => ['image', 'audio', 'video', 'file'].includes(item.toLowerCase())) ? 1 : 0;
 }
 
 function capabilityOutputCompatible(entry: ModelCatalogEntry, capability?: string) {
-  if (!capability || capability === 'TEXT_GENERATION' || capability === 'PERSONAL_TEXT' || capability === 'CODE' || capability === 'DOCS') {
-    return entry.outputModalities.includes('text');
+  const output = entry.outputModalities.map((item) => item.toLowerCase());
+  if (!capability || capability === 'TEXT_GENERATION' || capability === 'PERSONAL_TEXT' || capability === 'CODE' || capability === 'DOCS' || capability === 'WEBSITES' || capability === 'APPS' || capability === 'CAMPAIGNS') {
+    return output.includes('text');
   }
-  if (capability === 'IMAGE') return entry.outputModalities.some((item) => ['image', 'image_generation'].includes(item));
-  if (capability === 'VIDEO') return entry.outputModalities.includes('video');
-  if (capability === 'AUDIO' || capability === 'MUSIC') return entry.outputModalities.some((item) => ['audio', 'music'].includes(item));
+  if (capability === 'IMAGE') return output.some((item) => ['image', 'image_generation'].includes(item));
+  if (capability === 'VIDEO') return output.includes('video');
+  if (capability === 'AUDIO' || capability === 'MUSIC') return output.some((item) => ['audio', 'music'].includes(item));
   return true;
 }
 
@@ -55,13 +56,12 @@ export function inferCapabilityFromModalities(outputModalities: string[], inputM
   if (output.has('image') || output.has('image_generation')) return 'IMAGE';
   if (output.has('video')) return 'VIDEO';
   if (output.has('audio') || output.has('music')) return 'AUDIO';
-  if (inputModalities.some((item) => ['image', 'audio', 'video', 'file'].includes(item.toLowerCase()))) return 'TEXT_GENERATION';
+  if (output.has('text') || inputModalities.some((item) => ['image', 'audio', 'video', 'file'].includes(item.toLowerCase()))) return 'TEXT_GENERATION';
   return 'TEXT_GENERATION';
 }
 
 export function rankModels(entries: ModelCatalogEntry[], task: TaskProfile, budgetBrl: number, capability?: string): RoutedModel[] {
   return entries
-    .filter((entry) => capability ? entry.capability === capability : entry.capability === 'TEXT_GENERATION' || entry.capability === 'PERSONAL_TEXT')
     .filter((entry) => capabilityOutputCompatible(entry, capability))
     .map((entry) => {
       const quality = clamp(entry.qualityScore);
@@ -72,9 +72,9 @@ export function rankModels(entries: ModelCatalogEntry[], task: TaskProfile, budg
       const modality = modalityScore(entry, task, capability);
       const complexityFit = task.complexity === 'HIGH' ? quality : task.latencyPreference === 'LOW' ? latency : (quality + latency) / 2;
       const score = quality * 0.28 + reliability * 0.18 + latency * 0.14 + cost * 0.18 + context * 0.10 + modality * 0.06 + complexityFit * 0.06;
-      return { ...entry, score };
+      return { ...entry, capability: capability ?? entry.capability, score };
     })
-    .filter((entry) => capability !== 'IMAGE' && capability !== 'VIDEO' && capability !== 'AUDIO' && capability !== 'MUSIC' ? true : modalityScore(entry, task, capability) > 0)
+    .filter((entry) => capability ? modalityScore(entry, task, capability) > 0 : true)
     .sort((a, b) => b.score - a.score);
 }
 
@@ -94,8 +94,8 @@ export async function resolveAdaptiveModel(service: SupabaseClient, task: TaskPr
     latencyScore: Number(model.latency_score ?? 0),
     reliabilityScore: Number(model.reliability_score ?? activeProviders.get(model.provider_id) ?? 0),
     contextWindow: model.context_window ? Number(model.context_window) : null,
-    inputModalities: Array.isArray(model.input_modalities) ? model.input_modalities : ['text'],
-    outputModalities: Array.isArray(model.output_modalities) ? model.output_modalities : ['text'],
+    inputModalities: Array.isArray(model.input_modalities) ? model.input_modalities.map(String) : ['text'],
+    outputModalities: Array.isArray(model.output_modalities) ? model.output_modalities.map(String) : ['text'],
     source: 'REGISTRY',
   }));
   const merged = new Map(registry.map((entry) => [`${entry.providerId}:${entry.modelId}:${entry.capability}`, entry]));
