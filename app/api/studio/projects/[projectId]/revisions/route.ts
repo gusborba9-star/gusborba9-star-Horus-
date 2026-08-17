@@ -45,14 +45,14 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
     const conversationContext = Array.isArray(body.context) ? body.context.filter((item: unknown): item is string => typeof item === 'string').slice(-8) : [];
     const spec = buildOptimizedSpec({ prompt, project: state, requirements: body.requirements, conversationContext });
-    const capability = spec.capabilities[0];
+    const requestedCapability = spec.requestedCapability;
     const liveCatalog = await getLiveOpenRouterCatalog();
     const maxCostBrl = Number(project.intelligence_snapshot?.economicConstraints?.maxCostBrl);
     const nexusPlan = await resolveNexusPlan(client, {
-      intent: [project.objective, prompt, ...conversationContext].filter(Boolean).join('\n'),
+      intent: [prompt, project.objective, ...conversationContext].filter(Boolean).join('\n'),
       context: [JSON.stringify(project.context ?? {}), JSON.stringify(project.requirements ?? []), ...conversationContext],
       budgetBrl: Number.isFinite(maxCostBrl) && maxCostBrl > 0 ? maxCostBrl : Number.MAX_SAFE_INTEGER,
-      capability,
+      capability: requestedCapability,
       liveCatalog,
     });
 
@@ -66,7 +66,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       version,
       parent_revision_id: previous?.id ?? null,
       state: { requestedChange: prompt, risk },
-      diff: { intent: prompt, changeClass: spec.changeClass, capability },
+      diff: { intent: prompt, changeClass: spec.changeClass, capability: requestedCapability },
       estimated_cost_brl: typeof body.estimated_cost_brl === 'number' ? body.estimated_cost_brl : null,
       tests: { required: true, status: 'NOT_RUN' },
       preview: { status: 'NOT_CREATED' },
