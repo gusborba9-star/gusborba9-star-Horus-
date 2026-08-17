@@ -7,6 +7,18 @@ const MEDIUM = /\b(auth|autenticação|autenticacao|login|permissão|permissao|i
 const MAJOR = /\b(pagamento|payments|arquitetura|migrar|migração|migracao|reestruturar|backend|infraestrutura|infra|multi-tenant|multitenant)\b/i;
 const REBUILD = /\b(reconstru|reescrev|do zero|saas completo|transforme.*saas|rebuild|recrie.*inteiro)\b/i;
 
+const REQUESTED_CAPABILITY_RULES: Array<[StudioCapability, RegExp]> = [
+  ['IMAGE', /\b(imagem|foto|fotografia|logo|arte|visual|ilustra(?:ção|cao)|ger(?:ar|e)|criar uma imagem)\b/i],
+  ['VIDEO', /\b(vídeo|video|reels|filme|clipe)\b/i],
+  ['MUSIC', /\b(música|musica|canção|cancao|composição|composicao)\b/i],
+  ['AUDIO', /\b(áudio|audio|podcast|voz|narração|narracao)\b/i],
+  ['DOCS', /\b(documento|docs|contrato|relatório|relatorio)\b/i],
+  ['CODE', /\b(código|codigo|software|frontend|backend|typescript|react|next|programa|script)\b/i],
+  ['WEBSITES', /\b(site|website|landing|página|pagina|web)\b/i],
+  ['APPS', /\b(saas|app|aplicativo|aplicação|aplicacao)\b/i],
+  ['CAMPAIGNS', /\b(campanha|marketing|anúncio|anuncio)\b/i],
+];
+
 export function classifyChange(prompt: string): ChangeClass {
   const value = prompt.trim();
   if (REBUILD.test(value)) return 'REBUILD';
@@ -15,6 +27,14 @@ export function classifyChange(prompt: string): ChangeClass {
   if (LOW.test(value)) return 'LOW';
   if (MICRO.test(value)) return 'MICRO';
   return 'MEDIUM';
+}
+
+export function inferRequestedCapability(prompt: string, fallback: StudioCapability = 'CODE'): StudioCapability {
+  const value = prompt.trim();
+  for (const [capability, rule] of REQUESTED_CAPABILITY_RULES) {
+    if (rule.test(value)) return capability;
+  }
+  return fallback;
 }
 
 export function inferCapabilities(prompt: string, project: ProjectState, additionalContext: string[] = []): StudioCapability[] {
@@ -40,7 +60,7 @@ export function inferCapabilities(prompt: string, project: ProjectState, additio
   if (/\b(documento|docs|contrato|relatório|relatorio)\b/.test(semanticInput)) selected.add('DOCS');
   if (/\b(apresentação|apresentacao|slides)\b/.test(semanticInput)) selected.add('PRESENTATIONS');
   if (/\b(dev|engenharia|deploy|git|branch|commit|pull request)\b/.test(semanticInput)) selected.add('DEV');
-  if (selected.size === 0) selected.add('CODE');
+  if (selected.size === 0) selected.add(inferRequestedCapability(prompt));
   return [...selected].filter((capability) => STUDIO_CAPABILITIES.includes(capability));
 }
 
@@ -57,6 +77,7 @@ function buildExecutionPrompt(args: {
   project: ProjectState;
   changeClass: ChangeClass;
   capabilities: StudioCapability[];
+  requestedCapability: StudioCapability;
 }): string {
   const context = JSON.stringify(args.project.context);
   const requirements = JSON.stringify(args.project.requirements);
@@ -66,7 +87,8 @@ function buildExecutionPrompt(args: {
     `USER INTENT: ${args.prompt}`,
     `OBJECTIVE: ${args.project.objective}`,
     `CHANGE CLASS: ${args.changeClass}`,
-    `CAPABILITIES: ${args.capabilities.join(', ')}`,
+    `REQUESTED CAPABILITY: ${args.requestedCapability}`,
+    `PROJECT CAPABILITIES (CONTEXT): ${args.capabilities.join(', ')}`,
     `PROJECT CONTEXT: ${context}`,
     `REQUIREMENTS: ${requirements}`,
     `CURRENT ARCHITECTURE: ${architecture}`,
@@ -82,10 +104,11 @@ export function buildOptimizedSpec(args: {
   conversationContext?: string[];
 }): OptimizedExecutionSpec {
   const changeClass = classifyChange(args.prompt);
+  const requestedCapability = inferRequestedCapability(args.prompt, args.project.capabilities[0] ?? 'CODE');
   const capabilities = inferCapabilities(args.prompt, args.project, args.conversationContext ?? []);
   return {
     userPrompt: args.prompt,
-    optimizedExecutionPrompt: buildExecutionPrompt({ prompt: args.prompt, project: args.project, changeClass, capabilities }),
+    optimizedExecutionPrompt: buildExecutionPrompt({ prompt: args.prompt, project: args.project, changeClass, capabilities, requestedCapability }),
     objective: args.project.objective,
     changeClass,
     context: args.project.context,
@@ -99,6 +122,7 @@ export function buildOptimizedSpec(args: {
       delivery: args.project.delivery,
     },
     capabilities,
+    requestedCapability,
     connectors: args.project.connectors,
     executionStrategy: executionStrategy(changeClass),
     economicConstraints: {
