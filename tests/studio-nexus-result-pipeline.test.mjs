@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { inferCapabilities, buildOptimizedSpec } from '../lib/studio/engine.ts';
 import { inferCapabilityFromModalities, rankModels } from '../lib/nexus/model-router.ts';
 import { optimizePrompt } from '../lib/nexus/prompt-optimizer.ts';
+
+const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
 test('Studio preserves objective context when a revision prompt is shorter', () => {
   const project = {
@@ -39,4 +42,17 @@ test('Model router selects an IMAGE-capable output model', () => {
   const ranked = rankModels(entries, task, 10, 'IMAGE');
   assert.equal(ranked.length, 1);
   assert.equal(ranked[0].modelId, 'image-model');
+});
+
+test('Binary results are exposed through a stable authenticated artifact route', () => {
+  const nexus = read('app/api/studio/projects/[projectId]/nexus/route.ts');
+  const artifact = read('app/api/studio/results/[resultId]/artifact/route.ts');
+  assert.match(nexus, /source_artifact_url/);
+  assert.match(nexus, /\/api\/studio\/results\/\$\{storedResult\.id\}\/artifact/);
+  assert.match(nexus, /artifact_url: null/);
+  assert.match(nexus, /NEXUS_ARTIFACT_PERSIST_FAILED/);
+  assert.match(artifact, /requireStudioUser/);
+  assert.match(artifact, /data:\(\[.*?b64_json/s);
+  assert.match(artifact, /Content-Type/);
+  assert.match(artifact, /Content-Disposition/);
 });
