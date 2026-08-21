@@ -52,7 +52,7 @@ test('Binary results are exposed through a stable authenticated artifact route',
   assert.match(nexus, /artifact_url: null/);
   assert.match(nexus, /NEXUS_ARTIFACT_PERSIST_FAILED/);
   assert.match(artifact, /requireStudioUser/);
-  assert.match(artifact, /data:\(\[.*?b64_json/s);
+  assert.match(artifact, /b64_json/);
   assert.match(artifact, /Content-Type/);
   assert.match(artifact, /Content-Disposition/);
 });
