@@ -43,16 +43,20 @@ export function executionContractFor(capability: string, outputModalities: strin
     if (item.kind === 'IMAGE_GENERATION' && item.endpoint === 'IMAGE_GENERATION' && item.response === 'IMAGE') return { kind: 'IMAGE_GENERATION', endpoint: 'IMAGE_GENERATION', response: 'IMAGE' };
     if (item.kind === 'TEXT_GENERATION' && item.endpoint === 'CHAT_COMPLETIONS' && item.response === 'TEXT') return { kind: 'TEXT_GENERATION', endpoint: 'CHAT_COMPLETIONS', response: 'TEXT' };
   }
+
   const output = normalize(outputModalities);
-  if (capability === 'IMAGE' && output.some((item) => item === 'image' || item === 'image_generation')) return { kind: 'IMAGE_GENERATION', endpoint: 'IMAGE_GENERATION', response: 'IMAGE' };
-  if (output.includes('text')) return { kind: 'TEXT_GENERATION', endpoint: 'CHAT_COMPLETIONS', response: 'TEXT' };
+  // Generic OpenRouter catalog entries are chat-capable unless the catalog gives
+  // us explicit evidence for a dedicated execution contract. Image generation
+  // is intentionally NOT inferred from output modality alone: multimodal chat
+  // routers can advertise image output without being valid /images candidates.
+  if (capability !== 'IMAGE' && output.includes('text')) return { kind: 'TEXT_GENERATION', endpoint: 'CHAT_COMPLETIONS', response: 'TEXT' };
   return { kind: 'UNKNOWN', endpoint: 'UNKNOWN', response: 'UNKNOWN' };
 }
 
 function contractCompatible(entry: ModelCatalogEntry, capability?: string) {
-  if (capability === 'IMAGE') return entry.executionContract.kind === 'IMAGE_GENERATION' && entry.executionContract.endpoint === 'IMAGE_GENERATION';
+  if (capability === 'IMAGE') return entry.executionContract.kind === 'IMAGE_GENERATION' && entry.executionContract.endpoint === 'IMAGE_GENERATION' && entry.executionContract.response === 'IMAGE';
   if (capability === 'VIDEO' || capability === 'AUDIO' || capability === 'MUSIC') return false;
-  return entry.executionContract.kind === 'TEXT_GENERATION' && entry.executionContract.endpoint === 'CHAT_COMPLETIONS';
+  return entry.executionContract.kind === 'TEXT_GENERATION' && entry.executionContract.endpoint === 'CHAT_COMPLETIONS' && entry.executionContract.response === 'TEXT';
 }
 
 function modalityScore(entry: ModelCatalogEntry, task: TaskProfile, capability?: string) {
