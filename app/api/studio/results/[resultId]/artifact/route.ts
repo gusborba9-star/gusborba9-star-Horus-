@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireStudioUser } from '@/lib/studio/auth';
 
 function decodeDataUrl(value: string) {
-  const match = /^data:([^;,]+)(;base64)?,(.*)$/s.exec(value);
+  const match = /^data:([^;,]+)(;base64)?,([\s\S]*)$/.exec(value);
   if (!match) return null;
   const mediaType = match[1];
   const encoded = match[2] === ';base64';
