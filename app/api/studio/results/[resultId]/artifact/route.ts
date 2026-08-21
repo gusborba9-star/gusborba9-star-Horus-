@@ -45,7 +45,9 @@ export async function GET(request: Request, context: { params: Promise<{ resultI
       : {};
     const source = typeof metadata.source_artifact_url === 'string'
       ? metadata.source_artifact_url
-      : null;
+      : typeof result.artifact_url === 'string' && result.artifact_url.startsWith('data:')
+        ? result.artifact_url
+        : null;
     if (!source) return NextResponse.json({ success: false, error: 'ARTIFACT_NOT_FOUND' }, { status: 404 });
 
     const decoded = decodeDataUrl(source);
@@ -62,13 +64,14 @@ export async function GET(request: Request, context: { params: Promise<{ resultI
       });
     }
 
+    const extension = decoded.mediaType.split('/')[1]?.replace(/[^a-zA-Z0-9]/g, '') || 'bin';
     return new Response(decoded.bytes, {
       status: 200,
       headers: {
         'Content-Type': decoded.mediaType,
         'Content-Length': String(decoded.bytes.byteLength),
         'Cache-Control': 'private, max-age=31536000, immutable',
-        'Content-Disposition': `inline; filename="horus-${result.id}.${decoded.mediaType.split('/')[1] ?? 'bin'}"`,
+        'Content-Disposition': `inline; filename="horus-${result.id}.${extension}"`,
       },
     });
   } catch (error) {
