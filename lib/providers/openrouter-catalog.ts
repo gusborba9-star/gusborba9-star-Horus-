@@ -22,7 +22,7 @@ export async function getLiveOpenRouterCatalog(): Promise<ModelCatalogEntry[]> {
     const imagePayload = imageResponse.ok ? await imageResponse.json() : { data: [] };
     const generalModels = Array.isArray(generalPayload?.data) ? generalPayload.data : [];
     const imageModels = Array.isArray(imagePayload?.data) ? imagePayload.data : [];
-    const generalById = new Map(generalModels.map((model: any) => [String(model.id), model]));
+    const generalById = new Map<string, any>(generalModels.map((model: any) => [String(model.id), model]));
 
     const textEntries: ModelCatalogEntry[] = generalModels.map((model: any) => {
       const pricing = model.pricing ?? {}, architecture = model.architecture ?? {};
