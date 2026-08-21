@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { requireStudioUser } from '@/lib/studio/auth';
 
@@ -10,8 +11,9 @@ function artifactSecret() {
   return secret;
 }
 
-function signArtifact(resultId: string, expiresAt: number) {
-  return createHmac('sha256', artifactSecret()).update(`${resultId}.${expiresAt}`).digest('hex');
+export function createArtifactToken(resultId: string, expiresAt = Math.floor(Date.now() / 1000) + ARTIFACT_TOKEN_TTL_SECONDS) {
+  const signature = createHmac('sha256', artifactSecret()).update(`${resultId}.${expiresAt}`).digest('hex');
+  return `${signature}.${expiresAt}`;
 }
 
 function verifyArtifactToken(resultId: string, token: string | null) {
@@ -21,7 +23,7 @@ function verifyArtifactToken(resultId: string, token: string | null) {
   const expiresAt = Number(token.slice(separator + 1));
   const signature = token.slice(0, separator);
   if (!Number.isSafeInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return false;
-  const expected = signArtifact(resultId, expiresAt);
+  const expected = createArtifactToken(resultId, expiresAt).slice(0, separator);
   if (signature.length !== expected.length) return false;
   return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }
@@ -42,15 +44,21 @@ function decodeDataUrl(value: string) {
   }
 }
 
+function serviceRoleClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('SUPABASE_CONFIGURATION_MISSING');
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+}
+
 export async function GET(request: Request, context: { params: Promise<{ resultId: string }> }) {
   try {
     const { resultId } = await context.params;
-    const url = new URL(request.url);
-    const signedAccess = verifyArtifactToken(resultId, url.searchParams.get('token'));
-    const { client } = signedAccess ? { client: null } : await requireStudioUser(request);
+    const requestUrl = new URL(request.url);
+    const signedAccess = verifyArtifactToken(resultId, requestUrl.searchParams.get('token'));
+    const client = signedAccess ? serviceRoleClient() : (await requireStudioUser(request)).client;
 
-    const queryClient = client ?? (await requireStudioUser(request)).client;
-    const { data: result, error } = await queryClient
+    const { data: result, error } = await client
       .from('studio_results')
       .select('id,result_type,artifact_url,provider_metadata')
       .eq('id', resultId)
@@ -92,10 +100,4 @@ export async function GET(request: Request, context: { params: Promise<{ resultI
     const message = error instanceof Error ? error.message : 'ARTIFACT_LOAD_FAILED';
     return NextResponse.json({ success: false, error: message }, { status: message === 'AUTHENTICATION_REQUIRED' ? 401 : 400 });
   }
-}
-
-export function buildArtifactAccessUrl(resultId: string, origin: string) {
-  const expiresAt = Math.floor(Date.now() / 1000) + ARTIFACT_TOKEN_TTL_SECONDS;
-  const token = `${signArtifact(resultId, expiresAt)}.${expiresAt}`;
-  return `${origin}/api/studio/results/${resultId}/artifact?token=${encodeURIComponent(token)}`;
 }
