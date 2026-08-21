@@ -5,6 +5,7 @@ import type { ProjectState } from '@/lib/studio/types';
 import { resolveNexusPlan } from '@/lib/nexus/core';
 import { getLiveOpenRouterCatalog } from '@/lib/providers/openrouter-catalog';
 import { getInferenceProvider } from '@/lib/providers/inference';
+import { createArtifactToken } from '@/lib/studio/artifact-access';
 
 function projectState(project: any): ProjectState {
   return { identity: { id: project.id, name: project.name, ownerUserId: project.owner_user_id }, objective: project.objective, context: project.context ?? {}, requirements: Array.isArray(project.requirements) ? project.requirements : [], architecture: project.architecture ?? {}, capabilities: Array.isArray(project.capabilities) ? project.capabilities : [], connectors: Array.isArray(project.integrations) ? project.integrations : [], executionGraph: project.execution_graph ?? {}, environment: project.environment, environmentState: project.environment_state ?? {}, delivery: project.delivery ?? {} };
@@ -40,7 +41,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
     const providerMetadata = { ...result.providerMetadata, user_prompt: message, work_type: spec.workType, optimized_prompt: plan.optimized.optimized, task_profile: plan.optimized.profile, execution_contract: plan.model.executionContract, usage: result.usage, request_id: result.requestId, latency_ms: result.latencyMs, ...(sourceArtifactUrl ? { source_artifact_url: sourceArtifactUrl } : {}) };
     const { data: storedResult, error: resultError } = await client.from('studio_results').insert({ project_id: projectId, revision_id: revision.id, capability: requestedCapability, provider_id: result.providerId, model_id: result.modelId, result_type: result.resultType, status: 'READY', content_text: result.text, artifact_url: null, storage_path: null, provider_metadata: providerMetadata }).select('*').single();
     if (resultError || !storedResult) throw new Error(`NEXUS_RESULT_PERSIST_FAILED:${resultError?.message ?? 'UNKNOWN'}`);
-    const artifactUrl = sourceArtifactUrl ? `/api/studio/results/${storedResult.id}/artifact` : null;
+    const artifactUrl = sourceArtifactUrl
+      ? `${new URL(request.url).origin}/api/studio/results/${storedResult.id}/artifact?token=${encodeURIComponent(createArtifactToken(storedResult.id))}`
+      : null;
     const { data: persistedResult, error: artifactUpdateError } = await client.from('studio_results').update({ artifact_url: artifactUrl }).eq('id', storedResult.id).select('*').single();
     if (artifactUpdateError || !persistedResult) throw new Error(`NEXUS_ARTIFACT_PERSIST_FAILED:${artifactUpdateError?.message ?? 'UNKNOWN'}`);
     const resultPreview = { status: 'READY', resultId: persistedResult.id, resultType: result.resultType, url: `/dashboard/studio/result/${persistedResult.id}` };
